@@ -16,7 +16,8 @@ import {
   AGENT,
   URL,
   USER,
-  CUSTOM_ERROR
+  CUSTOM_ERROR,
+  EXCEPTION_ATTRIBUTES
 } from '../sections';
 
 export const ERROR_METADATA_SECTIONS: Section[] = [
@@ -30,5 +31,6 @@ export const ERROR_METADATA_SECTIONS: Section[] = [
   AGENT,
   URL,
   { ...USER, required: true },
-  CUSTOM_ERROR
+  CUSTOM_ERROR,
+  EXCEPTION_ATTRIBUTES
 ];

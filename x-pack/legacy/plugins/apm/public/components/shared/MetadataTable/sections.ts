@@ -121,6 +121,16 @@ export const ERROR: Section = {
   properties: ['id']
 };
 
+export const EXCEPTION_ATTRIBUTES: Section = {
+  key: 'error.exception.0.attributes',
+  label: i18n.translate(
+    'xpack.apm.metadataTable.section.exceptionAttributesLabel',
+    {
+      defaultMessage: 'Exception attributes'
+    }
+  )
+};
+
 const customLabel = i18n.translate(
   'xpack.apm.metadataTable.section.customLabel',
   {
