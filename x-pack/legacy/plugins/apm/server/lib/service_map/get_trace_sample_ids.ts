@@ -52,31 +52,16 @@ export async function getTraceSampleIds({
     bool: {
       filter: [
         {
-          bool: {
-            should: [
-              { term: { [PROCESSOR_EVENT]: 'span' } },
-              {
-                bool: {
-                  filter: [
-                    {
-                      term: {
-                        [PROCESSOR_EVENT]: 'transaction'
-                      }
-                    },
-                    {
-                      term: {
-                        [TRANSACTION_SAMPLED]: true
-                      }
-                    }
-                  ]
-                }
-              }
-            ],
-            minimum_should_match: 1
+          term: {
+            [PROCESSOR_EVENT]: 'span'
           }
         },
-        rangeQuery,
-        ...uiFiltersES
+        {
+          exists: {
+            field: DESTINATION_ADDRESS
+          }
+        },
+        rangeQuery
       ] as ESFilter[]
     }
   } as { bool: { filter: ESFilter[]; must_not?: ESFilter[] | ESFilter } };
@@ -95,10 +80,7 @@ export async function getTraceSampleIds({
       : {};
 
   const params = {
-    index: [
-      indices['apm_oss.spanIndices'],
-      indices['apm_oss.transactionIndices']
-    ],
+    index: [indices['apm_oss.spanIndices']],
     body: {
       size: 0,
       query,
@@ -115,16 +97,6 @@ export async function getTraceSampleIds({
                 }
               },
               {
-                [TRANSACTION_TYPE]: {
-                  terms: { field: TRANSACTION_TYPE, missing_bucket: true }
-                }
-              },
-              {
-                [TRANSACTION_NAME]: {
-                  terms: { field: TRANSACTION_NAME, missing_bucket: true }
-                }
-              },
-              {
                 [SPAN_TYPE]: {
                   terms: { field: SPAN_TYPE, missing_bucket: true }
                 }
@@ -136,20 +108,27 @@ export async function getTraceSampleIds({
               },
               {
                 [DESTINATION_ADDRESS]: {
-                  terms: { field: DESTINATION_ADDRESS, missing_bucket: true }
+                  terms: { field: DESTINATION_ADDRESS }
                 }
               }
             ]
           },
           aggs: {
-            sample_documents: {
-              terms: {
-                field: TRACE_ID,
-                execution_hint: 'map' as const,
-                // remove bias towards large traces by sorting on trace.id
-                // which will be random-esque
-                order: {
-                  _key: 'desc' as const
+            sample: {
+              sampler: {
+                shard_size: 30
+              },
+              aggs: {
+                trace_ids: {
+                  terms: {
+                    field: TRACE_ID,
+                    execution_hint: 'map' as const,
+                    // remove bias towards large traces by sorting on trace.id
+                    // which will be random-esque
+                    order: {
+                      _key: 'desc' as const
+                    }
+                  }
                 }
               }
             }
@@ -181,7 +160,7 @@ export async function getTraceSampleIds({
   // is queried
   const traceIdsWithPriority =
     tracesSampleResponse.aggregations?.connections.buckets.flatMap(bucket =>
-      bucket.sample_documents.buckets.map((sampleDocBucket, index) => ({
+      bucket.sample.trace_ids.buckets.map((sampleDocBucket, index) => ({
         traceId: sampleDocBucket.key as string,
         priority: index
       }))

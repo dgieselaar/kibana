@@ -5,7 +5,11 @@
  */
 
 import theme from '@elastic/eui/dist/eui_theme_light.json';
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
+import { find } from 'lodash';
+import { i18n } from '@kbn/i18n';
+import { EuiButton } from '@elastic/eui';
+import { toMountPoint } from '../../../../../../../../src/plugins/kibana_react/public';
 import { ServiceMapAPIResponse } from '../../../../server/lib/service_map/get_service_map';
 import {
   Connection,
@@ -22,10 +26,29 @@ import { useDeepObjectIdentity } from '../../../hooks/useDeepObjectIdentity';
 import { getAPMHref } from '../../shared/Links/apm/APMLink';
 import { useLocation } from '../../../hooks/useLocation';
 import { LoadingOverlay } from './LoadingOverlay';
+import { useApmPluginContext } from '../../../hooks/useApmPluginContext';
 
 interface ServiceMapProps {
   serviceName?: string;
 }
+
+type Element =
+  | {
+      group: 'nodes';
+      data: {
+        id: string;
+        agentName?: string;
+        href?: string;
+      };
+    }
+  | {
+      group: 'edges';
+      data: {
+        id: string;
+        source: string;
+        target: string;
+      };
+    };
 
 const cytoscapeDivStyle = {
   height: '85vh',
@@ -68,6 +91,11 @@ function getEdgeId(source: ConnectionNode, destination: ConnectionNode) {
 
 export function ServiceMap({ serviceName }: ServiceMapProps) {
   const { urlParams, uiFilters } = useUrlParams();
+  const { notifications } = useApmPluginContext().core;
+
+  const [, _setUnusedState] = useState(false);
+
+  const forceUpdate = () => _setUnusedState(value => !value);
 
   const callApmApi = useCallApmApi();
 
@@ -91,6 +119,7 @@ export function ServiceMap({ serviceName }: ServiceMapProps) {
     const { start, end, uiFilters: strippedUiFilters, ...query } = params;
 
     if (input.reset) {
+      renderedElements.current = [];
       setResponses([]);
     }
 
@@ -213,10 +242,58 @@ export function ServiceMap({ serviceName }: ServiceMapProps) {
     license?.isActive &&
     (license?.type === 'platinum' || license?.type === 'trial');
 
+  const renderedElements = useRef<Element[]>([]);
+
+  const openToast = useRef<string | null>(null);
+
+  const newData = elements.filter(element => {
+    return !find(
+      renderedElements.current,
+      el => el.data.id === element.data.id
+    );
+  });
+
+  if (renderedElements.current.length === 0) {
+    renderedElements.current = elements;
+  } else if (newData.length && !openToast.current) {
+    openToast.current = notifications.toasts.add({
+      title: i18n.translate('xpack.apm.newServiceMapData', {
+        defaultMessage: `Newly discovered connections are available.`
+      }),
+      onClose: () => {
+        openToast.current = null;
+      },
+      toastLifeTimeMs: 24 * 60 * 60 * 1000,
+      text: toMountPoint(
+        <EuiButton
+          onClick={() => {
+            renderedElements.current = elements;
+            if (openToast.current) {
+              notifications.toasts.remove(openToast.current);
+            }
+            forceUpdate();
+          }}
+        >
+          {i18n.translate('xpack.apm.updateServiceMap', {
+            defaultMessage: 'Update map'
+          })}
+        </EuiButton>
+      )
+    }).id;
+  }
+
+  useEffect(() => {
+    return () => {
+      if (openToast.current) {
+        notifications.toasts.remove(openToast.current);
+      }
+    };
+  }, [notifications.toasts]);
+
   return isValidPlatinumLicense ? (
     <LoadingOverlay isLoading={isLoading}>
       <Cytoscape
-        elements={elements}
+        elements={renderedElements.current}
         serviceName={serviceName}
         style={cytoscapeDivStyle}
       >
