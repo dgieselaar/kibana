@@ -39,6 +39,8 @@ export const SPAN_SELF_TIME_SUM = 'span.self_time.sum.us';
 export const SPAN_ACTION = 'span.action';
 export const SPAN_NAME = 'span.name';
 export const SPAN_ID = 'span.id';
+// TODO: change to `span.servicemap.fingerprint` once it's available
+export const SPAN_SERVICEMAP_FINGERPRINT = 'connection.hash';
 
 // Parent ID for a transaction or span
 export const PARENT_ID = 'parent.id';
