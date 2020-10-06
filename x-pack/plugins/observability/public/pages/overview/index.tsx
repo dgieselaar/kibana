@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 import { EuiFlexGrid, EuiFlexGroup, EuiFlexItem, EuiHorizontalRule, EuiSpacer } from '@elastic/eui';
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { ThemeContext } from 'styled-components';
 import { EmptySection } from '../../components/app/empty_section';
 import { WithHeaderLayout } from '../../components/app/layout/with_header';
@@ -16,8 +16,8 @@ import { LogsSection } from '../../components/app/section/logs';
 import { MetricsSection } from '../../components/app/section/metrics';
 import { UptimeSection } from '../../components/app/section/uptime';
 import { DatePicker, TimePickerTime } from '../../components/shared/data_picker';
-import { fetchHasData } from '../../data_handler';
 import { FETCH_STATUS, useFetcher } from '../../hooks/use_fetcher';
+import { useHasData } from '../../hooks/use_has_data';
 import { UI_SETTINGS, useKibanaUISettings } from '../../hooks/use_kibana_ui_settings';
 import { usePluginContext } from '../../hooks/use_plugin_context';
 import { useTrackPageview } from '../../hooks/use_track_metric';
@@ -26,8 +26,8 @@ import { getNewsFeed } from '../../services/get_news_feed';
 import { getObservabilityAlerts } from '../../services/get_observability_alerts';
 import { getAbsoluteTime } from '../../utils/date';
 import { getBucketSize } from '../../utils/get_bucket_size';
+import { LoadingObservability } from '../home/loading_observability';
 import { getEmptySections } from './empty_section';
-import { LoadingObservability } from './loading_observability';
 
 interface Props {
   routeParams: RouteParams<'/overview'>;
@@ -54,39 +54,52 @@ export function OverviewPage({ routeParams }: Props) {
   const theme = useContext(ThemeContext);
   const timePickerTime = useKibanaUISettings<TimePickerTime>(UI_SETTINGS.TIMEPICKER_TIME_DEFAULTS);
 
-  const result = useFetcher(() => fetchHasData(), []);
-  const hasData = result.data;
-
-  if (!hasData) {
-    return <LoadingObservability />;
-  }
-
   const { refreshInterval = 10000, refreshPaused = true } = routeParams.query;
 
-  const relativeTime = {
-    start: routeParams.query.rangeFrom ?? timePickerTime.from,
-    end: routeParams.query.rangeTo ?? timePickerTime.to,
-  };
+  const relativeTime = useMemo(() => {
+    return {
+      start: routeParams.query.rangeFrom ?? timePickerTime.from,
+      end: routeParams.query.rangeTo ?? timePickerTime.to,
+    };
+  }, [
+    routeParams.query.rangeFrom,
+    routeParams.query.rangeTo,
+    timePickerTime.to,
+    timePickerTime.from,
+  ]);
 
-  const absoluteTime = {
-    start: getAbsoluteTime(relativeTime.start),
-    end: getAbsoluteTime(relativeTime.end, { roundUp: true }),
-  };
+  const absoluteTime = useMemo(() => {
+    return {
+      start: getAbsoluteTime(relativeTime.start),
+      end: getAbsoluteTime(relativeTime.end, { roundUp: true }),
+    };
+  }, [relativeTime.start, relativeTime.end]);
 
   const bucketSize = calculatetBucketSize({
     start: absoluteTime.start,
     end: absoluteTime.end,
   });
 
+  const { hasData } = useHasData();
+
+  const appNames = Object.keys(hasData) as Array<keyof typeof hasData>;
+
+  const appsWithoutData = appNames.filter((app) => {
+    return hasData[app]?.status !== FETCH_STATUS.LOADING && hasData[app]?.data !== true;
+  });
+
   const appEmptySections = getEmptySections({ core }).filter(({ id }) => {
     if (id === 'alert') {
       return alertStatus !== FETCH_STATUS.FAILURE && !alerts.length;
     }
-    return !hasData[id];
+    return appsWithoutData.includes(id);
   });
 
-  // Hides the data section when all 'hasData' is false or undefined
-  const showDataSections = Object.values(hasData).some((hasPluginData) => hasPluginData);
+  const showLoader = !Object.values(hasData).some(({ status }) => status === FETCH_STATUS.SUCCESS);
+
+  if (showLoader) {
+    return <LoadingObservability />;
+  }
 
   return (
     <WithHeaderLayout
@@ -115,52 +128,41 @@ export function OverviewPage({ routeParams }: Props) {
 
       <EuiFlexGroup>
         <EuiFlexItem grow={6}>
-          {/* Data sections */}
-          {showDataSections && (
-            <EuiFlexItem grow={false}>
-              <EuiFlexGroup direction="column">
-                {hasData.infra_logs && (
-                  <EuiFlexItem grow={false}>
-                    <LogsSection
-                      absoluteTime={absoluteTime}
-                      relativeTime={relativeTime}
-                      bucketSize={bucketSize?.intervalString}
-                    />
-                  </EuiFlexItem>
-                )}
-                {hasData.infra_metrics && (
-                  <EuiFlexItem grow={false}>
-                    <MetricsSection
-                      absoluteTime={absoluteTime}
-                      relativeTime={relativeTime}
-                      bucketSize={bucketSize?.intervalString}
-                    />
-                  </EuiFlexItem>
-                )}
-                {hasData.apm && (
-                  <EuiFlexItem grow={false}>
-                    <APMSection
-                      absoluteTime={absoluteTime}
-                      relativeTime={relativeTime}
-                      bucketSize={bucketSize?.intervalString}
-                    />
-                  </EuiFlexItem>
-                )}
-                {hasData.uptime && (
-                  <EuiFlexItem grow={false}>
-                    <UptimeSection
-                      absoluteTime={absoluteTime}
-                      relativeTime={relativeTime}
-                      bucketSize={bucketSize?.intervalString}
-                    />
-                  </EuiFlexItem>
-                )}
-              </EuiFlexGroup>
-            </EuiFlexItem>
-          )}
+          <EuiFlexItem grow={false}>
+            <EuiFlexGroup direction="column">
+              <EuiFlexItem grow={false} hidden={!hasData?.infra_logs.data}>
+                <LogsSection
+                  absoluteTime={absoluteTime}
+                  relativeTime={relativeTime}
+                  bucketSize={bucketSize?.intervalString}
+                />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false} hidden={!hasData?.infra_metrics.data}>
+                <MetricsSection
+                  absoluteTime={absoluteTime}
+                  relativeTime={relativeTime}
+                  bucketSize={bucketSize?.intervalString}
+                />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false} hidden={!hasData?.apm.data}>
+                <APMSection
+                  absoluteTime={absoluteTime}
+                  relativeTime={relativeTime}
+                  bucketSize={bucketSize?.intervalString}
+                />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false} hidden={!hasData?.uptime.data}>
+                <UptimeSection
+                  absoluteTime={absoluteTime}
+                  relativeTime={relativeTime}
+                  bucketSize={bucketSize?.intervalString}
+                />
+              </EuiFlexItem>
+            </EuiFlexGroup>
+          </EuiFlexItem>
 
           {/* Empty sections */}
-          {!!appEmptySections.length && (
+          {appEmptySections.length > 0 && (
             <EuiFlexItem>
               <EuiSpacer size="s" />
               <EuiFlexGrid

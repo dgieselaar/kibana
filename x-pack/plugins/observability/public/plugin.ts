@@ -45,10 +45,10 @@ export class Plugin implements PluginClass<ObservabilityPluginSetup, Observabili
       category: DEFAULT_APP_CATEGORIES.observability,
 
       mount: async (params: AppMountParameters<unknown>) => {
-        // Load application bundle
-        const { renderApp } = await import('./application');
-        // Get start services
-        const [coreStart] = await core.getStartServices();
+        const [{ renderApp }, [coreStart]] = await Promise.all([
+          import('./application'),
+          core.getStartServices(),
+        ]);
 
         return renderApp(coreStart, plugins, params);
       },

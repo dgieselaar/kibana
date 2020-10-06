@@ -18,6 +18,7 @@ import { usePluginContext } from '../hooks/use_plugin_context';
 import { useRouteParams } from '../hooks/use_route_params';
 import { Breadcrumbs, routes } from '../routes';
 import { ObservabilityPluginSetupDeps } from '../plugin';
+import { HasDataContextProvider } from '../hooks/use_has_data';
 
 const observabilityLabelBreadcrumb = {
   text: i18n.translate('xpack.observability.observability.breadcrumb.', {
@@ -70,7 +71,9 @@ export const renderApp = (
           <EuiThemeProvider darkMode={isDarkMode}>
             <i18nCore.Context>
               <RedirectAppLinks application={core.application}>
-                <App />
+                <HasDataContextProvider>
+                  <App />
+                </HasDataContextProvider>
               </RedirectAppLinks>
             </i18nCore.Context>
           </EuiThemeProvider>
