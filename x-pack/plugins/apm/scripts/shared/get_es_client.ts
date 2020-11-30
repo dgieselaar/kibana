@@ -29,17 +29,18 @@ export function getEsClient({
     auth,
   });
 
-  return {
-    ...client,
-    async search<TDocument, TSearchRequest extends ESSearchRequest>(
-      request: TSearchRequest
-    ) {
-      const response = await client.search(request as any);
+  async function search<TDocument, TSearchRequest extends ESSearchRequest>(
+    request: TSearchRequest
+  ) {
+    const response = await client.search(request as any);
 
-      return {
-        ...response,
-        body: response.body as ESSearchResponse<TDocument, TSearchRequest>,
-      };
-    },
+    return {
+      ...response,
+      body: response.body as ESSearchResponse<TDocument, TSearchRequest>,
+    };
+  }
+
+  return Object.assign(client, { search }) as Omit<Client, 'search'> & {
+    search: typeof search;
   };
 }

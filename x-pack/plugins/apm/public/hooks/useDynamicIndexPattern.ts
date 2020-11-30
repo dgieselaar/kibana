@@ -30,3 +30,7 @@ export function useDynamicIndexPattern(
     status,
   };
 }
+
+export type DynamicIndexPattern = ReturnType<
+  typeof useDynamicIndexPattern
+>['indexPattern'];

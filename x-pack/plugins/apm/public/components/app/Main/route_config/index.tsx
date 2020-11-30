@@ -74,6 +74,10 @@ function HomeTraces() {
   return <Home tab="traces" />;
 }
 
+function HomeUserAnalytics() {
+  return <Home tab="user-analytics" />;
+}
+
 function ServiceDetailsErrors(
   props: RouteComponentProps<{ serviceName: string }>
 ) {
@@ -307,6 +311,14 @@ export const routes: APMRouteDefinition[] = [
     component: HomeServiceMap,
     breadcrumb: i18n.translate('xpack.apm.breadcrumb.serviceMapTitle', {
       defaultMessage: 'Service Map',
+    }),
+  },
+  {
+    exact: true,
+    path: '/user-analytics',
+    component: HomeUserAnalytics,
+    breadcrumb: i18n.translate('xpack.apm.breadcrumb.serviceMapTitle', {
+      defaultMessage: 'User analytics',
     }),
   },
   {

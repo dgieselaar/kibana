@@ -21,6 +21,7 @@ import {
 import moment from 'moment';
 import React, { useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
+import { uniq } from 'lodash';
 import { TimeSeries } from '../../../../typings/timeseries';
 import { FETCH_STATUS } from '../../../hooks/useFetcher';
 import { useUrlParams } from '../../../hooks/useUrlParams';
@@ -89,6 +90,10 @@ export function TimeseriesChart({
         y === null || y === undefined
     );
 
+  const axes = uniq(
+    timeseries.map((t) => ('yAxis' in t && t.yAxis) || 'y-axis')
+  );
+
   return (
     <ChartContainer hasData={!isEmpty} height={height} status={fetchStatus}>
       <Chart ref={chartRef} id={id}>
@@ -117,14 +122,18 @@ export function TimeseriesChart({
           showOverlappingTicks
           tickFormat={xFormatter}
         />
-        <Axis
-          id="y-axis"
-          ticks={3}
-          position={Position.Left}
-          tickFormat={yTickFormat ? yTickFormat : yLabelFormat}
-          labelFormat={yLabelFormat}
-          showGridLines
-        />
+        {axes.map((axis, index) => (
+          <Axis
+            key={axis}
+            id={axis}
+            ticks={3}
+            position={index === 0 ? Position.Left : Position.Right}
+            hide={index > 1}
+            tickFormat={yTickFormat ? yTickFormat : yLabelFormat}
+            labelFormat={yLabelFormat}
+            showGridLines
+          />
+        ))}
 
         {showAnnotations && <Annotations />}
 

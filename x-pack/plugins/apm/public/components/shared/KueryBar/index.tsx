@@ -4,28 +4,32 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
-import { i18n } from '@kbn/i18n';
-import { startsWith, uniqueId } from 'lodash';
+import { uniqueId } from 'lodash';
 import React, { useState } from 'react';
-import { useHistory, useLocation, useParams } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { ESFilter } from '../../../../../../typings/elasticsearch';
 import {
   esKuery,
   IIndexPattern,
   QuerySuggestion,
 } from '../../../../../../../src/plugins/data/public';
 import { useApmPluginContext } from '../../../hooks/useApmPluginContext';
-import { useDynamicIndexPattern } from '../../../hooks/useDynamicIndexPattern';
 import { useUrlParams } from '../../../hooks/useUrlParams';
 import { fromQuery, toQuery } from '../Links/url_helpers';
-import { getBoolFilter } from './get_bool_filter';
 // @ts-expect-error
 import { Typeahead } from './Typeahead';
-import { useProcessorEvent } from './use_processor_event';
 
 const Container = styled.div`
   margin-bottom: 10px;
 `;
+
+interface Props {
+  indexPattern?: IIndexPattern;
+  boolFilter?: ESFilter[];
+  placeholder: string;
+  filterSuggestions?: (suggestions: QuerySuggestion[]) => QuerySuggestion[];
+}
 
 interface State {
   suggestions: QuerySuggestion[];
@@ -37,48 +41,20 @@ function convertKueryToEsQuery(kuery: string, indexPattern: IIndexPattern) {
   return esKuery.toElasticsearchQuery(ast, indexPattern);
 }
 
-export function KueryBar() {
-  const { groupId, serviceName } = useParams<{
-    groupId?: string;
-    serviceName?: string;
-  }>();
+export function KueryBar(props: Props) {
   const history = useHistory();
   const [state, setState] = useState<State>({
     suggestions: [],
     isLoadingSuggestions: false,
   });
-  const { urlParams } = useUrlParams();
   const location = useLocation();
   const { data } = useApmPluginContext().plugins;
 
+  const { urlParams } = useUrlParams();
+
+  const { indexPattern, boolFilter, placeholder } = props;
+
   let currentRequestCheck;
-
-  const processorEvent = useProcessorEvent();
-
-  const examples = {
-    transaction: 'transaction.duration.us > 300000',
-    error: 'http.response.status_code >= 400',
-    metric: 'process.pid = "1234"',
-    defaults:
-      'transaction.duration.us > 300000 AND http.response.status_code >= 400',
-  };
-
-  const example = examples[processorEvent || 'defaults'];
-
-  const { indexPattern } = useDynamicIndexPattern(processorEvent);
-
-  const placeholder = i18n.translate('xpack.apm.kueryBar.placeholder', {
-    defaultMessage: `Search {event, select,
-            transaction {transactions}
-            metric {metrics}
-            error {errors}
-            other {transactions, errors and metrics}
-          } (E.g. {queryExample})`,
-    values: {
-      queryExample: example,
-      event: processorEvent,
-    },
-  });
 
   async function onChange(inputValue: string, selectionStart: number) {
     if (indexPattern == null) {
@@ -95,20 +71,13 @@ export function KueryBar() {
         (await data.autocomplete.getQuerySuggestions({
           language: 'kuery',
           indexPatterns: [indexPattern],
-          boolFilter: getBoolFilter({
-            groupId,
-            processorEvent,
-            serviceName,
-            urlParams,
-          }),
+          boolFilter: boolFilter || [],
           query: inputValue,
           selectionStart,
           selectionEnd: selectionStart,
           useTimeRange: true,
         })) || []
-      )
-        .filter((suggestion) => !startsWith(suggestion.text, 'span.'))
-        .slice(0, 15);
+      ).slice(0, 15);
 
       if (currentRequest !== currentRequestCheck) {
         return;

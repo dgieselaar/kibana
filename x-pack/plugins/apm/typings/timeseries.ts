@@ -27,6 +27,7 @@ export interface TimeSeries<
   type: string;
   color: string;
   areaColor?: string;
+  yAxis?: string;
 }
 
 export type ChartType = 'area' | 'linemark';

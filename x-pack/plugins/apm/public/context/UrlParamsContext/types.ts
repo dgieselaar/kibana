@@ -28,4 +28,5 @@ export type IUrlParams = {
   pageSize?: number;
   searchTerm?: string;
   percentile?: number;
+  segments?: string;
 } & Partial<Record<LocalUIFilterName, string>>;

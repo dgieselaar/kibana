@@ -96,6 +96,11 @@ import {
   rumVisitorsBreakdownRoute,
   rumWebCoreVitals,
 } from './rum_client';
+import {
+  userAnalyticsDynamicIndexPatternRoute,
+  userAnalyticsSegmentTimeseriesRoute,
+  userAnalyticsStaticEQLSuggestionsRoute,
+} from './user_analytics';
 
 const createApmApi = () => {
   const api = createApi()
@@ -199,7 +204,12 @@ const createApmApi = () => {
     .add(rumJSErrors)
     .add(rumUrlSearch)
     .add(rumLongTaskMetrics)
-    .add(rumHasDataRoute);
+    .add(rumHasDataRoute)
+
+    // User analytics
+    .add(userAnalyticsDynamicIndexPatternRoute)
+    .add(userAnalyticsSegmentTimeseriesRoute)
+    .add(userAnalyticsStaticEQLSuggestionsRoute);
 
   return api;
 };

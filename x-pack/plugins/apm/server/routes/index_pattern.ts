@@ -11,7 +11,7 @@ import { getInternalSavedObjectsClient } from '../lib/helpers/get_internal_saved
 import { getApmIndexPatternTitle } from '../lib/index_pattern/get_apm_index_pattern_title';
 import { getDynamicIndexPattern } from '../lib/index_pattern/get_dynamic_index_pattern';
 import { getApmIndices } from '../lib/settings/apm_indices/get_apm_indices';
-import { UIProcessorEvent } from '../../common/processor_event';
+import { ProcessorEvent, UIProcessorEvent } from '../../common/processor_event';
 
 export const staticIndexPatternRoute = createRoute((core) => ({
   endpoint: 'POST /api/apm/index_pattern/static',
@@ -49,10 +49,27 @@ export const dynamicIndexPatternRoute = createRoute({
       | UIProcessorEvent
       | undefined;
 
+    const indexNames = processorEvent
+      ? [processorEvent]
+      : [
+          ProcessorEvent.transaction,
+          ProcessorEvent.metric,
+          ProcessorEvent.error,
+        ];
+
+    const indicesMap = {
+      [ProcessorEvent.transaction]: indices['apm_oss.transactionIndices'],
+      [ProcessorEvent.metric]: indices['apm_oss.metricsIndices'],
+      [ProcessorEvent.error]: indices['apm_oss.errorIndices'],
+    };
+
+    const patterns = indexNames.map(
+      (name) => indicesMap[name as UIProcessorEvent]
+    );
+
     const dynamicIndexPattern = await getDynamicIndexPattern({
       context,
-      indices,
-      processorEvent,
+      patterns,
     });
 
     return { dynamicIndexPattern };

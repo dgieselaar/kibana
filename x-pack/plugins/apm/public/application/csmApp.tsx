@@ -69,7 +69,7 @@ export function CsmAppRoot({
   core,
   deps,
   config,
-  corePlugins: { embeddable },
+  corePlugins,
 }: {
   appMountParameters: AppMountParameters;
   core: CoreStart;
@@ -85,11 +85,15 @@ export function CsmAppRoot({
     config,
     core,
     plugins,
+    pluginsStart: corePlugins,
   };
+
   return (
     <RedirectAppLinks application={core.application}>
       <ApmPluginContext.Provider value={apmPluginContextValue}>
-        <KibanaContextProvider services={{ ...core, ...plugins, embeddable }}>
+        <KibanaContextProvider
+          services={{ ...core, ...plugins, embeddable: corePlugins.embeddable }}
+        >
           <i18nCore.Context>
             <Router history={history}>
               <UrlParamsProvider>

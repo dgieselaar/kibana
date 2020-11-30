@@ -9,11 +9,6 @@ import {
   IndexPatternsFetcher,
   FieldDescriptor,
 } from '../../../../../../src/plugins/data/server';
-import { ApmIndicesConfig } from '../settings/apm_indices/get_apm_indices';
-import {
-  ProcessorEvent,
-  UIProcessorEvent,
-} from '../../../common/processor_event';
 import { APMRequestHandlerContext } from '../../routes/typings';
 
 interface IndexPatternTitleAndFields {
@@ -29,15 +24,12 @@ const cache = new LRU<string, IndexPatternTitleAndFields | undefined>({
 // TODO: this is currently cached globally. In the future we might want to cache this per user
 export const getDynamicIndexPattern = async ({
   context,
-  indices,
-  processorEvent,
+  patterns,
 }: {
   context: APMRequestHandlerContext;
-  indices: ApmIndicesConfig;
-  processorEvent?: UIProcessorEvent;
+  patterns: string[];
 }) => {
-  const patternIndices = getPatternIndices(indices, processorEvent);
-  const indexPatternTitle = patternIndices.join(',');
+  const indexPatternTitle = patterns.join(',');
   const CACHE_KEY = `apm_dynamic_index_pattern_${indexPatternTitle}`;
   if (cache.has(CACHE_KEY)) {
     return cache.get(CACHE_KEY);
@@ -53,7 +45,7 @@ export const getDynamicIndexPattern = async ({
   // (would be a bad first time experience)
   try {
     const fields = await indexPatternsFetcher.getFieldsForWildcard({
-      pattern: patternIndices,
+      pattern: patterns,
     });
 
     const indexPattern: IndexPatternTitleAndFields = {
@@ -78,20 +70,3 @@ export const getDynamicIndexPattern = async ({
     throw e;
   }
 };
-
-function getPatternIndices(
-  indices: ApmIndicesConfig,
-  processorEvent?: UIProcessorEvent
-) {
-  const indexNames = processorEvent
-    ? [processorEvent]
-    : [ProcessorEvent.transaction, ProcessorEvent.metric, ProcessorEvent.error];
-
-  const indicesMap = {
-    [ProcessorEvent.transaction]: indices['apm_oss.transactionIndices'],
-    [ProcessorEvent.metric]: indices['apm_oss.metricsIndices'],
-    [ProcessorEvent.error]: indices['apm_oss.errorIndices'],
-  };
-
-  return indexNames.map((name) => indicesMap[name as UIProcessorEvent]);
-}

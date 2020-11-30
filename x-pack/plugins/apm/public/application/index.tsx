@@ -29,7 +29,7 @@ import {
 import { LicenseProvider } from '../context/LicenseContext';
 import { UrlParamsProvider } from '../context/UrlParamsContext';
 import { useBreadcrumbs } from '../hooks/use_breadcrumbs';
-import { ApmPluginSetupDeps } from '../plugin';
+import { ApmPluginSetupDeps, ApmPluginStartDeps } from '../plugin';
 import { createCallApmApi } from '../services/rest/createCallApmApi';
 import { createStaticIndexPattern } from '../services/rest/index_pattern';
 import { setHelpExtension } from '../setHelpExtension';
@@ -107,18 +107,26 @@ export function ApmAppRoot({
  * This module is rendered asynchronously in the Kibana platform.
  */
 
-export const renderApp = (
-  core: CoreStart,
-  setupDeps: ApmPluginSetupDeps,
-  appMountParameters: AppMountParameters,
-  config: ConfigSchema
-) => {
+export const renderApp = ({
+  core,
+  setupDeps,
+  startDeps,
+  appMountParameters,
+  config,
+}: {
+  core: CoreStart;
+  setupDeps: ApmPluginSetupDeps;
+  startDeps: ApmPluginStartDeps;
+  appMountParameters: AppMountParameters;
+  config: ConfigSchema;
+}) => {
   const { element } = appMountParameters;
   const apmPluginContextValue = {
     appMountParameters,
     config,
     core,
     plugins: setupDeps,
+    pluginsStart: startDeps,
   };
 
   // render APM feedback link in global help menu

@@ -8,19 +8,17 @@ import { EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
 import React from 'react';
 import styled from 'styled-components';
 import { DatePicker } from './DatePicker';
-import { KueryBar } from './KueryBar';
+import { APMKueryBar } from './KueryBar/APMKueryBar';
 
 const SearchBarFlexGroup = styled(EuiFlexGroup)`
   margin: ${({ theme }) =>
     `${theme.eui.euiSizeM} ${theme.eui.euiSizeM} -${theme.eui.gutterTypes.gutterMedium} ${theme.eui.euiSizeM}`};
 `;
 
-export function SearchBar() {
+export function SearchBar({ kueryBar }: { kueryBar?: JSX.Element }) {
   return (
     <SearchBarFlexGroup alignItems="flexStart" gutterSize="s">
-      <EuiFlexItem grow={3}>
-        <KueryBar />
-      </EuiFlexItem>
+      <EuiFlexItem grow={3}>{kueryBar || <APMKueryBar />}</EuiFlexItem>
       <EuiFlexItem grow={1}>
         <DatePicker />
       </EuiFlexItem>

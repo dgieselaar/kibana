@@ -9,7 +9,7 @@ import { createMemoryHistory } from 'history';
 import { Observable } from 'rxjs';
 import { AppMountParameters, CoreStart, HttpSetup } from 'src/core/public';
 import { mockApmPluginContextValue } from '../context/ApmPluginContext/MockApmPluginContext';
-import { ApmPluginSetupDeps } from '../plugin';
+import { ApmPluginSetupDeps, ApmPluginStartDeps } from '../plugin';
 import { createCallApmApi } from '../services/rest/createCallApmApi';
 import { renderApp } from './';
 import { disableConsoleWarning } from '../utils/testHelpers';
@@ -71,12 +71,13 @@ describe('renderApp', () => {
     let unmount: () => void;
 
     act(() => {
-      unmount = renderApp(
-        (core as unknown) as CoreStart,
-        (plugins as unknown) as ApmPluginSetupDeps,
-        (params as unknown) as AppMountParameters,
-        config
-      );
+      unmount = renderApp({
+        appMountParameters: (params as unknown) as AppMountParameters,
+        config,
+        core: (core as unknown) as CoreStart,
+        setupDeps: (plugins as unknown) as ApmPluginSetupDeps,
+        startDeps: {} as ApmPluginStartDeps,
+      });
     });
 
     expect(() => {

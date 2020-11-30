@@ -12,10 +12,12 @@ import { ApmHeader } from '../../shared/ApmHeader';
 import { useServiceMapHref } from '../../shared/Links/apm/ServiceMapLink';
 import { useServiceInventoryHref } from '../../shared/Links/apm/service_inventory_link';
 import { useTraceOverviewHref } from '../../shared/Links/apm/TraceOverviewLink';
+import { useUserAnalyticsHref } from '../../shared/Links/apm/UserAnalyticsLink';
 import { MainTabs } from '../../shared/main_tabs';
 import { ServiceMap } from '../ServiceMap';
 import { ServiceInventory } from '../service_inventory';
 import { TraceOverview } from '../TraceOverview';
+import { UserAnalytics } from '../user_analytics';
 
 interface Tab {
   key: string;
@@ -25,7 +27,7 @@ interface Tab {
 }
 
 interface Props {
-  tab: 'traces' | 'services' | 'service-map';
+  tab: 'traces' | 'services' | 'service-map' | 'user-analytics';
 }
 
 export function Home({ tab }: Props) {
@@ -53,6 +55,14 @@ export function Home({ tab }: Props) {
         defaultMessage: 'Service Map',
       }),
       Component: ServiceMap,
+    },
+    {
+      key: 'user-analytics',
+      href: useUserAnalyticsHref(),
+      text: i18n.translate('xpack.apm.home.userAnalyticsTabLabel', {
+        defaultMessage: 'User analytics',
+      }),
+      Component: UserAnalytics,
     },
   ];
   const selectedTab = homeTabs.find(
