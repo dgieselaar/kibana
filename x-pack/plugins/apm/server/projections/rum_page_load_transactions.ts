@@ -44,9 +44,7 @@ export function getRumPageLoadTransactionsProjection({
         ? [
             {
               wildcard: {
-                'url.full': {
-                  value: `*${urlQuery}*`,
-                },
+                'url.full': `*${urlQuery}*`,
               },
             },
           ]
@@ -90,9 +88,7 @@ export function getRumErrorsProjection({
         ? [
             {
               wildcard: {
-                'url.full': {
-                  value: `*${urlQuery}*`,
-                },
+                'url.full': `*${urlQuery}*`,
               },
             },
           ]

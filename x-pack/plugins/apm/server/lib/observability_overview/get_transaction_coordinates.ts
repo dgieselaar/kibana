@@ -48,6 +48,7 @@ export async function getTransactionCoordinates({
             field: '@timestamp',
             fixed_interval: bucketSize,
             min_doc_count: 0,
+            format: 'epoch_millis',
           },
           aggs: {
             count: {

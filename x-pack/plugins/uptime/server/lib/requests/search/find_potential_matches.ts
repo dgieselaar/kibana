@@ -39,7 +39,8 @@ const query = async (queryContext: QueryContext, searchAfter: any, size: number)
     body,
   };
 
-  return await queryContext.search(params);
+  const response = await queryContext.search(params);
+  return response;
 };
 
 const queryBody = async (queryContext: QueryContext, searchAfter: any, size: number) => {
@@ -58,7 +59,9 @@ const queryBody = async (queryContext: QueryContext, searchAfter: any, size: num
           size,
           sources: [
             {
-              monitor_id: { terms: { field: 'monitor.id', order: queryContext.cursorOrder() } },
+              monitor_id: {
+                terms: { field: 'monitor.id' as const, order: queryContext.cursorOrder() },
+              },
             },
           ],
         },

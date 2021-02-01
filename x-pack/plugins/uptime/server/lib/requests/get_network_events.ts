@@ -4,6 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
 import { UMElasticsearchQueryFn } from '../adapters/framework';
 import { NetworkEvent } from '../../../common/runtime_types';
 
@@ -28,7 +29,7 @@ export const getNetworkEvents: UMElasticsearchQueryFn<
           { term: { 'synthetics.type': 'journey/network_info' } },
           { term: { 'monitor.check_group': checkGroup } },
           { term: { 'synthetics.step.index': Number(stepIndex) } },
-        ],
+        ] as QueryContainer[],
       },
     },
     // NOTE: This limit may need tweaking in the future. Users can technically perform multiple

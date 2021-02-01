@@ -4,6 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 import * as t from 'io-ts';
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
 import {
   CustomLink,
   CustomLinkES,
@@ -27,7 +28,7 @@ export async function listCustomLinks({
         should: [
           { term: { [key]: value } },
           { bool: { must_not: [{ exists: { field: key } }] } },
-        ],
+        ] as QueryContainer[],
       },
     };
   });
@@ -44,7 +45,7 @@ export async function listCustomLinks({
       sort: [
         {
           'label.keyword': {
-            order: 'asc',
+            order: 'asc' as const,
           },
         },
       ],
@@ -53,7 +54,7 @@ export async function listCustomLinks({
   const resp = await internalClient.search<CustomLinkES>(params);
   const customLinks = resp.hits.hits.map((item) =>
     fromESFormat({
-      id: item._id,
+      id: item._id as string,
       ...item._source,
     })
   );

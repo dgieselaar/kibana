@@ -4,6 +4,8 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
+import { asMutableArray } from '../../../../common/utils/as_mutable_array';
 import { ESSearchResponse } from '../../../../../../typings/elasticsearch';
 import { PromiseReturnType } from '../../../../../observability/typings/common';
 import { Setup } from '../../helpers/setup_request';
@@ -46,7 +48,7 @@ export async function anomalySeriesFetcher({
                 },
               },
             },
-          ],
+          ] as QueryContainer[],
         },
       },
       aggs: {
@@ -64,11 +66,11 @@ export async function anomalySeriesFetcher({
               aggs: {
                 anomaly_score: {
                   top_metrics: {
-                    metrics: [
+                    metrics: asMutableArray([
                       { field: 'record_score' },
                       { field: 'timestamp' },
                       { field: 'bucket_span' },
-                    ] as const,
+                    ] as const),
                     sort: {
                       record_score: 'desc' as const,
                     },

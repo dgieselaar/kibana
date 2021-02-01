@@ -3,9 +3,9 @@
  * or more contributor license agreements. Licensed under the Elastic License;
  * you may not use this file except in compliance with the Elastic License.
  */
-import { ValuesType } from 'utility-types';
 import { flatten, merge, sortBy, sum, pickBy } from 'lodash';
-import { AggregationOptionsByType } from '../../../../../../typings/elasticsearch/aggregations';
+import { CompositeAggregationSource } from '@elastic/elasticsearch/api/types';
+import { asMutableArray } from '../../../../common/utils/as_mutable_array';
 import { ProcessorEvent } from '../../../../common/processor_event';
 import { TelemetryTask } from '.';
 import { AGENT_NAMES, RUM_AGENT_NAMES } from '../../../../common/agent_name';
@@ -58,9 +58,7 @@ export const tasks: TelemetryTask[] = [
     // the transaction count for that time range.
     executor: async ({ indices, search }) => {
       async function getBucketCountFromPaginatedQuery(
-        sources: Array<
-          ValuesType<AggregationOptionsByType['composite']['sources']>[string]
-        >,
+        sources: CompositeAggregationSource[],
         prevResult?: {
           transaction_count: number;
           expected_metric_document_count: number;
@@ -315,7 +313,7 @@ export const tasks: TelemetryTask[] = [
             service_environments: {
               composite: {
                 size: 1000,
-                sources: [
+                sources: asMutableArray([
                   {
                     [SERVICE_ENVIRONMENT]: {
                       terms: {
@@ -331,7 +329,7 @@ export const tasks: TelemetryTask[] = [
                       },
                     },
                   },
-                ],
+                ] as const),
               },
             },
           },

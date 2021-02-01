@@ -5,7 +5,7 @@
  */
 import { merge } from 'lodash';
 import { Logger } from 'kibana/server';
-import { RequestParams } from '@elastic/elasticsearch';
+import { IndicesStats } from '@elastic/elasticsearch/api/requestParams';
 import {
   ESSearchRequest,
   ESSearchResponse,
@@ -20,7 +20,7 @@ type TelemetryTaskExecutor = (params: {
     params: TSearchRequest
   ): Promise<ESSearchResponse<unknown, TSearchRequest>>;
   indicesStats(
-    params: RequestParams.IndicesStats
+    params: IndicesStats
     // promise returned by client has an abort property
     // so we cannot use its ReturnType
   ): Promise<{

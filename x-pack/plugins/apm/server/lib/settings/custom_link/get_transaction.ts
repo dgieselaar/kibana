@@ -4,6 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 import * as t from 'io-ts';
+import { compact } from 'lodash';
 import { Setup } from '../../helpers/setup_request';
 import { ProcessorEvent } from '../../../../common/processor_event';
 import { filterOptionsRt } from './custom_link_types';
@@ -18,15 +19,15 @@ export async function getTransaction({
 }) {
   const { apmEventClient } = setup;
 
-  const esFilters = Object.entries(filters)
-    // loops through the filters splitting the value by comma and removing white spaces
-    .map(([key, value]) => {
-      if (value) {
-        return { terms: { [key]: splitFilterValueByComma(value) } };
-      }
-    })
-    // removes filters without value
-    .filter((value) => value);
+  const esFilters = compact(
+    Object.entries(filters)
+      // loops through the filters splitting the value by comma and removing white spaces
+      .map(([key, value]) => {
+        if (value) {
+          return { terms: { [key]: splitFilterValueByComma(value) } };
+        }
+      })
+  );
 
   const params = {
     terminateAfter: 1,

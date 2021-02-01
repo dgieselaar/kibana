@@ -4,6 +4,8 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
+import { asMutableArray } from '../../../../apm/common/utils/as_mutable_array';
 import { UMElasticsearchQueryFn } from '../adapters/framework';
 import { Ping } from '../../../common/runtime_types';
 
@@ -29,10 +31,13 @@ export const getJourneySteps: UMElasticsearchQueryFn<GetJourneyStepsParams, Ping
               'monitor.check_group': checkGroup,
             },
           },
-        ],
+        ] as QueryContainer,
       },
     },
-    sort: [{ 'synthetics.step.index': { order: 'asc' } }, { '@timestamp': { order: 'asc' } }],
+    sort: asMutableArray([
+      { 'synthetics.step.index': { order: 'asc' } },
+      { '@timestamp': { order: 'asc' } },
+    ] as const),
     _source: {
       excludes: ['synthetics.blob'],
     },

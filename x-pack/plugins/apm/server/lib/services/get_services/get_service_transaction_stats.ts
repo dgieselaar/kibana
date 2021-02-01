@@ -4,6 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { asMutableArray } from '../../../../common/utils/as_mutable_array';
 import {
   AGENT_NAME,
   SERVICE_ENVIRONMENT,
@@ -114,7 +115,7 @@ export async function getServiceTransactionStats({
                 },
                 agentName: {
                   top_hits: {
-                    docvalue_fields: [AGENT_NAME] as const,
+                    docvalue_fields: asMutableArray([AGENT_NAME] as const),
                     size: 1,
                   },
                 },

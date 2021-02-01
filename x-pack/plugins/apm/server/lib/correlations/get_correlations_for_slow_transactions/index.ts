@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
-import { AggregationOptionsByType } from '../../../../../../typings/elasticsearch/aggregations';
+import { AggregationOptionsByType } from '../../../../../../typings/elasticsearch';
 import { ESFilter } from '../../../../../../typings/elasticsearch';
 import { rangeFilter } from '../../../../common/utils/range_filter';
 import {
@@ -58,6 +58,10 @@ export async function getCorrelationsForSlowTransactions({
     backgroundFilters,
     setup,
   });
+
+  if (durationForPercentile === null) {
+    return {};
+  }
 
   const params = {
     apm: { events: [ProcessorEvent.transaction] },

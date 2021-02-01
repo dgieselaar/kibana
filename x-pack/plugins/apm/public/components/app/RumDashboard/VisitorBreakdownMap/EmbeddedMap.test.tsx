@@ -35,7 +35,7 @@ mockEmbeddable.getEmbeddableFactory = jest.fn().mockImplementation(() => ({
   }),
 }));
 
-const mockCore: () => [any] = () => {
+const mockCore: () => any[] = () => {
   const core = {
     embeddable: mockEmbeddable,
   };

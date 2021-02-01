@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
-import { MetricsAggregationResponsePart } from '../../../../../../typings/elasticsearch/aggregations';
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
 import {
   PROCESSOR_EVENT,
   SERVICE_NAME,
@@ -43,7 +43,7 @@ export async function getTransactionDurationChartPreview({
           ? [{ term: { [TRANSACTION_TYPE]: transactionType } }]
           : []),
         ...getEnvironmentUiFilterES(environment),
-      ],
+      ] as QueryContainer[],
     },
   };
 
@@ -56,7 +56,7 @@ export async function getTransactionDurationChartPreview({
         fixed_interval: intervalString,
       },
       aggs: {
-        agg:
+        duration:
           aggregationType === 'avg'
             ? { avg: { field: TRANSACTION_DURATION } }
             : {
@@ -81,12 +81,11 @@ export async function getTransactionDurationChartPreview({
   return resp.aggregations.timeseries.buckets.map((bucket) => {
     const percentilesKey = aggregationType === '95th' ? '95.0' : '99.0';
     const x = bucket.key;
+
     const y =
-      aggregationType === 'avg'
-        ? (bucket.agg as MetricsAggregationResponsePart).value
-        : (bucket.agg as { values: Record<string, number | null> }).values[
-            percentilesKey
-          ];
+      'values' in bucket.duration
+        ? bucket.duration.values[percentilesKey]
+        : bucket.duration.value;
 
     return { x, y };
   });

@@ -4,14 +4,16 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
-import { isEmpty, omit } from 'lodash';
+import { isEmpty, omit, merge } from 'lodash';
 import { EventOutcome } from '../../../../common/event_outcome';
 import {
   processSignificantTermAggs,
   TopSigTerm,
 } from '../process_significant_term_aggs';
-import { AggregationOptionsByType } from '../../../../../../typings/elasticsearch/aggregations';
-import { ESFilter } from '../../../../../../typings/elasticsearch';
+import {
+  AggregationOptionsByType,
+  ESFilter,
+} from '../../../../../../typings/elasticsearch';
 import { rangeFilter } from '../../../../common/utils/range_filter';
 import {
   EVENT_OUTCOME,
@@ -162,18 +164,11 @@ export async function getErrorRateTimeSeries({
     body: {
       size: 0,
       query: { bool: { filter: backgroundFilters } },
-      aggs: {
-        // overall aggs
-        timeseries: timeseriesAgg,
-
-        // per term aggs
-        ...perTermAggs,
-      },
+      aggs: merge({}, { timeseries: timeseriesAgg }, perTermAggs),
     },
   };
 
   const response = await apmEventClient.search(params);
-  type Agg = NonNullable<typeof response.aggregations>;
 
   if (!response.aggregations) {
     return {};
@@ -186,8 +181,7 @@ export async function getErrorRateTimeSeries({
       ),
     },
     significantTerms: topSigTerms.map((topSig, index) => {
-      // @ts-expect-error
-      const agg = response.aggregations[`term_${index}`] as Agg;
+      const agg = response.aggregations![`term_${index}`];
 
       return {
         ...topSig,

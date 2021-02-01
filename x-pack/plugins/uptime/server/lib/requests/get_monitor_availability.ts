@@ -4,10 +4,10 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { asMutableArray } from '../../../../apm/common/utils/as_mutable_array';
 import { UMElasticsearchQueryFn } from '../adapters';
 import { GetMonitorAvailabilityParams, Ping } from '../../../common/runtime_types';
 import { AfterKey } from './get_monitor_status';
-import { SortOptions } from '../../../../../typings/elasticsearch';
 
 export interface AvailabilityKey {
   monitorId: string;
@@ -78,7 +78,7 @@ export const getMonitorAvailability: UMElasticsearchQueryFn<
           composite: {
             size: 2000,
             ...(afterKey ? { after: afterKey } : {}),
-            sources: [
+            sources: asMutableArray([
               {
                 monitorId: {
                   terms: {
@@ -94,7 +94,7 @@ export const getMonitorAvailability: UMElasticsearchQueryFn<
                   },
                 },
               },
-            ],
+            ] as const),
           },
           aggs: {
             fields: {
@@ -103,10 +103,10 @@ export const getMonitorAvailability: UMElasticsearchQueryFn<
                 sort: [
                   {
                     '@timestamp': {
-                      order: 'desc',
+                      order: 'desc' as const,
                     },
                   },
-                ] as SortOptions,
+                ],
               },
             },
             up_sum: {

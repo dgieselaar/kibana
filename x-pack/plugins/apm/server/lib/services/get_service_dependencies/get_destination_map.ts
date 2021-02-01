@@ -5,6 +5,7 @@
  */
 
 import { isEqual, keyBy, mapValues } from 'lodash';
+import { asMutableArray } from '../../../../common/utils/as_mutable_array';
 import { pickKeys } from '../../../../common/utils/pick_keys';
 import { AgentName } from '../../../../typings/es_schemas/ui/fields/agent';
 import {
@@ -55,7 +56,7 @@ export const getDestinationMap = async ({
         connections: {
           composite: {
             size: 1000,
-            sources: [
+            sources: asMutableArray([
               {
                 [SPAN_DESTINATION_SERVICE_RESOURCE]: {
                   terms: { field: SPAN_DESTINATION_SERVICE_RESOURCE },
@@ -64,12 +65,16 @@ export const getDestinationMap = async ({
               // make sure we get samples for both successful
               // and failed calls
               { [EVENT_OUTCOME]: { terms: { field: EVENT_OUTCOME } } },
-            ],
+            ] as const),
           },
           aggs: {
             docs: {
               top_hits: {
-                docvalue_fields: [SPAN_TYPE, SPAN_SUBTYPE, SPAN_ID] as const,
+                docvalue_fields: asMutableArray([
+                  SPAN_TYPE,
+                  SPAN_SUBTYPE,
+                  SPAN_ID,
+                ] as const),
                 _source: false,
                 sort: {
                   '@timestamp': 'desc',
@@ -116,12 +121,12 @@ export const getDestinationMap = async ({
         },
       },
       size: outgoingConnections.length,
-      docvalue_fields: [
+      docvalue_fields: asMutableArray([
         SERVICE_NAME,
         SERVICE_ENVIRONMENT,
         AGENT_NAME,
         PARENT_ID,
-      ] as const,
+      ] as const),
       _source: false,
     },
   });

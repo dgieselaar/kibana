@@ -4,8 +4,12 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 import { KibanaRequest } from 'src/core/server';
-import { RequestParams } from '@elastic/elasticsearch';
 import { TransportRequestPromise } from '@elastic/elasticsearch/lib/Transport';
+import {
+  CreateIndexRequest,
+  DeleteRequest,
+  IndexRequest,
+} from '@elastic/elasticsearch/api/types';
 import { unwrapEsResponse } from '../../../../../../observability/server';
 import { APMRequestHandlerContext } from '../../../../routes/typings';
 import {
@@ -19,7 +23,7 @@ import {
 } from '../call_async_with_debug';
 import { cancelEsRequestOnAbort } from '../cancel_es_request_on_abort';
 
-export type APMIndexDocumentParams<T> = RequestParams.Index<T>;
+export type APMIndexDocumentParams<T> = IndexRequest<T>;
 
 export type APMInternalClient = ReturnType<typeof createInternalESClient>;
 
@@ -71,14 +75,14 @@ export function createInternalESClient({
         params,
       });
     },
-    delete: (params: RequestParams.Delete): Promise<{ result: string }> => {
+    delete: (params: DeleteRequest): Promise<{ result: string }> => {
       return callEs({
         operationName: 'delete',
         cb: () => asInternalUser.delete(params),
         params,
       });
     },
-    indicesCreate: (params: RequestParams.IndicesCreate) => {
+    indicesCreate: (params: CreateIndexRequest) => {
       return callEs({
         operationName: 'indices.create',
         cb: () => asInternalUser.indices.create(params),

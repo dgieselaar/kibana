@@ -4,9 +4,9 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 import { merge } from 'lodash';
+import { estypes } from '@elastic/elasticsearch';
 import { TRANSACTION_TYPE } from '../../../common/elasticsearch_fieldnames';
 import { arrayUnionToCallable } from '../../../common/utils/array_union_to_callable';
-import { AggregationInputMap } from '../../../../../typings/elasticsearch';
 import { TransactionGroupRequestBase, TransactionGroupSetup } from './fetcher';
 import { getTransactionDurationFieldForAggregatedTransactions } from '../helpers/aggregated_transactions';
 
@@ -20,8 +20,8 @@ type BucketKey = string | Record<string, string>;
 
 function mergeRequestWithAggs<
   TRequestBase extends TransactionGroupRequestBase,
-  TInputMap extends AggregationInputMap
->(request: TRequestBase, aggs: TInputMap) {
+  TAggregationMap extends Record<string, estypes.AggregationContainer>
+>(request: TRequestBase, aggs: TAggregationMap) {
   return merge({}, request, {
     body: {
       aggs: {

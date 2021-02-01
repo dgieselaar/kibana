@@ -4,6 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
 import { UMElasticsearchQueryFn } from '../adapters';
 import { Ping } from '../../../common/runtime_types';
 
@@ -43,20 +44,20 @@ export const getLatestMonitor: UMElasticsearchQueryFn<GetLatestMonitorParams, Pi
           },
           ...(monitorId ? [{ term: { 'monitor.id': monitorId } }] : []),
           ...(observerLocation ? [{ term: { 'observer.geo.name': observerLocation } }] : []),
-        ],
+        ] as QueryContainer[],
       },
     },
     size: 1,
     _source: ['url', 'monitor', 'observer', '@timestamp', 'tls.*', 'http', 'error', 'tags'],
     sort: {
-      '@timestamp': { order: 'desc' },
+      '@timestamp': { order: 'desc' as const },
     },
   };
 
   const { body: result } = await uptimeEsClient.search({ body: params });
 
   const doc = result.hits?.hits?.[0];
-  const docId = doc?._id ?? '';
+  const docId = (doc?._id as string | undefined) ?? '';
   const { tls, ...ping } = (doc?._source as Ping & { '@timestamp': string }) ?? {};
 
   return {

@@ -4,7 +4,6 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
-import { SortOptions } from '../../../../../typings/elasticsearch/aggregations';
 import {
   ERROR_CULPRIT,
   ERROR_EXC_HANDLED,
@@ -36,7 +35,7 @@ export async function getErrorGroups({
 
   const projection = getErrorGroupsProjection({ setup, serviceName });
 
-  const order: SortOptions = sortByLatestOccurrence
+  const order = sortByLatestOccurrence
     ? {
         max_timestamp: sortDirection,
       }

@@ -4,6 +4,7 @@
  * you may not use this file except in compliance with the Elastic License.
  */
 
+import { QueryContainer } from '@elastic/elasticsearch/api/types';
 import {
   SERVICE_NAME,
   TRACE_ID,
@@ -66,7 +67,7 @@ export async function getBuckets({
 }) {
   const { start, end, esFilter, apmEventClient } = setup;
 
-  const commonFilters = [
+  const commonFilters: QueryContainer[] = [
     { term: { [SERVICE_NAME]: serviceName } },
     { term: { [TRANSACTION_TYPE]: transactionType } },
     { term: { [TRANSACTION_NAME]: transactionName } },
@@ -89,7 +90,7 @@ export async function getBuckets({
             should: [
               { term: { [TRACE_ID]: traceId } },
               { term: { [TRANSACTION_ID]: transactionId } },
-            ],
+            ] as QueryContainer[],
           },
         },
         aggs: {

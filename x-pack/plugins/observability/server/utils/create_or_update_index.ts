@@ -3,23 +3,12 @@
  * or more contributor license agreements. Licensed under the Elastic License;
  * you may not use this file except in compliance with the Elastic License.
  */
+import { CreateIndexRequest, PutMappingRequest } from '@elastic/elasticsearch/api/types';
 import pRetry from 'p-retry';
 import { Logger, ElasticsearchClient } from 'src/core/server';
 
-export interface MappingsObject {
-  type: string;
-  ignore_above?: number;
-  scaling_factor?: number;
-  ignore_malformed?: boolean;
-  coerce?: boolean;
-  fields?: Record<string, MappingsObject>;
-}
-
-export interface MappingsDefinition {
-  dynamic?: boolean | 'strict';
-  properties: Record<string, MappingsDefinition | MappingsObject>;
-  dynamic_templates?: any[];
-}
+export type Mappings = Required<CreateIndexRequest>['body']['mappings'] &
+  Required<PutMappingRequest>['body'];
 
 export async function createOrUpdateIndex({
   index,
@@ -28,7 +17,7 @@ export async function createOrUpdateIndex({
   logger,
 }: {
   index: string;
-  mappings: MappingsDefinition;
+  mappings: Mappings;
   client: ElasticsearchClient;
   logger: Logger;
 }) {
@@ -57,7 +46,8 @@ export async function createOrUpdateIndex({
             });
 
         if (!result.body.acknowledged) {
-          const resultError = result && result.body.error && JSON.stringify(result.body.error);
+          const bodyWithError: { body?: { error: any } } = result as any;
+          const resultError = JSON.stringify(bodyWithError?.body?.error);
           throw new Error(resultError);
         }
       },
@@ -80,9 +70,9 @@ function createNewIndex({
 }: {
   index: string;
   client: ElasticsearchClient;
-  mappings: MappingsDefinition;
+  mappings: Required<CreateIndexRequest>['body']['mappings'];
 }) {
-  return client.indices.create<{ acknowledged: boolean; error: any }>({
+  return client.indices.create({
     index,
     body: {
       // auto_expand_replicas: Allows cluster to not have replicas for this index
@@ -99,9 +89,9 @@ function updateExistingIndex({
 }: {
   index: string;
   client: ElasticsearchClient;
-  mappings: MappingsDefinition;
+  mappings: PutMappingRequest['body'];
 }) {
-  return client.indices.putMapping<{ acknowledged: boolean; error: any }>({
+  return client.indices.putMapping({
     index,
     body: mappings,
   });
