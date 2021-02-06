@@ -26,6 +26,15 @@ export const PercentilesKeyedTypeRT = rt.type({
   values: rt.array(rt.type({ key: rt.string, value: NumberOrNullRT })),
 });
 
+export const TopMetricsTypeRT = rt.type({
+  top: rt.array(
+    rt.type({
+      sort: rt.union([rt.array(rt.number), rt.array(rt.string)]),
+      metrics: rt.record(rt.string, rt.union([rt.number, rt.string, rt.null])),
+    })
+  ),
+});
+
 export const TopHitsTypeRT = rt.type({
   hits: rt.type({
     total: rt.type({
@@ -38,7 +47,7 @@ export const TopHitsTypeRT = rt.type({
           _index: rt.string,
           _id: rt.string,
           _score: NumberOrNullRT,
-          _source: rt.object,
+          fields: rt.record(rt.string, rt.union([rt.array(rt.string), rt.array(rt.number)])),
         }),
         rt.partial({
           sort: rt.array(rt.union([rt.string, rt.number])),
@@ -79,12 +88,20 @@ export const HistogramResponseRT = rt.type({
   }),
 });
 
+const GroupingKeyRT = rt.intersection([
+  rt.type({ histogram: rt.number }),
+  rt.record(rt.string, rt.union([rt.string, rt.number])),
+]);
+
 const GroupingBucketRT = rt.intersection([
   rt.type({
-    key: rt.record(rt.string, rt.string),
+    key: GroupingKeyRT,
     doc_count: rt.number,
   }),
-  HistogramResponseRT,
+  rt.record(
+    rt.string,
+    rt.union([rt.number, rt.string, MetricValueTypeRT, TermsWithMetrics, rt.object])
+  ),
 ]);
 
 export const GroupingResponseRT = rt.type({
@@ -93,7 +110,7 @@ export const GroupingResponseRT = rt.type({
       buckets: rt.array(GroupingBucketRT),
     }),
     rt.partial({
-      after_key: rt.record(rt.string, rt.string),
+      after_key: GroupingKeyRT,
     }),
   ]),
 });

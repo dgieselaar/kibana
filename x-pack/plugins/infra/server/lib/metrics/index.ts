@@ -88,10 +88,22 @@ export const query = async (
     const { after_key: afterKey } = groupings;
     const limit = options.limit || 9;
     const returnAfterKey = afterKey && groupings.buckets.length === limit ? true : false;
+    console.log('received response', limit, groupings.buckets.length);
     return {
       series: groupings.buckets.map((bucket) => {
-        const keys = Object.values(bucket.key);
-        return convertHistogramBucketsToTimeseries(keys, options, bucket.histogram.buckets);
+        const { key, ...values } = bucket;
+        const { histogram, ...groupingKeys } = key;
+        const keys = Object.values(groupingKeys) as string[];
+        const timeseriesBuckets = [{ key: histogram, ...values }];
+
+        return convertHistogramBucketsToTimeseries(
+          keys,
+          {
+            ...options,
+            dropLastBucket: false,
+          },
+          timeseriesBuckets
+        );
       }),
       info: {
         afterKey: returnAfterKey ? afterKey : null,

@@ -54,7 +54,7 @@ export const metricsExplorerRequestBodyRequiredFieldsRT = rt.type({
 });
 
 const groupByRT = rt.union([rt.string, rt.null, rt.undefined]);
-export const afterKeyObjectRT = rt.record(rt.string, rt.union([rt.string, rt.null]));
+export const afterKeyObjectRT = rt.record(rt.string, rt.union([rt.string, rt.number, rt.null]));
 
 export const metricsExplorerRequestBodyOptionalFieldsRT = rt.partial({
   groupBy: rt.union([groupByRT, rt.array(groupByRT)]),

@@ -4,10 +4,30 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-
+import { groupBy, sortBy } from 'lodash';
 import { MetricsAPIRequest, MetricsAPIResponse } from '../../../../common/http_api';
 import { ESSearchClient } from '../../../lib/metrics/types';
 import { query } from '../../../lib/metrics';
+
+type Series = MetricsAPIResponse['series'];
+
+const mergeSeries = (previousSeries: Series, series: Series) => {
+  const allSeries = [...previousSeries, ...series];
+
+  const allSeriesById = groupBy(allSeries, 'id');
+
+  return Object.keys(allSeriesById).map((id) => {
+    const allSeriesForId = allSeriesById[id] as Series;
+    const first = allSeriesForId[0];
+    return {
+      ...first,
+      rows: sortBy(
+        allSeriesForId.flatMap((idSeries) => idSeries.rows),
+        'timestamp'
+      ),
+    };
+  });
+};
 
 const handleResponse = (
   client: ESSearchClient,
@@ -17,10 +37,13 @@ const handleResponse = (
   const combinedResponse = previousResponse
     ? {
         ...previousResponse,
-        series: [...previousResponse.series, ...resp.series],
+        series: mergeSeries(previousResponse.series, resp.series),
         info: resp.info,
       }
-    : resp;
+    : {
+        ...resp,
+        series: mergeSeries([], resp.series),
+      };
   if (resp.info.afterKey) {
     return query(client, { ...options, afterKey: resp.info.afterKey }).then(
       handleResponse(client, options, combinedResponse)

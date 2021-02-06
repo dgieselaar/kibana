@@ -12,32 +12,32 @@ import { calculateBucketSize } from './calculate_bucket_size';
 
 export const createAggregations = (options: MetricsAPIRequest) => {
   const { intervalString } = calculateBucketSize(options.timerange);
+  const metricsAggregations = createMetricsAggregations(options);
+
   const histogramAggregation = {
     histogram: {
       date_histogram: {
         field: options.timerange.field,
         fixed_interval: intervalString,
         offset: options.alignDataToEnd ? calculateDateHistogramOffset(options.timerange) : '0s',
-        extended_bounds: {
-          min: options.timerange.from,
-          max: options.timerange.to,
-        },
       },
-      aggregations: createMetricsAggregations(options),
     },
   };
 
   if (Array.isArray(options.groupBy) && options.groupBy.length) {
     const limit = options.limit || 9;
+    console.log({ limit });
     return {
       groupings: {
         composite: {
           size: limit,
-          sources: options.groupBy.map((field, index) => ({
-            [`groupBy${index}`]: { terms: { field } },
-          })),
+          sources: options.groupBy
+            .map((field, index) => ({
+              [`groupBy${index}`]: { terms: { field } },
+            }))
+            .concat(histogramAggregation),
         },
-        aggs: histogramAggregation,
+        aggs: metricsAggregations,
       },
     };
   }

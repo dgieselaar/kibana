@@ -21,6 +21,7 @@ import {
   PercentilesKeyedTypeRT,
   TopHitsTypeRT,
   MetricValueTypeRT,
+  TopMetricsTypeRT,
 } from '../types';
 
 const BASE_COLUMNS = [{ name: 'timestamp', type: 'date' }] as MetricsAPIColumn[];
@@ -58,7 +59,11 @@ const getValue = (valueObject: ValueObjectType) => {
   }
 
   if (TopHitsTypeRT.is(valueObject)) {
-    return valueObject.hits.hits.map((hit) => hit._source);
+    return valueObject.hits.hits.map((hit) => hit.fields);
+  }
+
+  if (TopMetricsTypeRT.is(valueObject)) {
+    return valueObject.top.map((res) => res.metrics);
   }
 
   return null;
