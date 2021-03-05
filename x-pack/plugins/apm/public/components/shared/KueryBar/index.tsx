@@ -25,6 +25,7 @@ import { getBoolFilter } from './get_bool_filter';
 // @ts-expect-error
 import { Typeahead } from './Typeahead';
 import { useProcessorEvent } from './use_processor_event';
+import { useServiceName } from '../../../hooks/use_service_name';
 
 const Container = euiStyled.div`
   margin-bottom: 10px;
@@ -77,10 +78,12 @@ export function KueryBar(props: {
   prepend?: React.ReactNode | string;
   config?: Config;
 }) {
-  const { groupId, serviceName } = useParams<{
+  const { groupId } = useParams<{
     groupId?: string;
     serviceName?: string;
   }>();
+  const serviceName = useServiceName();
+
   const history = useHistory();
   const [state, setState] = useState<State>({
     suggestions: [],
