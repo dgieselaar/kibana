@@ -26,6 +26,8 @@ import { EuiIcon } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import React from 'react';
 import { useHistory } from 'react-router-dom';
+import { ValuesType } from 'utility-types';
+import { isFiniteNumber } from '../../../../common/utils/is_finite_number';
 import { useChartTheme } from '../../../../../observability/public';
 import { asAbsoluteDateTime } from '../../../../common/utils/formatters';
 import { RectCoordinate, TimeSeries } from '../../../../typings/timeseries';
@@ -37,6 +39,9 @@ import { unit } from '../../../style/variables';
 import { ChartContainer } from './chart_container';
 import { onBrushEnd, isTimeseriesEmpty } from './helper/helper';
 import { getLatencyChartSelector } from '../../../selectors/latency_chart_selectors';
+import { APIReturnType } from '../../../services/rest/createCallApmApi';
+
+type Alert = ValuesType<APIReturnType<'GET /api/apm/alerts/inventory/top'>>;
 
 interface Props {
   id: string;
@@ -58,6 +63,7 @@ interface Props {
     typeof getLatencyChartSelector
   >['anomalyTimeseries'];
   customTheme?: Record<string, unknown>;
+  alerts?: Alert[];
 }
 
 export function TimeseriesChart({
@@ -72,6 +78,7 @@ export function TimeseriesChart({
   yDomain,
   anomalyTimeseries,
   customTheme = {},
+  alerts = [],
 }: Props) {
   const history = useHistory();
   const { annotations } = useAnnotationsContext();
@@ -80,9 +87,14 @@ export function TimeseriesChart({
   const chartTheme = useChartTheme();
 
   const xValues = timeseries.flatMap(({ data }) => data.map(({ x }) => x));
+  const yValues = timeseries
+    .flatMap(({ data }) => data.map((point) => ('y' in point ? point.y : null)))
+    .filter(isFiniteNumber);
 
   const min = Math.min(...xValues);
   const max = Math.max(...xValues);
+
+  const maxY = Math.max(...yValues);
 
   const xFormatter = niceTimeFormatter([min, max]);
 
@@ -191,6 +203,23 @@ export function TimeseriesChart({
             style={{ fill: anomalyTimeseries.scores.color }}
           />
         )}
+        {alerts.map((alert) => {
+          return (
+            <RectAnnotation
+              id={alert.group_by_value}
+              dataValues={[
+                {
+                  coordinates: {
+                    x0: alert.first_seen,
+                    x1: alert.timestamp,
+                    y0: 0,
+                    y1: maxY,
+                  },
+                },
+              ]}
+            />
+          );
+        })}
       </Chart>
     </ChartContainer>
   );

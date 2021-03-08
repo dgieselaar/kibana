@@ -18,5 +18,6 @@ export function useServiceName() {
   const match = useRouteMatch<{ serviceName?: string }>(
     '/services/:serviceName'
   );
+
   return match?.params?.serviceName;
 }

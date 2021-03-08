@@ -6,6 +6,10 @@
  */
 
 import React, { createContext, ReactNode } from 'react';
+import {
+  ENVIRONMENT_ALL,
+  ENVIRONMENT_NOT_DEFINED,
+} from '../../../common/environment_filter_values';
 import { isRumAgentName } from '../../../common/agent_name';
 import {
   TRANSACTION_PAGE_LOAD,
@@ -15,8 +19,14 @@ import { useServiceTransactionTypesFetcher } from './use_service_transaction_typ
 import { useUrlParams } from '../url_params_context/use_url_params';
 import { useServiceAgentNameFetcher } from './use_service_agent_name_fetcher';
 import { IUrlParams } from '../url_params_context/types';
+import { useFetcher } from '../../hooks/use_fetcher';
+import { useServiceName } from '../../hooks/use_service_name';
+import { APIReturnType } from '../../services/rest/createCallApmApi';
+
+type TopAlerts = APIReturnType<'GET /api/apm/alerts/inventory/top'>;
 
 export const APMServiceContext = createContext<{
+  alerts?: TopAlerts;
   agentName?: string;
   transactionType?: string;
   transactionTypes: string[];
@@ -29,6 +39,9 @@ export function ApmServiceContextProvider({
 }) {
   const { urlParams } = useUrlParams();
   const { agentName } = useServiceAgentNameFetcher();
+  const serviceName = useServiceName()!;
+  const { environment, start, end } = urlParams;
+
   const transactionTypes = useServiceTransactionTypesFetcher();
   const transactionType = getTransactionType({
     urlParams,
@@ -36,9 +49,42 @@ export function ApmServiceContextProvider({
     agentName,
   });
 
+  const { data: alerts = [] } = useFetcher(
+    (callApmApi) => {
+      if (!start || !end || !transactionType) {
+        return;
+      }
+
+      let kuery = `service.name:${serviceName}`;
+
+      if (environment && environment !== ENVIRONMENT_ALL.value) {
+        if (environment === ENVIRONMENT_NOT_DEFINED.value) {
+          kuery += ` and not (service.environment:*)`;
+        } else {
+          kuery += ` and service.environment:"${environment}"`;
+        }
+      }
+
+      kuery += ` and not (processor.event:transaction) or (processor.event:transaction and transaction.type:${transactionType})`;
+
+      return callApmApi({
+        endpoint: 'GET /api/apm/alerts/inventory/top',
+        params: {
+          query: {
+            start,
+            end,
+            kuery,
+          },
+        },
+      });
+    },
+    [start, end, serviceName, environment, transactionType],
+    { preservePreviousData: false }
+  );
+
   return (
     <APMServiceContext.Provider
-      value={{ agentName, transactionType, transactionTypes }}
+      value={{ agentName, alerts, transactionType, transactionTypes }}
       children={children}
     />
   );

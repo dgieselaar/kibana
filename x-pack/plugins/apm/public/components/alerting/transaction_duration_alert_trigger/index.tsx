@@ -73,7 +73,10 @@ interface Props {
 export function TransactionDurationAlertTrigger(props: Props) {
   const { setAlertParams, alertParams, setAlertProperty } = props;
   const { urlParams } = useUrlParams();
-  const { transactionTypes, transactionType } = useApmServiceContext();
+  const {
+    transactionTypes: availableTransactionTypes,
+    transactionType: selectedTransactionType,
+  } = useApmServiceContext();
   const serviceName = useServiceName();
   const { start, end } = urlParams;
   const { environmentOptions } = useEnvironmentsFetcher({
@@ -132,6 +135,12 @@ export function TransactionDurationAlertTrigger(props: Props) {
       yTickFormat={yTickFormat}
     />
   );
+
+  const transactionType = selectedTransactionType ?? urlParams.transactionType;
+
+  const transactionTypes = availableTransactionTypes.length
+    ? availableTransactionTypes.concat()
+    : [transactionType].filter(Boolean);
 
   if (!transactionTypes.length || !serviceName) {
     return null;

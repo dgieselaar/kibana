@@ -5,27 +5,29 @@
  * 2.0.
  */
 
-import { EuiBadge } from '@elastic/eui';
 import {
+  DefaultItemAction,
+  EuiBadge,
   EuiBasicTable,
   EuiBasicTableColumn,
   EuiBasicTableProps,
-  DefaultItemAction,
-  EuiTableSelectionType,
+  EuiFlexGroup,
+  EuiFlexItem,
   EuiLink,
+  EuiTableSelectionType,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
+import { capitalize } from 'lodash';
 import React from 'react';
 import { ValuesType } from 'utility-types';
-import { EuiText } from '@elastic/eui';
-import { EuiFlexItem } from '@elastic/eui';
-import { EuiFlexGroup } from '@elastic/eui';
 import { AlertSeverity } from '../../../../../alerts/common';
-import { useApmPluginContext } from '../../../context/apm_plugin/use_apm_plugin_context';
-import { APIReturnType } from '../../../services/rest/createCallApmApi';
 import { AlertType } from '../../../../common/alert_types';
-import { TimestampTooltip } from '../../shared/TimestampTooltip';
+import { useApmPluginContext } from '../../../context/apm_plugin/use_apm_plugin_context';
 import { useUrlParams } from '../../../context/url_params_context/use_url_params';
+import { useTheme } from '../../../hooks/use_theme';
+import { APIReturnType } from '../../../services/rest/createCallApmApi';
+import { SparkPlot } from '../../shared/charts/spark_plot';
+import { TimestampTooltip } from '../../shared/TimestampTooltip';
 
 type AlertItem = ValuesType<APIReturnType<'GET /api/apm/alerts/inventory/top'>>;
 
@@ -65,13 +67,90 @@ export function AlertsTable(props: AlertsTableProps) {
     urlParams: { start, end },
   } = useUrlParams();
 
+  const theme = useTheme();
+
   const columns: Array<EuiBasicTableColumn<AlertItem>> = [
     {
       field: 'timestamp',
-      name: 'Last updated',
-      render: (_, { timestamp }) => (
-        <TimestampTooltip time={timestamp} timeUnit="minutes" />
-      ),
+      name: 'Status',
+      render: (_, { timestamp, recovered }) => {
+        return (
+          <EuiFlexGroup
+            direction="row"
+            gutterSize="s"
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            <EuiFlexItem grow={false}>
+              {recovered ? (
+                <EuiBadge color="hollow">
+                  {i18n.translate(
+                    'xpack.apm.alertInventory.alertStatusRecovered',
+                    { defaultMessage: 'Recovered' }
+                  )}
+                </EuiBadge>
+              ) : (
+                <EuiBadge color="accent">
+                  {i18n.translate(
+                    'xpack.apm.alertInventory.alertStatusActive',
+                    { defaultMessage: 'Active' }
+                  )}
+                </EuiBadge>
+              )}
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <TimestampTooltip time={timestamp} timeUnit="minutes" />
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        );
+      },
+    },
+    {
+      field: 'severity_level',
+      name: 'Severity',
+      render: (_, { severity_level: severityLevel, timeseries }) => {
+        let label: string = '';
+
+        let color: string = 'default';
+
+        switch (severityLevel) {
+          case AlertSeverity.Warning:
+            color = 'warning';
+            label = i18n.translate(
+              'xpack.apm.alertInventory.severityLabel.warning',
+              { defaultMessage: 'warning' }
+            );
+            break;
+
+          case AlertSeverity.Critical:
+            color = 'danger';
+            label = i18n.translate(
+              'xpack.apm.alertInventory.severityLabel.warning',
+              { defaultMessage: 'critical' }
+            );
+            break;
+        }
+
+        const euiColorKey = `euiColor${capitalize(
+          color
+        )}` as keyof typeof theme.eui;
+
+        return (
+          <EuiFlexGroup gutterSize="s">
+            {label ? (
+              <EuiFlexItem grow={false}>
+                <EuiBadge color={color}>{label}</EuiBadge>
+              </EuiFlexItem>
+            ) : null}
+            <EuiFlexItem grow={false}>
+              <SparkPlot
+                series={timeseries}
+                color={euiColorKey}
+                valueLabel={<></>}
+              />
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        );
+      },
     },
     {
       field: 'first_seen',
@@ -97,33 +176,6 @@ export function AlertsTable(props: AlertsTableProps) {
       },
     },
     {
-      field: 'severity_level',
-      name: 'Severity',
-      render: (_, { severity_level: severityLevel }) => {
-        switch (severityLevel) {
-          case AlertSeverity.Warning:
-            return (
-              <EuiBadge color="warning">
-                {i18n.translate(
-                  'xpack.apm.alertInventory.severityLabel.warning',
-                  { defaultMessage: 'warning' }
-                )}
-              </EuiBadge>
-            );
-
-          case AlertSeverity.Critical:
-            return (
-              <EuiBadge color="danger">
-                {i18n.translate(
-                  'xpack.apm.alertInventory.severityLabel.warning',
-                  { defaultMessage: 'critical' }
-                )}
-              </EuiBadge>
-            );
-        }
-      },
-    },
-    {
       field: 'reason',
       name: 'Reason',
       render: (_, { reason, rule_type_id: ruleTypeId, fields }) => {
@@ -139,11 +191,26 @@ export function AlertsTable(props: AlertsTableProps) {
               )}&end=${encodeURIComponent(end!)}`
             );
             break;
+
+          case AlertType.TransactionDuration:
+            href = core.http.basePath.prepend(
+              `/app/apm/services/${
+                fields['service.name']
+              }/?transactionType=${encodeURIComponent(
+                String(fields['transaction.type'])
+              )}&start=${encodeURIComponent(start!)}&end=${encodeURIComponent(
+                end!
+              )}`
+            );
+            break;
         }
 
-        return <EuiLink href={href}>{reason}</EuiLink>;
+        return (
+          <EuiLink href={href} style={{ whiteSpace: 'nowrap' }}>
+            {reason}
+          </EuiLink>
+        );
       },
-      width: '50%',
     },
     {
       actions,
@@ -153,6 +220,7 @@ export function AlertsTable(props: AlertsTableProps) {
   return (
     <EuiBasicTable<AlertItem>
       {...props}
+      tableLayout="auto"
       isSelectable={true}
       selection={[] as EuiTableSelectionType<AlertItem>}
       columns={columns}

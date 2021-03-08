@@ -222,12 +222,12 @@ export function registerErrorCountAlertType({
       return event;
     },
     mapAlertInstanceToEvent: ({ context }) => {
+      const { serviceName, environment, triggerValue, threshold } =
+        context ?? {};
+
       if (!context) {
         return {};
       }
-
-      const { serviceName, environment, triggerValue, threshold } =
-        context ?? {};
 
       const event = {
         service: {

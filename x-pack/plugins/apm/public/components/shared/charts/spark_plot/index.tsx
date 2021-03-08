@@ -31,7 +31,8 @@ type Color =
   | 'euiColorVis6'
   | 'euiColorVis7'
   | 'euiColorVis8'
-  | 'euiColorVis9';
+  | 'euiColorVis9'
+  | string;
 
 export function SparkPlot({
   color,

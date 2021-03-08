@@ -8,6 +8,7 @@
 import { schema } from '@kbn/config-schema';
 import { Observable } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { Maybe } from '../../../typings/common';
 import {
   ENVIRONMENT_ALL,
   ENVIRONMENT_NOT_DEFINED,
@@ -23,7 +24,10 @@ import {
   TRANSACTION_TYPE,
 } from '../../../common/elasticsearch_fieldnames';
 import { ProcessorEvent } from '../../../common/processor_event';
-import { getDurationFormatter } from '../../../common/utils/formatters';
+import {
+  asMillisecondDuration,
+  getDurationFormatter,
+} from '../../../common/utils/formatters';
 import { environmentQuery } from '../../../server/utils/queries';
 import { getApmIndices } from '../settings/apm_indices/get_apm_indices';
 import { apmActionVariables } from './action_variables';
@@ -98,6 +102,9 @@ export function registerTransactionDurationAlertType({
             name: {
               type: 'keyword',
             },
+            type: {
+              type: 'keyword',
+            },
           },
         },
       },
@@ -135,6 +142,7 @@ export function registerTransactionDurationAlertType({
         transactionType,
         environment,
         triggerValue,
+        triggerValueNumber,
         threshold,
       } = context ?? {};
 
@@ -144,10 +152,12 @@ export function registerTransactionDurationAlertType({
         },
         alert: {
           severity: {
-            value: triggerValue as number,
+            value: triggerValueNumber as number,
             threshold: threshold as number,
           },
-          reason: `Error count for ${serviceName}/${transactionType} in ${environment} was above the threshold of ${threshold} (${triggerValue})`,
+          reason: `Transaction duration for ${serviceName}/${transactionType} in ${environment} was above the threshold of ${asMillisecondDuration(
+            threshold as Maybe<number>
+          )} (${triggerValue})`,
         },
       };
 
@@ -236,6 +246,7 @@ export function registerTransactionDurationAlertType({
             environment,
             threshold,
             triggerValue: transactionDurationFormatted,
+            triggerValueNumber: transactionDuration,
             interval: `${alertParams.windowSize}${alertParams.windowUnit}`,
           });
         });

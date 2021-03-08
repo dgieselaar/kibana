@@ -82,6 +82,9 @@ exports.EcsExtensionsMappings = {
     },
     alert: {
       properties: {
+        influencers: {
+          type: 'flattened',
+        },
         severity: {
           properties: {
             level: {
@@ -171,6 +174,7 @@ exports.EcsEventLogProperties = [
   'alert.severity.level',
   'alert.severity.value',
   'alert.severity.threshold',
+  'alert.influencers',
   'rule.id',
   'rule.name',
   'rule.executor.next_update_at',
