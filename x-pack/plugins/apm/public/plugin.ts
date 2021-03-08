@@ -139,7 +139,7 @@ export class ApmPlugin implements Plugin<ApmPluginSetup, ApmPluginStart> {
       icon: 'plugins/apm/public/icon.svg',
       category: DEFAULT_APP_CATEGORIES.observability,
 
-      async mount(params: AppMountParameters<unknown>) {
+      async mount(params: c) {
         // Load application bundle and Get start services
         const [{ renderApp }, [coreStart, corePlugins]] = await Promise.all([
           import('./application'),
@@ -155,6 +155,31 @@ export class ApmPlugin implements Plugin<ApmPluginSetup, ApmPluginStart> {
         );
       },
     });
+
+    if (plugins.alerts) {
+      core.application.register({
+        id: 'apm-alerts',
+        title: 'Alerts',
+        order: 8001,
+        euiIconType: 'logoObservability',
+        appRoute: '/app/apm/alerts',
+        category: DEFAULT_APP_CATEGORIES.observability,
+        async mount(params: AppMountParameters<unknown>) {
+          const [{ renderApp }, [coreStart, corePlugins]] = await Promise.all([
+            import('./application'),
+            core.getStartServices(),
+          ]);
+
+          return renderApp(
+            coreStart,
+            pluginSetupDeps,
+            params,
+            config,
+            corePlugins as ApmPluginStartDeps
+          );
+        },
+      });
+    }
 
     core.application.register({
       id: 'ux',

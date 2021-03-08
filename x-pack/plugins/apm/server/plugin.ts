@@ -90,10 +90,9 @@ export class APMPlugin implements Plugin<APMPluginSetup> {
 
     core.uiSettings.register(uiSettings);
 
-    if (plugins.actions && plugins.alerts) {
+    if (plugins.observability) {
       registerApmAlerts({
-        alerts: plugins.alerts,
-        actions: plugins.actions,
+        alerts: plugins.observability.alerts,
         ml: plugins.ml,
         config$: mergedConfig$,
       });

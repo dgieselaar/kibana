@@ -7,6 +7,7 @@
 
 import type { IRouter, RequestHandlerContext } from 'src/core/server';
 import type { PublicMethodsOf } from '@kbn/utility-types';
+import { IEvent } from '../../event_log/server';
 import { PublicAlertInstance } from './alert_instance';
 import { AlertTypeRegistry as OrigAlertTypeRegistry } from './alert_type_registry';
 import { PluginSetupContract, PluginStartContract } from './plugin';
@@ -155,6 +156,8 @@ export interface AlertType<
     params?: ActionVariable[];
   };
   minimumLicenseRequired: LicenseType;
+  mapAlertParamsToEvent?: (params: Params) => IEvent;
+  mapAlertInstanceToEvent?: (instance: { context?: Record<string, unknown> }) => IEvent;
 }
 
 export type UntypedAlertType = AlertType<

@@ -8,8 +8,12 @@
 import { schema } from '@kbn/config-schema';
 import { Observable } from 'rxjs';
 import { take } from 'rxjs/operators';
+import {
+  ENVIRONMENT_ALL,
+  ENVIRONMENT_NOT_DEFINED,
+} from '../../../common/environment_filter_values';
+import { ObservabilityAlertRegistry } from '../../../../observability/server';
 import { APMConfig } from '../..';
-import { AlertingPlugin } from '../../../../alerts/server';
 import { AlertType, ALERT_TYPES_CONFIG } from '../../../common/alert_types';
 import {
   PROCESSOR_EVENT,
@@ -26,7 +30,7 @@ import { apmActionVariables } from './action_variables';
 import { alertingEsClient } from './alerting_es_client';
 
 interface RegisterAlertParams {
-  alerts: AlertingPlugin['setup'];
+  alerts: ObservabilityAlertRegistry;
   config$: Observable<APMConfig>;
 }
 
@@ -70,6 +74,85 @@ export function registerTransactionDurationAlertType({
     },
     producer: 'apm',
     minimumLicenseRequired: 'basic',
+    mappings: {
+      properties: {
+        processor: {
+          properties: {
+            event: {
+              type: 'keyword',
+            },
+          },
+        },
+        service: {
+          properties: {
+            name: {
+              type: 'keyword',
+            },
+            environment: {
+              type: 'keyword',
+            },
+          },
+        },
+        transaction: {
+          properties: {
+            name: {
+              type: 'keyword',
+            },
+          },
+        },
+      },
+    },
+    mapAlertParamsToEvent: (params) => {
+      const event: Record<string, any> = {
+        processor: {
+          event: 'transaction',
+        },
+        transaction: {
+          type: params.transactionType,
+        },
+        service: {
+          name: params.serviceName,
+        },
+      };
+
+      if (
+        params.environment &&
+        params.environment !== ENVIRONMENT_NOT_DEFINED.value &&
+        params.environment !== ENVIRONMENT_ALL.value
+      ) {
+        event.service.environment = params.environment;
+      }
+
+      return event;
+    },
+    mapAlertInstanceToEvent: ({ context }) => {
+      if (!context) {
+        return {};
+      }
+
+      const {
+        serviceName,
+        transactionType,
+        environment,
+        triggerValue,
+        threshold,
+      } = context ?? {};
+
+      const event = {
+        alert_instance: {
+          title: `${serviceName}/${transactionType}:${environment}`,
+        },
+        alert: {
+          severity: {
+            value: triggerValue as number,
+            threshold: threshold as number,
+          },
+          reason: `Error count for ${serviceName}/${transactionType} in ${environment} was above the threshold of ${threshold} (${triggerValue})`,
+        },
+      };
+
+      return event;
+    },
     executor: async ({ services, params }) => {
       const config = await config$.pipe(take(1)).toPromise();
       const alertParams = params;

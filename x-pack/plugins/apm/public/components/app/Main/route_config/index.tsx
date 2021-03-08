@@ -30,6 +30,7 @@ import {
 } from './route_handlers/agent_configuration';
 import { enableServiceOverview } from '../../../../../common/ui_settings_keys';
 import { useApmPluginContext } from '../../../../context/apm_plugin/use_apm_plugin_context';
+import { AlertsPage } from '../../alerts_overview';
 
 /**
  * Given a path, redirect to that location, preserving the search and maintaining
@@ -361,6 +362,14 @@ export const routes: APMRouteDefinition[] = [
         defaultMessage: 'Anomaly detection',
       }
     ),
+  },
+  {
+    exact: true,
+    path: '/alerts',
+    component: AlertsPage,
+    breadcrumb: i18n.translate('xpack.apm.breadcrumb.settings.alerts', {
+      defaultMessage: 'Alerts',
+    }),
   },
 ];
 

@@ -18,7 +18,7 @@ export const plugin: PluginInitializer<ObservabilityPluginSetup, ObservabilityPl
 export * from './components/shared/action_menu/';
 
 export type { UXMetrics } from './components/shared/core_web_vitals/';
-export { getCoreVitalsComponent, HeaderMenuPortal } from './components/shared/';
+export { getCoreVitalsComponent, HeaderMenuPortal, ExperimentalBadge } from './components/shared/';
 
 export {
   useTrackPageview,

@@ -6,8 +6,9 @@
  */
 
 import type { PublicMethodsOf } from '@kbn/utility-types';
-import { Dictionary, pickBy, mapValues, without, cloneDeep } from 'lodash';
+import { Dictionary, pickBy, mapValues, without, cloneDeep, merge } from 'lodash';
 import type { Request } from '@hapi/hapi';
+import { inspect } from 'util';
 import { addSpaceIdToPath } from '../../../spaces/server';
 import { Logger, KibanaRequest } from '../../../../../src/core/server';
 import { TaskRunnerContext } from './task_runner_factory';
@@ -47,8 +48,10 @@ import {
   AlertInstanceState,
   AlertInstanceContext,
   WithoutReservedActionGroups,
+  AlertSeverity,
 } from '../../common';
 import { NormalizedAlertType } from '../alert_type_registry';
+import { intervalFromNow } from '../../../task_manager/server/lib/intervals';
 
 const FALLBACK_RETRY_INTERVAL = '5m';
 
@@ -144,6 +147,128 @@ export class TaskRunner<
     this.context.basePathService.set(fakeRequest, path);
 
     return fakeRequest;
+  }
+
+  private generateNewAndRecoveredInstanceEvents(
+    params: GenerateNewAndRecoveredInstanceEventsParams<InstanceState, InstanceContext>
+  ) {
+    const {
+      eventLogger,
+      alertId,
+      namespace,
+      currentAlertInstances,
+      originalAlertInstances,
+      recoveredAlertInstances,
+      event: baseEvent,
+    } = params;
+    const originalAlertInstanceIds = Object.keys(originalAlertInstances);
+    const currentAlertInstanceIds = Object.keys(currentAlertInstances);
+    const recoveredAlertInstanceIds = Object.keys(recoveredAlertInstances);
+    const newIds = without(currentAlertInstanceIds, ...originalAlertInstanceIds);
+
+    const logInstanceEvent = (
+      instanceId: string,
+      instance: AlertInstance,
+      action: string,
+      message: string,
+      reason: string,
+      group?: string,
+      subgroup?: string
+    ) => {
+      const { instance: instanceMeta } = instance.toRaw().meta;
+
+      const event: IEvent = merge({}, baseEvent, {
+        event: {
+          action,
+          kind: 'alert',
+        },
+        kibana: {
+          alerting: {
+            instance_id: instanceId,
+            ...(group ? { action_group_id: group } : {}),
+            ...(subgroup ? { action_subgroup: subgroup } : {}),
+          },
+          saved_objects: [
+            {
+              rel: SAVED_OBJECT_REL_PRIMARY,
+              type: 'alert',
+              id: alertId,
+              namespace,
+            },
+          ],
+        },
+        alert_instance: {
+          ...instanceMeta,
+          started_at: instanceMeta.started_at.toISOString(),
+        },
+        alert: {
+          reason,
+          severity: {
+            level: AlertSeverity.Warning,
+          },
+        },
+        message,
+      });
+
+      if (this.alertType.mapAlertInstanceToEvent) {
+        merge(
+          event,
+          this.alertType.mapAlertInstanceToEvent({
+            context: instance.getScheduledActionOptions()?.context,
+          })
+        );
+      }
+      eventLogger.logEvent(event);
+    };
+
+    for (const id of recoveredAlertInstanceIds) {
+      const { group: actionGroup, subgroup: actionSubgroup } =
+        recoveredAlertInstances[id].getLastScheduledActions() ?? {};
+      const message = `${params.alertLabel} instance '${id}' has recovered`;
+      logInstanceEvent(
+        id,
+        recoveredAlertInstances[id],
+        EVENT_LOG_ACTIONS.recoveredInstance,
+        message,
+        params.alertLabel,
+        actionGroup,
+        actionSubgroup
+      );
+    }
+
+    for (const id of newIds) {
+      const { actionGroup, subgroup: actionSubgroup } =
+        currentAlertInstances[id].getScheduledActionOptions() ?? {};
+      const message = `${params.alertLabel} created new instance: '${id}'`;
+      logInstanceEvent(
+        id,
+        currentAlertInstances[id],
+        EVENT_LOG_ACTIONS.newInstance,
+        message,
+        params.alertLabel,
+        actionGroup,
+        actionSubgroup
+      );
+    }
+
+    for (const id of currentAlertInstanceIds) {
+      const { actionGroup, subgroup: actionSubgroup } =
+        currentAlertInstances[id].getScheduledActionOptions() ?? {};
+      const message = `${params.alertLabel} active instance: '${id}' in ${
+        actionSubgroup
+          ? `actionGroup(subgroup): '${actionGroup}(${actionSubgroup})'`
+          : `actionGroup: '${actionGroup}'`
+      }`;
+      logInstanceEvent(
+        id,
+        currentAlertInstances[id],
+        EVENT_LOG_ACTIONS.activeInstance,
+        message,
+        params.alertLabel,
+        actionGroup,
+        actionSubgroup
+      );
+    }
   }
 
   private getServicesWithSpaceLevelPermissions(
@@ -251,7 +376,7 @@ export class TaskRunner<
             InstanceState,
             InstanceContext,
             WithoutReservedActionGroups<ActionGroupIds, RecoveryActionGroupId>
-          >(alertInstances),
+          >(alertInstances, alertId),
         },
         params,
         state: alertTypeState as State,
@@ -277,6 +402,15 @@ export class TaskRunner<
     event.event = event.event || {};
     event.event.outcome = 'success';
 
+    if (!event.rule) {
+      event.rule = {};
+    }
+    event.rule.name = alert.name;
+
+    if (this.alertType.mapAlertParamsToEvent) {
+      merge(event, this.alertType.mapAlertParamsToEvent(alert.params));
+    }
+
     // Cleanup alert instances that are no longer scheduling actions to avoid over populating the alertInstances object
     const instancesWithScheduledActions = pickBy(
       alertInstances,
@@ -296,7 +430,7 @@ export class TaskRunner<
       alertLabel,
     });
 
-    generateNewAndRecoveredInstanceEvents({
+    this.generateNewAndRecoveredInstanceEvents({
       eventLogger,
       originalAlertInstances,
       currentAlertInstances: instancesWithScheduledActions,
@@ -304,6 +438,7 @@ export class TaskRunner<
       alertId,
       alertLabel,
       namespace,
+      event,
     });
 
     if (!muteAll) {
@@ -470,7 +605,21 @@ export class TaskRunner<
           },
         ],
       },
+      rule: {
+        id: alertId,
+        name: this.taskInstance.params.alertName,
+        executor: {
+          next_update_at: this.taskInstance.schedule
+            ? intervalFromNow(this.taskInstance.schedule.interval)?.toISOString()
+            : undefined,
+        },
+      },
+      rule_type: {
+        id: this.alertType.id,
+        name: this.alertType.name,
+      },
     };
+
     eventLogger.startTiming(event);
 
     const { state, schedule } = await errorAsAlertTaskRunResult(
@@ -569,80 +718,7 @@ interface GenerateNewAndRecoveredInstanceEventsParams<
   alertId: string;
   alertLabel: string;
   namespace: string | undefined;
-}
-
-function generateNewAndRecoveredInstanceEvents<
-  InstanceState extends AlertInstanceState,
-  InstanceContext extends AlertInstanceContext
->(params: GenerateNewAndRecoveredInstanceEventsParams<InstanceState, InstanceContext>) {
-  const {
-    eventLogger,
-    alertId,
-    namespace,
-    currentAlertInstances,
-    originalAlertInstances,
-    recoveredAlertInstances,
-  } = params;
-  const originalAlertInstanceIds = Object.keys(originalAlertInstances);
-  const currentAlertInstanceIds = Object.keys(currentAlertInstances);
-  const recoveredAlertInstanceIds = Object.keys(recoveredAlertInstances);
-  const newIds = without(currentAlertInstanceIds, ...originalAlertInstanceIds);
-
-  for (const id of recoveredAlertInstanceIds) {
-    const { group: actionGroup, subgroup: actionSubgroup } =
-      recoveredAlertInstances[id].getLastScheduledActions() ?? {};
-    const message = `${params.alertLabel} instance '${id}' has recovered`;
-    logInstanceEvent(id, EVENT_LOG_ACTIONS.recoveredInstance, message, actionGroup, actionSubgroup);
-  }
-
-  for (const id of newIds) {
-    const { actionGroup, subgroup: actionSubgroup } =
-      currentAlertInstances[id].getScheduledActionOptions() ?? {};
-    const message = `${params.alertLabel} created new instance: '${id}'`;
-    logInstanceEvent(id, EVENT_LOG_ACTIONS.newInstance, message, actionGroup, actionSubgroup);
-  }
-
-  for (const id of currentAlertInstanceIds) {
-    const { actionGroup, subgroup: actionSubgroup } =
-      currentAlertInstances[id].getScheduledActionOptions() ?? {};
-    const message = `${params.alertLabel} active instance: '${id}' in ${
-      actionSubgroup
-        ? `actionGroup(subgroup): '${actionGroup}(${actionSubgroup})'`
-        : `actionGroup: '${actionGroup}'`
-    }`;
-    logInstanceEvent(id, EVENT_LOG_ACTIONS.activeInstance, message, actionGroup, actionSubgroup);
-  }
-
-  function logInstanceEvent(
-    instanceId: string,
-    action: string,
-    message: string,
-    group?: string,
-    subgroup?: string
-  ) {
-    const event: IEvent = {
-      event: {
-        action,
-      },
-      kibana: {
-        alerting: {
-          instance_id: instanceId,
-          ...(group ? { action_group_id: group } : {}),
-          ...(subgroup ? { action_subgroup: subgroup } : {}),
-        },
-        saved_objects: [
-          {
-            rel: SAVED_OBJECT_REL_PRIMARY,
-            type: 'alert',
-            id: alertId,
-            namespace,
-          },
-        ],
-      },
-      message,
-    };
-    eventLogger.logEvent(event);
-  }
+  event: IEvent;
 }
 
 interface ScheduleActionsForRecoveredInstancesParams<

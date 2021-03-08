@@ -5,55 +5,131 @@
  * 2.0.
  */
 
-exports.EcsKibanaExtensionsMappings = {
+exports.EcsExtensionsMappings = {
   properties: {
-    // kibana server uuid
-    server_uuid: {
-      type: 'keyword',
-      ignore_above: 1024,
-    },
-    // alerting specific fields
-    alerting: {
+    kibana: {
       properties: {
-        instance_id: {
+        // kibana server uuid
+        server_uuid: {
           type: 'keyword',
           ignore_above: 1024,
         },
-        action_group_id: {
-          type: 'keyword',
-          ignore_above: 1024,
+        // alerting specific fields
+        alerting: {
+          properties: {
+            instance_id: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+            action_group_id: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+            action_subgroup: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+            status: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+          },
         },
-        action_subgroup: {
-          type: 'keyword',
-          ignore_above: 1024,
-        },
-        status: {
-          type: 'keyword',
-          ignore_above: 1024,
+        // array of saved object references, for "linking" via search
+        saved_objects: {
+          type: 'nested',
+          properties: {
+            // relation; currently only supports "primary" or not set
+            rel: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+            // relevant kibana space
+            namespace: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+            id: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+            type: {
+              type: 'keyword',
+              ignore_above: 1024,
+            },
+          },
         },
       },
     },
-    // array of saved object references, for "linking" via search
-    saved_objects: {
-      type: 'nested',
+    alert_instance: {
       properties: {
-        // relation; currently only supports "primary" or not set
-        rel: {
-          type: 'keyword',
-          ignore_above: 1024,
-        },
-        // relevant kibana space
-        namespace: {
-          type: 'keyword',
-          ignore_above: 1024,
-        },
         id: {
           type: 'keyword',
-          ignore_above: 1024,
         },
-        type: {
+        uuid: {
           type: 'keyword',
-          ignore_above: 1024,
+        },
+        name: {
+          type: 'keyword',
+        },
+        title: {
+          type: 'keyword',
+        },
+        started_at: {
+          type: 'date',
+        },
+      },
+    },
+    alert: {
+      properties: {
+        severity: {
+          properties: {
+            level: {
+              type: 'keyword',
+            },
+            value: {
+              type: 'float',
+            },
+            threshold: {
+              type: 'float',
+            },
+          },
+        },
+        reason: {
+          type: 'keyword',
+        },
+      },
+    },
+    rule: {
+      properties: {
+        id: {
+          type: 'keyword',
+        },
+        name: {
+          type: 'keyword',
+        },
+        executor: {
+          properties: {
+            next_update_at: {
+              type: 'date',
+            },
+          },
+        },
+      },
+    },
+    rule_type: {
+      properties: {
+        id: {
+          type: 'keyword',
+        },
+        name: {
+          type: 'keyword',
+        },
+        description: {
+          type: 'text',
+        },
+        producer: {
+          type: 'keyword',
         },
       },
     },
@@ -73,6 +149,7 @@ exports.EcsEventLogProperties = [
   'event.end',
   'event.outcome', // optional, but one of failure, success, unknown
   'event.reason',
+  'event.kind',
   'error.message',
   'user.name',
   'kibana.server_uuid',
@@ -85,6 +162,21 @@ exports.EcsEventLogProperties = [
   'kibana.saved_objects.id',
   'kibana.saved_objects.name',
   'kibana.saved_objects.type',
+  'alert_instance.id',
+  'alert_instance.uuid',
+  'alert_instance.title',
+  'alert_instance.name',
+  'alert_instance.started_at',
+  'alert.reason',
+  'alert.severity.level',
+  'alert.severity.value',
+  'alert.severity.threshold',
+  'rule.id',
+  'rule.name',
+  'rule.executor.next_update_at',
+  'rule_type.id',
+  'rule_type.name',
+  'rule_type.description',
 ];
 
 // properties that can have multiple values (array vs single value)

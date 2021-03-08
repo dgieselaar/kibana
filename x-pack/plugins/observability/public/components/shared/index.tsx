@@ -7,6 +7,7 @@
 
 import React, { lazy, Suspense } from 'react';
 import { CoreVitalProps, HeaderMenuPortalProps } from './types';
+export { ExperimentalBadge } from './experimental_badge';
 
 const CoreVitalsLazy = lazy(() => import('./core_web_vitals/index'));
 

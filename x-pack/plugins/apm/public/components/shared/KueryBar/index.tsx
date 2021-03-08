@@ -9,6 +9,8 @@ import { i18n } from '@kbn/i18n';
 import { startsWith, uniqueId } from 'lodash';
 import React, { useState } from 'react';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
+import { UIProcessorEvent } from '../../../../common/processor_event';
+import { ESFilter } from '../../../../../../typings/elasticsearch';
 import { euiStyled } from '../../../../../../../src/plugins/kibana_react/common';
 import {
   esKuery,
@@ -28,6 +30,12 @@ const Container = euiStyled.div`
   margin-bottom: 10px;
 `;
 
+interface Config {
+  placeholder: string;
+  indexPattern: IIndexPattern;
+  boolFilter: ESFilter[];
+}
+
 interface State {
   suggestions: QuerySuggestion[];
   isLoadingSuggestions: boolean;
@@ -38,7 +46,37 @@ function convertKueryToEsQuery(kuery: string, indexPattern: IIndexPattern) {
   return esKuery.toElasticsearchQuery(ast, indexPattern);
 }
 
-export function KueryBar(props: { prepend?: React.ReactNode | string }) {
+function getPlaceholder(processorEvent: UIProcessorEvent | undefined) {
+  const examples = {
+    transaction: 'transaction.duration.us > 300000',
+    error: 'http.response.status_code >= 400',
+    metric: 'process.pid = "1234"',
+    defaults:
+      'transaction.duration.us > 300000 AND http.response.status_code >= 400',
+  };
+
+  const example = examples[processorEvent || 'defaults'];
+
+  const placeholder = i18n.translate('xpack.apm.kueryBar.placeholder', {
+    defaultMessage: `Search {event, select,
+            transaction {transactions}
+            metric {metrics}
+            error {errors}
+            other {transactions, errors and metrics}
+          } (E.g. {queryExample})`,
+    values: {
+      queryExample: example,
+      event: processorEvent,
+    },
+  });
+
+  return placeholder;
+}
+
+export function KueryBar(props: {
+  prepend?: React.ReactNode | string;
+  config?: Config;
+}) {
   const { groupId, serviceName } = useParams<{
     groupId?: string;
     serviceName?: string;
@@ -56,30 +94,18 @@ export function KueryBar(props: { prepend?: React.ReactNode | string }) {
 
   const processorEvent = useProcessorEvent();
 
-  const examples = {
-    transaction: 'transaction.duration.us > 300000',
-    error: 'http.response.status_code >= 400',
-    metric: 'process.pid = "1234"',
-    defaults:
-      'transaction.duration.us > 300000 AND http.response.status_code >= 400',
+  const { indexPattern: dynamicIndexPattern } = useDynamicIndexPatternFetcher();
+
+  const { indexPattern, boolFilter, placeholder } = props.config || {
+    boolFilter: getBoolFilter({
+      groupId,
+      processorEvent,
+      serviceName,
+      urlParams,
+    }),
+    indexPattern: dynamicIndexPattern,
+    placeholder: getPlaceholder(processorEvent),
   };
-
-  const example = examples[processorEvent || 'defaults'];
-
-  const { indexPattern } = useDynamicIndexPatternFetcher();
-
-  const placeholder = i18n.translate('xpack.apm.kueryBar.placeholder', {
-    defaultMessage: `Search {event, select,
-            transaction {transactions}
-            metric {metrics}
-            error {errors}
-            other {transactions, errors and metrics}
-          } (E.g. {queryExample})`,
-    values: {
-      queryExample: example,
-      event: processorEvent,
-    },
-  });
 
   async function onChange(inputValue: string, selectionStart: number) {
     if (indexPattern == null) {
@@ -96,12 +122,7 @@ export function KueryBar(props: { prepend?: React.ReactNode | string }) {
         (await data.autocomplete.getQuerySuggestions({
           language: 'kuery',
           indexPatterns: [indexPattern],
-          boolFilter: getBoolFilter({
-            groupId,
-            processorEvent,
-            serviceName,
-            urlParams,
-          }),
+          boolFilter,
           query: inputValue,
           selectionStart,
           selectionEnd: selectionStart,

@@ -49,6 +49,10 @@
                 "reason": {
                     "ignore_above": 1024,
                     "type": "keyword"
+                },
+                "kind": {
+                    "ignore_above": 1024,
+                    "type": "keyword"
                 }
             }
         },
@@ -120,6 +124,77 @@
                         }
                     },
                     "type": "nested"
+                }
+            }
+        },
+        "alert_instance": {
+            "properties": {
+                "id": {
+                    "type": "keyword"
+                },
+                "uuid": {
+                    "type": "keyword"
+                },
+                "title": {
+                    "type": "keyword"
+                },
+                "name": {
+                    "type": "keyword"
+                },
+                "started_at": {
+                    "type": "date"
+                }
+            }
+        },
+        "alert": {
+            "properties": {
+                "reason": {
+                    "type": "keyword"
+                },
+                "severity": {
+                    "properties": {
+                        "level": {
+                            "type": "keyword"
+                        },
+                        "value": {
+                            "type": "float"
+                        },
+                        "threshold": {
+                            "type": "float"
+                        }
+                    }
+                }
+            }
+        },
+        "rule": {
+            "properties": {
+                "id": {
+                    "ignore_above": 1024,
+                    "type": "keyword"
+                },
+                "name": {
+                    "ignore_above": 1024,
+                    "type": "keyword"
+                },
+                "executor": {
+                    "properties": {
+                        "next_update_at": {
+                            "type": "date"
+                        }
+                    }
+                }
+            }
+        },
+        "rule_type": {
+            "properties": {
+                "id": {
+                    "type": "keyword"
+                },
+                "name": {
+                    "type": "keyword"
+                },
+                "description": {
+                    "type": "text"
                 }
             }
         }

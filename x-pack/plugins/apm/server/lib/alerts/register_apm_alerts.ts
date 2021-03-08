@@ -6,8 +6,7 @@
  */
 
 import { Observable } from 'rxjs';
-import { AlertingPlugin } from '../../../../alerts/server';
-import { ActionsPlugin } from '../../../../actions/server';
+import { ObservabilityAlertRegistry } from '../../../../observability/server';
 import { registerTransactionDurationAlertType } from './register_transaction_duration_alert_type';
 import { registerTransactionDurationAnomalyAlertType } from './register_transaction_duration_anomaly_alert_type';
 import { registerErrorCountAlertType } from './register_error_count_alert_type';
@@ -16,8 +15,7 @@ import { MlPluginSetup } from '../../../../ml/server';
 import { registerTransactionErrorRateAlertType } from './register_transaction_error_rate_alert_type';
 
 interface Params {
-  alerts: AlertingPlugin['setup'];
-  actions: ActionsPlugin['setup'];
+  alerts: ObservabilityAlertRegistry;
   ml?: MlPluginSetup;
   config$: Observable<APMConfig>;
 }

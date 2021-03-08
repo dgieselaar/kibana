@@ -9,8 +9,8 @@ import { schema } from '@kbn/config-schema';
 import { isEmpty } from 'lodash';
 import { Observable } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { ObservabilityAlertRegistry } from '../../../../observability/server';
 import { APMConfig } from '../..';
-import { AlertingPlugin } from '../../../../alerts/server';
 import { AlertType, ALERT_TYPES_CONFIG } from '../../../common/alert_types';
 import {
   EVENT_OUTCOME,
@@ -28,7 +28,7 @@ import { apmActionVariables } from './action_variables';
 import { alertingEsClient } from './alerting_es_client';
 
 interface RegisterAlertParams {
-  alerts: AlertingPlugin['setup'];
+  alerts: ObservabilityAlertRegistry;
   config$: Observable<APMConfig>;
 }
 

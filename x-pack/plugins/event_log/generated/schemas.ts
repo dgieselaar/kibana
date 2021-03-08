@@ -19,7 +19,7 @@ type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends Array<infer U> ? Array<DeepPartial<U>> : DeepPartial<T[P]>;
 };
 
-export const ECS_VERSION = '1.6.0';
+export const ECS_VERSION = '1.8.0';
 
 // types and config-schema describing the es structures
 export type IValidatedEvent = TypeOf<typeof EventSchema>;
@@ -33,7 +33,7 @@ export const EventSchema = schema.maybe(
     ecs: schema.maybe(
       schema.object({
         version: ecsString(),
-      })
+      }, { unknowns: 'allow' })
     ),
     event: schema.maybe(
       schema.object({
@@ -44,17 +44,18 @@ export const EventSchema = schema.maybe(
         end: ecsDate(),
         outcome: ecsString(),
         reason: ecsString(),
-      })
+        kind: ecsString(),
+      }, { unknowns: 'allow' })
     ),
     error: schema.maybe(
       schema.object({
         message: ecsString(),
-      })
+      }, { unknowns: 'allow' })
     ),
     user: schema.maybe(
       schema.object({
         name: ecsString(),
-      })
+      }, { unknowns: 'allow' })
     ),
     kibana: schema.maybe(
       schema.object({
@@ -65,7 +66,7 @@ export const EventSchema = schema.maybe(
             action_group_id: ecsString(),
             action_subgroup: ecsString(),
             status: ecsString(),
-          })
+          }, { unknowns: 'allow' })
         ),
         saved_objects: schema.maybe(
           schema.arrayOf(
@@ -74,12 +75,51 @@ export const EventSchema = schema.maybe(
               namespace: ecsString(),
               id: ecsString(),
               type: ecsString(),
-            })
+            }, { unknowns: 'allow' })
           )
         ),
-      })
+      }, { unknowns: 'allow' })
     ),
-  })
+    alert_instance: schema.maybe(
+      schema.object({
+        id: ecsString(),
+        uuid: ecsString(),
+        title: ecsString(),
+        name: ecsString(),
+        started_at: ecsDate(),
+      }, { unknowns: 'allow' })
+    ),
+    alert: schema.maybe(
+      schema.object({
+        reason: ecsString(),
+        severity: schema.maybe(
+          schema.object({
+            level: ecsString(),
+            value: ecsNumber(),
+            threshold: ecsNumber(),
+          }, { unknowns: 'allow' })
+        ),
+      }, { unknowns: 'allow' })
+    ),
+    rule: schema.maybe(
+      schema.object({
+        id: ecsString(),
+        name: ecsString(),
+        executor: schema.maybe(
+          schema.object({
+            next_update_at: ecsDate(),
+          }, { unknowns: 'allow' })
+        ),
+      }, { unknowns: 'allow' })
+    ),
+    rule_type: schema.maybe(
+      schema.object({
+        id: ecsString(),
+        name: ecsString(),
+        description: ecsString(),
+      }, { unknowns: 'allow' })
+    ),
+  }, { unknowns: 'allow' })
 );
 
 function ecsStringMulti() {

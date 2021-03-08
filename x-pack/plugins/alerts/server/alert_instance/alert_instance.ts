@@ -45,7 +45,7 @@ export class AlertInstance<
   private meta: AlertInstanceMeta;
   private state: State;
 
-  constructor({ state, meta = {} }: RawAlertInstance = {}) {
+  constructor({ state, meta }: RawAlertInstance) {
     this.state = (state || {}) as State;
     this.meta = meta;
   }

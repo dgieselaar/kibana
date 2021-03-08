@@ -106,6 +106,10 @@ import {
   transactionErrorCountChartPreview,
   transactionDurationChartPreview,
 } from './alerts/chart_preview';
+import {
+  alertsDynamicIndexPatternRoute,
+  topAlertsRoute,
+} from './alerts/alert_inventory';
 
 const createApmApi = () => {
   const api = createApi()
@@ -214,7 +218,9 @@ const createApmApi = () => {
     // Alerting
     .add(transactionErrorCountChartPreview)
     .add(transactionDurationChartPreview)
-    .add(transactionErrorRateChartPreview);
+    .add(transactionErrorRateChartPreview)
+    .add(alertsDynamicIndexPatternRoute)
+    .add(topAlertsRoute);
 
   return api;
 };

@@ -8,6 +8,13 @@
 import { schema } from '@kbn/config-schema';
 import { Observable } from 'rxjs';
 import { isEmpty } from 'lodash';
+import { ObservabilityAlertRegistry } from '../../../../observability/server';
+import { AlertSeverity } from '../../../../alerts/common';
+import {
+  ENVIRONMENT_ALL,
+  ENVIRONMENT_NOT_DEFINED,
+} from '../../../common/environment_filter_values';
+import { IEvent } from '../../../../event_log/server';
 import { getSeverity } from '../../../common/anomaly_detection';
 import { ANOMALY_SEVERITY } from '../../../../ml/common';
 import { KibanaRequest } from '../../../../../../src/core/server';
@@ -16,14 +23,13 @@ import {
   ALERT_TYPES_CONFIG,
   ANOMALY_ALERT_SEVERITY_TYPES,
 } from '../../../common/alert_types';
-import { AlertingPlugin } from '../../../../alerts/server';
 import { APMConfig } from '../..';
 import { MlPluginSetup } from '../../../../ml/server';
 import { getMLJobs } from '../service_map/get_service_anomalies';
 import { apmActionVariables } from './action_variables';
 
 interface RegisterAlertParams {
-  alerts: AlertingPlugin['setup'];
+  alerts: ObservabilityAlertRegistry;
   ml?: MlPluginSetup;
   config$: Observable<APMConfig>;
 }
@@ -48,7 +54,6 @@ const alertTypeConfig =
 export function registerTransactionDurationAnomalyAlertType({
   alerts,
   ml,
-  config$,
 }: RegisterAlertParams) {
   alerts.registerType({
     id: AlertType.TransactionDurationAnomaly,
@@ -243,6 +248,57 @@ export function registerTransactionDurationAnomalyAlertType({
           });
         });
       }
+    },
+    mapAlertParamsToEvent: (params) => {
+      const event: Record<string, any> = {
+        processor: {
+          event: 'transaction',
+        },
+      };
+
+      event.service = {};
+
+      if (params.serviceName) {
+        event.service.name = params.serviceName;
+      }
+
+      if (
+        params.environment &&
+        params.environment !== ENVIRONMENT_NOT_DEFINED.value &&
+        params.environment !== ENVIRONMENT_ALL.value
+      ) {
+        event.service.environment = params.environment;
+      }
+
+      if (params.transactionType) {
+        event.transaction = { type: params.transactionType };
+      }
+
+      return event;
+    },
+    mapAlertInstanceToEvent: ({ context }) => {
+      const event = {
+        service: {
+          name: context.serviceName,
+          environment: !(
+            context.environment === ENVIRONMENT_NOT_DEFINED.value ||
+            context.environment === ENVIRONMENT_ALL.value
+          )
+            ? context.environment
+            : undefined,
+        },
+        transaction: {
+          type: context.transactionType,
+        },
+        alert_instance: {
+          severity: {
+            code: context.severity as any,
+            value: context.thresholdValue as number,
+          },
+        },
+      };
+
+      return event;
     },
   });
 }

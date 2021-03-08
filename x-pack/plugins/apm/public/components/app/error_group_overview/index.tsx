@@ -35,6 +35,26 @@ export function ErrorGroupOverview({ serviceName }: ErrorGroupOverviewProps) {
     groupId: undefined,
   });
 
+  const { data: alerts } = useFetcher(
+    (callApmApi) => {
+      if (!start || !end) {
+        return;
+      }
+
+      return callApmApi({
+        endpoint: 'GET /api/apm/alerts/inventory/top',
+        params: {
+          query: {
+            start,
+            end,
+            kuery: `service.name:${serviceName} and processor.event:error`,
+          },
+        },
+      });
+    },
+    [start, end, serviceName]
+  );
+
   const { data: errorGroupListData } = useFetcher(
     (callApmApi) => {
       const normalizedSortDirection = sortDirection === 'asc' ? 'asc' : 'desc';

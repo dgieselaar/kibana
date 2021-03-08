@@ -146,6 +146,7 @@ export class Plugin implements CorePlugin<IEventLogService, IEventLogClientServi
       savedObjectProviderRegistry: this.savedObjectProviderRegistry,
       spacesService: spaces?.spacesService,
     });
+
     return this.eventLogClientService;
   }
 

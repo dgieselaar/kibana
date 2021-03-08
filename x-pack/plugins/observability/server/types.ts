@@ -6,6 +6,15 @@
  */
 
 import type { IRouter, RequestHandlerContext } from 'src/core/server';
+import { MappingsDefinition } from '.';
+import type {
+  AlertingPlugin,
+  AlertInstanceContext,
+  AlertInstanceState,
+  AlertTypeParams,
+  AlertTypeState,
+  AlertType,
+} from '../../alerts/server';
 import type { LicensingApiRequestHandlerContext } from '../../licensing/server';
 
 /**
@@ -19,3 +28,23 @@ export interface ObservabilityRequestHandlerContext extends RequestHandlerContex
  * @internal
  */
 export type ObservabilityPluginRouter = IRouter<ObservabilityRequestHandlerContext>;
+
+export interface ObservabilityAlertRegistry {
+  registerType<
+    Params extends AlertTypeParams = AlertTypeParams,
+    State extends AlertTypeState = AlertTypeState,
+    InstanceState extends AlertInstanceState = AlertInstanceState,
+    InstanceContext extends AlertInstanceContext = AlertInstanceContext,
+    ActionGroupIds extends string = never,
+    RecoveryActionGroupId extends string = never
+  >(
+    alertType: AlertType<
+      Params,
+      State,
+      InstanceState,
+      InstanceContext,
+      ActionGroupIds,
+      RecoveryActionGroupId
+    > & { mappings?: MappingsDefinition }
+  ): void;
+}

@@ -17,6 +17,7 @@ export * from './builtin_action_groups';
 export * from './disabled_action_groups';
 export * from './alert_notify_when_type';
 export * from './parse_duration';
+export * from './alert_severity';
 
 export interface AlertingFrameworkHealth {
   isSufficientlySecure: boolean;

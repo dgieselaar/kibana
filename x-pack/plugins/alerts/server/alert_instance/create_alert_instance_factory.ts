@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import uuid from 'uuid';
 import { AlertInstanceContext, AlertInstanceState } from '../types';
 import { AlertInstance } from './alert_instance';
 
@@ -12,10 +13,23 @@ export function createAlertInstanceFactory<
   InstanceState extends AlertInstanceState,
   InstanceContext extends AlertInstanceContext,
   ActionGroupIds extends string
->(alertInstances: Record<string, AlertInstance<InstanceState, InstanceContext, ActionGroupIds>>) {
+>(
+  alertInstances: Record<string, AlertInstance<InstanceState, InstanceContext, ActionGroupIds>>,
+  alertId: string
+) {
   return (id: string): AlertInstance<InstanceState, InstanceContext, ActionGroupIds> => {
     if (!alertInstances[id]) {
-      alertInstances[id] = new AlertInstance<InstanceState, InstanceContext, ActionGroupIds>();
+      alertInstances[id] = new AlertInstance<InstanceState, InstanceContext, ActionGroupIds>({
+        meta: {
+          instance: {
+            uuid: uuid.v4(),
+            id: [alertId, id].join('|'),
+            name: id,
+            title: id,
+            started_at: new Date(),
+          },
+        },
+      });
     }
 
     return alertInstances[id];

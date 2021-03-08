@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-const EVENT_LOG_NAME_SUFFIX = `-event-log`;
+const EVENT_LOG_NAME_SUFFIX = `-event-log-rac`;
 
 export interface EsNames {
   base: string;

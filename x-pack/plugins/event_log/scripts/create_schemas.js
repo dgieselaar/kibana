@@ -27,7 +27,7 @@ function main() {
   const ecsMappings = readEcsJSONFile(ecsDir, ECS_MAPPINGS_FILE);
 
   // add our custom fields
-  ecsMappings.mappings.properties.kibana = mappings.EcsKibanaExtensionsMappings;
+  lodash.merge(ecsMappings.mappings, mappings.EcsExtensionsMappings);
 
   const exportedProperties = mappings.EcsEventLogProperties;
   const multiValuedProperties = new Set(mappings.EcsEventLogMultiValuedProperties);
@@ -175,7 +175,7 @@ function generateSchemaLines(lineWriter, prop, mappings) {
   }
   lineWriter.dedent();
 
-  lineWriter.addLine('})');
+  lineWriter.addLine("}, { unknowns: 'allow' })");
   if (mappings.type === 'nested') {
     lineWriter.dedent();
     lineWriter.addLine(')');

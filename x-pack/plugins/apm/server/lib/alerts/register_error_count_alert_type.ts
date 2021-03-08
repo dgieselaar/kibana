@@ -9,9 +9,12 @@ import { schema, TypeOf } from '@kbn/config-schema';
 import { isEmpty } from 'lodash';
 import { Observable } from 'rxjs';
 import { take } from 'rxjs/operators';
+import {
+  ENVIRONMENT_ALL,
+  ENVIRONMENT_NOT_DEFINED,
+} from '../../../common/environment_filter_values';
 import { APMConfig } from '../..';
 import {
-  AlertingPlugin,
   AlertInstanceContext,
   AlertInstanceState,
   AlertTypeState,
@@ -31,9 +34,10 @@ import { environmentQuery } from '../../../server/utils/queries';
 import { getApmIndices } from '../settings/apm_indices/get_apm_indices';
 import { apmActionVariables } from './action_variables';
 import { alertingEsClient } from './alerting_es_client';
+import { ObservabilityAlertRegistry } from '../../../../observability/server';
 
 interface RegisterAlertParams {
-  alerts: AlertingPlugin['setup'];
+  alerts: ObservabilityAlertRegistry;
   config$: Observable<APMConfig>;
 }
 
@@ -138,11 +142,7 @@ export function registerErrorCountAlertType({
           serviceName: string;
           environment?: string;
         }) {
-          const alertInstanceName = [
-            AlertType.ErrorCount,
-            serviceName,
-            environment,
-          ]
+          const alertInstanceName = [serviceName, environment]
             .filter((name) => name)
             .join('_');
 
@@ -169,6 +169,89 @@ export function registerErrorCountAlertType({
           }
         });
       }
+    },
+    mappings: {
+      properties: {
+        processor: {
+          properties: {
+            event: {
+              type: 'keyword',
+            },
+          },
+        },
+        service: {
+          properties: {
+            name: {
+              type: 'keyword',
+            },
+            environment: {
+              type: 'keyword',
+            },
+          },
+        },
+        transaction: {
+          properties: {
+            name: {
+              type: 'keyword',
+            },
+          },
+        },
+      },
+    },
+    mapAlertParamsToEvent: (params) => {
+      const event: Record<string, any> = {
+        processor: {
+          event: 'error',
+        },
+      };
+
+      event.service = {};
+
+      if (params.serviceName) {
+        event.service.name = params.serviceName;
+      }
+
+      if (
+        params.environment &&
+        params.environment !== ENVIRONMENT_NOT_DEFINED.value &&
+        params.environment !== ENVIRONMENT_ALL.value
+      ) {
+        event.service.environment = params.environment;
+      }
+
+      return event;
+    },
+    mapAlertInstanceToEvent: ({ context }) => {
+      if (!context) {
+        return {};
+      }
+
+      const { serviceName, environment, triggerValue, threshold } =
+        context ?? {};
+
+      const event = {
+        service: {
+          name: serviceName,
+          environment: !(
+            environment === ENVIRONMENT_NOT_DEFINED.value ||
+            environment === ENVIRONMENT_ALL.value
+          )
+            ? environment
+            : undefined,
+        },
+        alert_instance: {
+          title: `${serviceName}:${environment}`,
+        },
+        alert: {
+          severity: {
+            value: triggerValue as number,
+            threshold: threshold as number,
+          },
+          reason: `Error count for ${serviceName} in ${environment} was above the threshold of ${threshold} (${triggerValue})`,
+        },
+      };
+
+      return event;
     },
   });
 }
