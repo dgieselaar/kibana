@@ -33,6 +33,10 @@ import { getApmIndices } from '../settings/apm_indices/get_apm_indices';
 import { apmActionVariables } from './action_variables';
 import { alertingEsClient } from './alerting_es_client';
 
+function tag(key: string, value: unknown) {
+  return `${key}:${String(value).replace(/:/g, '__')}`;
+}
+
 interface RegisterAlertParams {
   alerts: ObservabilityAlertRegistry;
   config$: Observable<APMConfig>;
@@ -147,6 +151,13 @@ export function registerTransactionDurationAlertType({
       } = context ?? {};
 
       const event = {
+        service: {
+          name: serviceName,
+          ...(environment ? { environment } : {}),
+        },
+        transaction: {
+          type: transactionType,
+        },
         alert_instance: {
           title: `${serviceName}/${transactionType}:${environment}`,
         },
@@ -155,6 +166,11 @@ export function registerTransactionDurationAlertType({
             value: triggerValueNumber as number,
             threshold: threshold as number,
           },
+          influencers: [
+            tag('service.name', serviceName),
+            ...(environment ? [tag('service.environment', environment)] : []),
+            tag('transaction.type', transactionType),
+          ],
           reason: `Transaction duration for ${serviceName}/${transactionType} in ${environment} was above the threshold of ${asMillisecondDuration(
             threshold as Maybe<number>
           )} (${triggerValue})`,
@@ -209,6 +225,7 @@ export function registerTransactionDurationAlertType({
               terms: {
                 field: SERVICE_ENVIRONMENT,
                 size: maxServiceEnvironments,
+                missing: '',
               },
             },
           },
@@ -235,7 +252,8 @@ export function registerTransactionDurationAlertType({
         ).formatted;
 
         environments.buckets.map((bucket) => {
-          const environment = bucket.key;
+          const environment = bucket.key ?? null;
+
           const alertInstance = services.alertInstanceFactory(
             `${AlertType.TransactionDuration}_${environment}`
           );

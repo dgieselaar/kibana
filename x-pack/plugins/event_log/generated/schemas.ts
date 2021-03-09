@@ -91,7 +91,6 @@ export const EventSchema = schema.maybe(
     ),
     alert: schema.maybe(
       schema.object({
-        reason: ecsString(),
         severity: schema.maybe(
           schema.object({
             level: ecsString(),
@@ -99,6 +98,8 @@ export const EventSchema = schema.maybe(
             threshold: ecsNumber(),
           }, { unknowns: 'allow' })
         ),
+        reason: ecsString(),
+        influencers: ecsStringMulti(),
       }, { unknowns: 'allow' })
     ),
     rule: schema.maybe(

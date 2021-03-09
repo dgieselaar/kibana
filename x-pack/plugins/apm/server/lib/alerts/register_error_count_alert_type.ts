@@ -36,6 +36,10 @@ import { apmActionVariables } from './action_variables';
 import { alertingEsClient } from './alerting_es_client';
 import { ObservabilityAlertRegistry } from '../../../../observability/server';
 
+function tag(key: string, value: unknown) {
+  return `${key}:${String(value).replace(/:/g, '__')}`;
+}
+
 interface RegisterAlertParams {
   alerts: ObservabilityAlertRegistry;
   config$: Observable<APMConfig>;
@@ -123,6 +127,7 @@ export function registerErrorCountAlertType({
                   terms: {
                     field: SERVICE_ENVIRONMENT,
                     size: maxServiceEnvironments,
+                    missing: '',
                   },
                 },
               },
@@ -149,6 +154,7 @@ export function registerErrorCountAlertType({
           const alertInstance = services.alertInstanceFactory(
             alertInstanceName
           );
+
           alertInstance.scheduleActions(alertTypeConfig.defaultActionGroupId, {
             serviceName,
             environment,
@@ -232,12 +238,7 @@ export function registerErrorCountAlertType({
       const event = {
         service: {
           name: serviceName,
-          environment: !(
-            environment === ENVIRONMENT_NOT_DEFINED.value ||
-            environment === ENVIRONMENT_ALL.value
-          )
-            ? environment
-            : undefined,
+          ...(environment ? { environment } : {}),
         },
         alert_instance: {
           title: `${serviceName}:${environment}`,
@@ -248,6 +249,10 @@ export function registerErrorCountAlertType({
             threshold: threshold as number,
           },
           reason: `Error count for ${serviceName} in ${environment} was above the threshold of ${threshold} (${triggerValue})`,
+          influencers: [
+            tag('service.name', serviceName),
+            ...(environment ? [tag('service.environment', environment)] : []),
+          ],
         },
       };
 

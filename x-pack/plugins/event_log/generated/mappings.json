@@ -148,9 +148,6 @@
         },
         "alert": {
             "properties": {
-                "reason": {
-                    "type": "keyword"
-                },
                 "severity": {
                     "properties": {
                         "level": {
@@ -162,6 +159,15 @@
                         "threshold": {
                             "type": "float"
                         }
+                    }
+                },
+                "reason": {
+                    "type": "keyword"
+                },
+                "influencers": {
+                    "type": "keyword",
+                    "meta": {
+                        "isArray": "true"
                     }
                 }
             }

@@ -30,6 +30,7 @@ export async function getTopAlerts({
     'alert.severity.level',
     'alert.severity.value',
     'alert.reason',
+    'alert.influencers',
     '@timestamp',
     'rule.id',
     'rule.name',
@@ -104,6 +105,11 @@ export async function getTopAlerts({
                       field: 'alert.severity.value',
                     },
                   },
+                  threshold: {
+                    max: {
+                      field: 'alert.severity.threshold',
+                    },
+                  },
                 },
               },
             },
@@ -133,6 +139,7 @@ export async function getTopAlerts({
           unique: bucket.unique_instances.value,
           group_by_field: groupByField,
           group_by_value: latest[groupByField]![0] as string,
+          influencers: (latest['alert.influencers'] as Maybe<string[]>) ?? [],
           fields: (fields ?? []).reduce((prev, field) => {
             if ((latest as any)[field]?.[0]) {
               prev[field] = (latest as any)[field][0];
@@ -142,6 +149,7 @@ export async function getTopAlerts({
           timeseries: bucket.timeseries.buckets.map((dateBucket) => ({
             x: dateBucket.key,
             y: dateBucket.severity.value,
+            threshold: dateBucket.threshold.value,
           })),
         };
       }) ?? []
@@ -193,10 +201,12 @@ export async function getTopAlerts({
     getRecoveredInstances(),
   ]);
 
-  return activeInstances.map((instance) => {
+  const instances = activeInstances.map((instance) => {
     return {
       ...instance,
       recovered: recoveredInstances.includes(instance.group_by_value),
     };
   });
+
+  return instances;
 }

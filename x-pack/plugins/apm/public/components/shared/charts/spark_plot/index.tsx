@@ -12,6 +12,7 @@ import {
   AreaSeries,
   Chart,
   CurveType,
+  LineSeries,
   ScaleType,
   Settings,
 } from '@elastic/charts';
@@ -39,9 +40,11 @@ export function SparkPlot({
   series,
   valueLabel,
   compact,
+  thresholdSeries,
 }: {
   color: Color;
   series?: Coordinate[] | null;
+  thresholdSeries?: Coordinate[];
   valueLabel: React.ReactNode;
   compact?: boolean;
 }) {
@@ -96,6 +99,16 @@ export function SparkPlot({
               color={colorValue}
               curve={CurveType.CURVE_MONOTONE_X}
             />
+            {thresholdSeries ? (
+              <LineSeries
+                id="threshold"
+                xScaleType={ScaleType.Time}
+                yScaleType={ScaleType.Linear}
+                data={thresholdSeries}
+                color="red"
+                curve={CurveType.CURVE_MONOTONE_X}
+              />
+            ) : null}
           </Chart>
         )}
       </EuiFlexItem>

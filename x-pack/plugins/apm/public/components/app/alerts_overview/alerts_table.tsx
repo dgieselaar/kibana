@@ -146,6 +146,10 @@ export function AlertsTable(props: AlertsTableProps) {
                 series={timeseries}
                 color={euiColorKey}
                 valueLabel={<></>}
+                thresholdSeries={timeseries.map((coordinate) => ({
+                  x: coordinate.x,
+                  y: coordinate.threshold,
+                }))}
               />
             </EuiFlexItem>
           </EuiFlexGroup>
@@ -165,7 +169,6 @@ export function AlertsTable(props: AlertsTableProps) {
       render: (_, { rule_name: ruleName, rule_id: ruleId }) => {
         return (
           <EuiLink
-            style={{ whiteSpace: 'nowrap' }}
             href={core.http.basePath.prepend(
               `/app/management/insightsAndAlerting/triggersActions/alert/${ruleId}`
             )}
@@ -205,11 +208,7 @@ export function AlertsTable(props: AlertsTableProps) {
             break;
         }
 
-        return (
-          <EuiLink href={href} style={{ whiteSpace: 'nowrap' }}>
-            {reason}
-          </EuiLink>
-        );
+        return <EuiLink href={href}>{reason}</EuiLink>;
       },
     },
     {

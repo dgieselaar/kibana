@@ -7,18 +7,23 @@
 
 import {
   EuiButton,
+  EuiFacetButton,
+  EuiFacetGroup,
   EuiFlexGroup,
   EuiFlexItem,
   EuiPage,
   EuiPageHeader,
+  EuiPanel,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import React from 'react';
+import { sortBy } from 'lodash';
+import React, { useState } from 'react';
 import { ExperimentalBadge } from '../../../../../observability/public';
+import { asPercent } from '../../../../common/utils/formatters';
 import { useUrlParams } from '../../../context/url_params_context/use_url_params';
 import { useFetcher } from '../../../hooks/use_fetcher';
-import { KueryBar } from '../../shared/KueryBar';
 import { DatePicker } from '../../shared/DatePicker';
+import { KueryBar } from '../../shared/KueryBar';
 import { AlertsTable } from './alerts_table';
 
 /**
@@ -90,7 +95,7 @@ export function AlertsPage() {
       }
     : undefined;
 
-  const { data: alerts } = useFetcher(
+  const { data: alerts = [] } = useFetcher(
     (callApmApi) => {
       if (!start || !end) {
         return;
@@ -109,6 +114,39 @@ export function AlertsPage() {
     },
     [start, end, kuery]
   );
+
+  const [selectedInfluencers, setSelectedInfluencers] = useState<string[]>([]);
+
+  const numAlerts = alerts.length;
+
+  const topInfluencers = sortBy(
+    alerts
+      .flatMap((alert) => alert.influencers)
+      .reduce((prev, influencer) => {
+        let existing = prev.find((infl) => infl.tag === influencer);
+        if (!existing) {
+          existing = { tag: influencer, count: 0 };
+          prev.push(existing);
+        }
+        existing.count += 1;
+        return prev;
+      }, [] as Array<{ tag: string; count: number }>),
+    'count'
+  )
+    .reverse()
+    .map((influencer) => {
+      return {
+        ...influencer,
+        selected: selectedInfluencers.includes(influencer.tag),
+        share: asPercent(influencer.count / numAlerts, 1),
+      };
+    });
+
+  const displayedAlerts = selectedInfluencers.length
+    ? alerts.filter((alert) =>
+        selectedInfluencers.every((tag) => alert.influencers.includes(tag))
+      )
+    : alerts;
 
   return (
     <EuiPage>
@@ -144,7 +182,48 @@ export function AlertsPage() {
             </EuiFlexGroup>
           </EuiFlexItem>
           <EuiFlexItem>
-            <AlertsTable items={alerts ?? []} />
+            {topInfluencers.length ? (
+              <EuiFlexGroup direction="column" gutterSize="m">
+                {/* <EuiFlexItem grow={false}>
+                  <EuiTitle size="s">
+                    <h3>
+                      {i18n.translate(
+                        'xpack.observability.alertsInfluencersHeader',
+                        { defaultMessage: 'Influencers' }
+                      )}
+                    </h3>
+                  </EuiTitle>
+                </EuiFlexItem> */}
+                <EuiFlexItem grow={false}>
+                  <EuiPanel paddingSize="m">
+                    <EuiFacetGroup gutterSize="s" layout="horizontal">
+                      {topInfluencers.slice(0, 10).map((influencer) => (
+                        <EuiFacetButton
+                          key={influencer.tag}
+                          quantity={influencer.count}
+                          isSelected={influencer.selected}
+                          onClick={() => {
+                            const selected = influencer.selected;
+                            setSelectedInfluencers((influencers) =>
+                              selected
+                                ? influencers.filter(
+                                    (tag) => tag !== influencer.tag
+                                  )
+                                : influencers.concat(influencer.tag)
+                            );
+                          }}
+                        >
+                          {influencer.tag}
+                        </EuiFacetButton>
+                      ))}
+                    </EuiFacetGroup>
+                  </EuiPanel>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            ) : null}
+          </EuiFlexItem>
+          <EuiFlexItem>
+            <AlertsTable items={displayedAlerts} />
           </EuiFlexItem>
         </EuiFlexGroup>
       </EuiPageHeader>

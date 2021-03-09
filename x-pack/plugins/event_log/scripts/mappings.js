@@ -83,7 +83,7 @@ exports.EcsExtensionsMappings = {
     alert: {
       properties: {
         influencers: {
-          type: 'flattened',
+          type: 'keyword',
         },
         severity: {
           properties: {
@@ -97,6 +97,9 @@ exports.EcsExtensionsMappings = {
               type: 'float',
             },
           },
+        },
+        reason: {
+          type: 'keyword',
         },
       },
     },
@@ -170,6 +173,7 @@ exports.EcsEventLogProperties = [
   'alert.severity.level',
   'alert.severity.value',
   'alert.severity.threshold',
+  'alert.reason',
   'alert.influencers',
   'rule.id',
   'rule.name',
@@ -180,4 +184,4 @@ exports.EcsEventLogProperties = [
 ];
 
 // properties that can have multiple values (array vs single value)
-exports.EcsEventLogMultiValuedProperties = ['tags'];
+exports.EcsEventLogMultiValuedProperties = ['tags', 'alert.influencers'];
