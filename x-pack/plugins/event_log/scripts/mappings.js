@@ -98,9 +98,6 @@ exports.EcsExtensionsMappings = {
             },
           },
         },
-        reason: {
-          type: 'keyword',
-        },
       },
     },
     rule: {
@@ -170,7 +167,6 @@ exports.EcsEventLogProperties = [
   'alert_instance.title',
   'alert_instance.name',
   'alert_instance.started_at',
-  'alert.reason',
   'alert.severity.level',
   'alert.severity.value',
   'alert.severity.threshold',
