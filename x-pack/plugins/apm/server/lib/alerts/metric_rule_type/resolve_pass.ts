@@ -301,7 +301,9 @@ export async function resolvePass({
             ? Object.fromEntries(
                 sourcesAsList.map((source, index) => [
                   source.name,
-                  Array.isArray(bucket.key) ? bucket.key[index] : bucket.key,
+                  Array.isArray(bucket.key)
+                    ? bucket.key[index]
+                    : (bucket.key as string),
                 ])
               )
             : {};
