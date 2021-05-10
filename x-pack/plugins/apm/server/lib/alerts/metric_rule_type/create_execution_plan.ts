@@ -150,7 +150,7 @@ export function createExecutionPlan({
 }) {
   return {
     async evaluate({ time }: { time: number }) {
-      const queries = 'index' in config ? [config] : config.queries;
+      const queries = 'query' in config ? [config.query] : config.queries;
 
       const queryResults = await Promise.all(
         queries.map(async (query) => {

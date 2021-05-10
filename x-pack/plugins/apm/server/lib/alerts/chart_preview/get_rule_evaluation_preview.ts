@@ -6,7 +6,7 @@
  */
 
 import pLimit from 'p-limit';
-import { ESSearchClient } from 'typings/elasticsearch';
+import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { createExecutionPlan } from '../metric_rule_type/create_execution_plan';
 import { getSteps } from '../metric_rule_type/get_steps';

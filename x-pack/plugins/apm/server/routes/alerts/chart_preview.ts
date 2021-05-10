@@ -95,12 +95,18 @@ const ruleEvaluationPreview = createApmServerRoute({
   endpoint: 'POST /api/apm/alerts/rule_evaluation_preview',
   params: t.type({
     body: t.intersection([
-      t.partial({
-        from: toNumberRt,
-      }),
-      t.type({
-        config: configRt,
-      }),
+      t.partial(
+        {
+          from: toNumberRt,
+        },
+        'from'
+      ),
+      t.type(
+        {
+          config: configRt,
+        },
+        'config'
+      ),
     ]),
   }),
   options: {

@@ -99,7 +99,10 @@ const configRt = t.intersection(
     t.partial({
       step: durationRt,
     }),
-    t.union([queryRt, t.type({ queries: t.array(queryRt) })]),
+    t.union([
+      t.type({ query: queryRt }),
+      t.type({ queries: t.array(queryRt) }),
+    ]),
   ],
   'config'
 );

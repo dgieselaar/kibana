@@ -72,6 +72,6 @@ export function createMetricQueryResolver(defaults?: Record<string, any>) {
         resolver: resolverFn,
       });
     },
-    get: defaults,
+    get: () => defaults,
   };
 }
