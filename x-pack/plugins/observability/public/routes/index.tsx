@@ -15,6 +15,7 @@ import { jsonRt } from './json_rt';
 import { AlertsPage } from '../pages/alerts';
 import { CasesPage } from '../pages/cases';
 import { ExploratoryViewPage } from '../components/shared/exploratory_view';
+import { AlertsAsCodeDemoPage } from '../pages/alerts_as_code_demo';
 
 export type RouteParams<T extends keyof typeof routes> = DecodeParams<typeof routes[T]['params']>;
 
@@ -114,6 +115,17 @@ export const routes = {
         text: i18n.translate('xpack.observability.alerts.breadcrumb', {
           defaultMessage: 'Alerts',
         }),
+      },
+    ],
+  },
+  '/aac': {
+    handler: () => {
+      return <AlertsAsCodeDemoPage />;
+    },
+    params: {},
+    breadcrumb: [
+      {
+        text: 'Alerts as code demo',
       },
     ],
   },
