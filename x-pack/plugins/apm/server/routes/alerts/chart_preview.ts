@@ -113,7 +113,9 @@ const ruleEvaluationPreview = createApmServerRoute({
     tags: ['access:apm'],
   },
   handler: async ({ params, context }) => {
-    return getRuleEvaluationPreview({
+    console.log(require('util').inspect(params.body, { depth: null }));
+
+    const preview = await getRuleEvaluationPreview({
       config: params.body.config,
       from: params.body.from,
       to: Date.now(),
@@ -126,6 +128,12 @@ const ruleEvaluationPreview = createApmServerRoute({
         },
       },
     });
+
+    console.log(require('util').inspect(preview, { depth: null }));
+
+    return {
+      preview,
+    };
   },
 });
 

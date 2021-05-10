@@ -45,7 +45,7 @@ const metricRt = t.intersection([
 
 const metricContainerRt = t.record(t.string, metricRt);
 
-const groupingRt = t.type(
+const groupingRt = t.partial(
   {
     by: t.record(
       t.string,
@@ -76,7 +76,7 @@ const runtimeMappingsRt = t.record(
 
 const queryRt = t.intersection(
   [
-    t.union([groupingRt, t.strict({})]),
+    groupingRt,
     t.type({
       index: t.union([t.string, t.array(t.string)]),
       metrics: metricContainerRt,

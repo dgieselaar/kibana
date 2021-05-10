@@ -10,6 +10,7 @@ import { PathReporter } from 'io-ts/lib/PathReporter';
 import { mapValues, flatten, pickBy, uniq } from 'lodash';
 import * as math from 'mathjs';
 import { ESSearchClient } from 'typings/elasticsearch';
+import { arrayUnionToCallable } from '../../../../common/utils/array_union_to_callable';
 import {
   getMetricQueryResolver,
   QueryMetricAggregation,
@@ -89,9 +90,9 @@ function parseMetrics({
 
       const { record, ...meta } = metricConfig;
 
-      const { range, offset } = (meta as unknown) as ValuesType<
-        UnionToIntersection<typeof meta>
-      >;
+      const { range, offset } = (meta as any)[
+        Object.keys(meta)[0]
+      ] as ValuesType<UnionToIntersection<typeof meta>>;
 
       let end =
         time -
@@ -210,24 +211,18 @@ export function createExecutionPlan({
                 return metric.meta.aggregation;
               });
 
-              const groupConfig =
-                'by' in config
-                  ? { by: config.by, limit: config.limit }
-                  : { by: {} };
+              const groupConfig = query.by
+                ? { by: query.by, limit: query.limit }
+                : undefined;
 
-              if ('by' in query) {
-                groupConfig.by = query.by;
-                groupConfig.limit = query.limit;
-              }
-
-              const sources = Object.entries(groupConfig.by).map(
-                ([name, source]) => {
-                  return {
-                    name,
-                    source,
-                  };
-                }
-              );
+              const sources = groupConfig
+                ? Object.entries(groupConfig.by).map(([name, source]) => {
+                    return {
+                      name,
+                      source,
+                    };
+                  })
+                : [];
 
               const response = await clusterClient.search({
                 index: query.index,
@@ -244,10 +239,21 @@ export function createExecutionPlan({
                     ? aggs
                     : {
                         groups: {
-                          multi_terms: {
-                            terms: sources.map((source) => source.source),
-                            ...({ size: groupConfig.limit ?? 10000 } as {}),
-                          },
+                          ...(sources.length === 1
+                            ? {
+                                terms: {
+                                  ...sources[0].source,
+                                  size: groupConfig!.limit,
+                                },
+                              }
+                            : {
+                                multi_terms: {
+                                  terms: sources.map((source) => source.source),
+                                  ...({
+                                    size: groupConfig!.limit ?? 10000,
+                                  } as {}),
+                                },
+                              }),
                           aggs,
                         },
                       },
@@ -272,9 +278,12 @@ export function createExecutionPlan({
                       },
                     ];
 
-              return buckets.map((bucket) => {
+              return arrayUnionToCallable(buckets).map((bucket) => {
+                const keys = Array.isArray(bucket.key)
+                  ? bucket.key
+                  : [bucket.key as string];
                 const labels = Object.fromEntries(
-                  bucket.key.map((key, index) => {
+                  keys.map((key, index) => {
                     return [sources[index].name, key];
                   })
                 );
@@ -287,7 +296,7 @@ export function createExecutionPlan({
                 );
 
                 return {
-                  timestamp: time,
+                  time,
                   labels,
                   metrics: aggregatedMetrics,
                 };
@@ -309,6 +318,7 @@ export function createExecutionPlan({
                 }
               );
               return {
+                time: measurement.time,
                 labels: measurement.labels,
                 metrics: {
                   ...measurement.metrics,

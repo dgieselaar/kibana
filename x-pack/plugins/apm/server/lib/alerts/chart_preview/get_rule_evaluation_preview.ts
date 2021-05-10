@@ -11,7 +11,7 @@ import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_d
 import { createExecutionPlan } from '../metric_rule_type/create_execution_plan';
 import { getSteps } from '../metric_rule_type/get_steps';
 
-export function getRuleEvaluationPreview({
+export async function getRuleEvaluationPreview({
   config,
   from,
   to,
@@ -28,7 +28,7 @@ export function getRuleEvaluationPreview({
   });
 
   if (!config.step || !from) {
-    return plan.evaluate({ time: to });
+    return [await plan.evaluate({ time: to })];
   }
 
   const steps = getSteps({
@@ -38,13 +38,17 @@ export function getRuleEvaluationPreview({
     max: 20,
   });
 
+  console.log(JSON.stringify(steps));
+
   const limiter = pLimit(5);
 
-  return steps.map((step) =>
-    limiter(() => {
-      return plan.evaluate({
-        time: step.time,
-      });
-    })
+  return await Promise.all(
+    steps.map((step) =>
+      limiter(() => {
+        return plan.evaluate({
+          time: step.time,
+        });
+      })
+    )
   );
 }

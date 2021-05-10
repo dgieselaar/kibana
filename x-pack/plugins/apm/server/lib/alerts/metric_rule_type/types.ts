@@ -8,4 +8,5 @@
 export interface Measurement {
   labels: Record<string, string>;
   metrics: Record<string, number | null>;
+  time: number;
 }
