@@ -35,6 +35,15 @@ export type ESSearchResponse<
   TOptions extends { restTotalHitsAsInt: boolean } = { restTotalHitsAsInt: false }
 > = InferSearchResponseOf<TDocument, TSearchRequest, TOptions>;
 
+export interface ESSearchClient<
+  TDocument = unknown,
+  TOptions extends { restTotalHitsAsInt: boolean } = { restTotalHitsAsInt: false }
+> {
+  search<TSearchRequest extends ESSearchRequest>(
+    request: TSearchRequest
+  ): Promise<ESSearchResponse<TDocument, TSearchRequest, TOptions>>;
+}
+
 export {
   InferSearchResponseOf,
   AggregationResultOf,

@@ -6,17 +6,15 @@
  */
 import * as t from 'io-ts';
 import { propsToSchema } from '@kbn/io-ts-utils/target/props_to_schema';
-import moment from 'moment';
-import { ValuesType } from 'utility-types';
 import { parseInterval } from '../../../../../../../src/plugins/data/common';
-import { metricConfigRt } from '../../../../common/rules/metric_config_rt';
 import { AlertType, ALERT_TYPES_CONFIG } from '../../../../common/alert_types';
 import {
   createLifecycleRuleTypeFactory,
   getRuleExecutorData,
 } from '../../../../../rule_registry/server';
 import { RegisterRuleDependencies } from '../register_apm_alerts';
-import { resolvePass, PassResponse } from './resolve_pass';
+import { configRt } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
+import { createExecutionPlan } from './create_execution_plan';
 
 export function registerMetricRuleType({
   alerting,
@@ -41,7 +39,7 @@ export function registerMetricRuleType({
       validate: {
         params: propsToSchema(
           t.type({
-            config: metricConfigRt,
+            config: configRt,
           })
         ),
       },
@@ -50,31 +48,42 @@ export function registerMetricRuleType({
           services: { scopedClusterClient },
         } = options;
 
-        const ruleDataWriter = ruleDataClient.getWriter();
-        const ruleExecutorData = getRuleExecutorData(type, options);
+        // const ruleDataWriter = ruleDataClient.getWriter();
+        // const ruleExecutorData = getRuleExecutorData(type, options);
 
-        const { config } = options.params;
+        // const { config } = options.params;
 
-        const until = moment(
-          options.startedAt.getTime() -
-            parseInterval(config.query_delay)!.asMilliseconds()
-        )
-          .startOf('minute')
-          .valueOf();
+        // const plan = createExecutionPlan({
+        //   config,
+        //   scopedClusterClient,
+        // });
 
-        const series: Array<ValuesType<PassResponse>> = [];
-        for (const pass of config.passes) {
-          series.push(
-            ...(await resolvePass({
-              by: config.by,
-              pass,
-              ruleDataWriter,
-              scopedClusterClient,
-              until,
-              ruleExecutorData,
-            }))
-          );
-        }
+        // const results = await plan.evaluate({
+        //   time: options.startedAt.getTime(),
+        // });
+
+        return {};
+
+        // const until = moment(
+        //   options.startedAt.getTime() -
+        //     parseInterval(config.query_delay)!.asMilliseconds()
+        // )
+        //   .startOf('minute')
+        //   .valueOf();
+
+        // const series: Array<ValuesType<PassResponse>> = [];
+        // for (const pass of config.passes) {
+        //   series.push(
+        //     ...(await resolvePass({
+        //       by: config.by,
+        //       pass,
+        //       ruleDataWriter,
+        //       scopedClusterClient,
+        //       until,
+        //       ruleExecutorData,
+        //     }))
+        //   );
+        // }
       },
     })
   );
