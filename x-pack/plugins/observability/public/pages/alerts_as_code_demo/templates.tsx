@@ -102,7 +102,7 @@ export const templates: Array<Template<any>> = [
         step: '1m',
         query: {
           index: ['apm-*', 'traces-apm*'],
-          filter: 'transaction.type:page-load',
+          filter: 'transaction.type:page-load or transaction.type:request',
           metrics: {
             [satisfied]: {
               count_over_time: {

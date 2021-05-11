@@ -5,13 +5,13 @@
  * 2.0.
  */
 
-import { isEqual } from 'lodash';
+import { isEqual, flatten } from 'lodash';
+import pLimit from 'p-limit';
 import { RuleDataWriter } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { createExecutionPlan } from '../metric_rule_type/create_execution_plan';
 import { getSteps } from '../metric_rule_type/get_steps';
-import { recordResults } from '../metric_rule_type/record_results';
 import { Measurement } from '../metric_rule_type/types';
 
 function toSeries(measurements: Measurement[]) {
@@ -97,23 +97,22 @@ export async function getRuleEvaluationPreview({
           max: 20,
         });
 
-  const evaluations: Measurement[] = [];
+  const limiter = pLimit(5);
 
-  for (const step of steps) {
-    const results = await plan.evaluate({
-      time: step.time,
-    });
+  const allEvaluations = flatten(
+    await Promise.all(
+      steps.map((step) => {
+        return limiter(async () => {
+          const { evaluations } = await plan.evaluate({
+            time: step.time,
+          });
+          return evaluations;
+        });
+      })
+    )
+  );
 
-    await recordResults({
-      defaults: {},
-      results,
-      ruleDataWriter,
-    });
-
-    evaluations.push(...results.evaluations);
-  }
-
-  const allSeries = toSeries(evaluations);
+  const allSeries = toSeries(allEvaluations);
 
   return allSeries;
 }
