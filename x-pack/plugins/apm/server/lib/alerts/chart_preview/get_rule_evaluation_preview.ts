@@ -5,7 +5,6 @@
  * 2.0.
  */
 
-import pLimit from 'p-limit';
 import { isEqual } from 'lodash';
 import { RuleDataWriter } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
@@ -48,6 +47,7 @@ function toSeries(measurements: Measurement[]) {
           };
         }),
       };
+      allSeries.push(series);
     }
     return series;
   }
@@ -87,7 +87,6 @@ export async function getRuleEvaluationPreview({
     !config.step || !from
       ? [
           {
-            index: 0,
             time: to,
           },
         ]
@@ -98,24 +97,23 @@ export async function getRuleEvaluationPreview({
           max: 20,
         });
 
-  const limiter = pLimit(5);
+  const evaluations: Measurement[] = [];
 
-  return Promise.all(
-    steps.map((step) =>
-      limiter(async () => {
-        const results = await plan.evaluate({
-          time: step.time,
-        });
-        await recordResults({
-          defaults: {},
-          results,
-          ruleDataWriter,
-        });
-        return {
-          series: toSeries(results.evaluations),
-          record: results.record,
-        };
-      })
-    )
-  );
+  for (const step of steps) {
+    const results = await plan.evaluate({
+      time: step.time,
+    });
+
+    await recordResults({
+      defaults: {},
+      results,
+      ruleDataWriter,
+    });
+
+    evaluations.push(...results.evaluations);
+  }
+
+  const allSeries = toSeries(evaluations);
+
+  return allSeries;
 }

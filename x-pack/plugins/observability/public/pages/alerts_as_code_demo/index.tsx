@@ -32,9 +32,7 @@ import { Template, templates } from './templates';
 
 export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
-
-  const {} = usePluginContext();
-
+  const { inspector } = usePluginContext().plugins;
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
   >({ template: templates[0], values: {} });
@@ -166,17 +164,25 @@ export function AlertsAsCodeDemoPage() {
                           <EuiFlexGroup direction="row" justifyContent="flexEnd">
                             <EuiFlexItem grow={false}>
                               <EuiButtonEmpty
-                                disabled={!valid}
                                 type="button"
-                                iconType="magnifyWithPlus"
+                                iconType="inspect"
+                                onClick={() =>
+                                  inspector.open(
+                                    {
+                                      json: selectedTemplate.template.toRawTemplate(
+                                        // FIXME: use actual values
+                                        selectedTemplate.values
+                                      ),
+                                    },
+                                    { title: `${selectedTemplate.template.title} JSON` }
+                                  )
+                                }
                               >
-                                <EuiText size="s">Inspect and copy JSON</EuiText>
+                                <EuiText size="s">Inspect</EuiText>
                               </EuiButtonEmpty>
                             </EuiFlexItem>
                             <EuiFlexItem grow={false}>
-                              <EuiButton disabled={!valid} type="button">
-                                Convert to free-form
-                              </EuiButton>
+                              <EuiButton type="button">Convert to free-form</EuiButton>
                             </EuiFlexItem>
                           </EuiFlexGroup>
                         </EuiFormRow>

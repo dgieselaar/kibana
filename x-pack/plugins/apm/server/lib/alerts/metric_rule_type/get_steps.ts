@@ -32,10 +32,12 @@ export function getSteps({ step, from, to, max }: Options) {
 
   const steps = Math.min(max, Math.ceil((to - from) / stepInMs));
 
-  return new Array(steps).fill(undefined).map((_, index) => {
-    return {
-      index,
-      time: to - index * stepInMs,
-    };
-  });
+  return new Array(steps)
+    .fill(undefined)
+    .map((_, index) => {
+      return {
+        time: to - index * stepInMs,
+      };
+    })
+    .reverse();
 }

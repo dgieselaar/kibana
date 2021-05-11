@@ -6,11 +6,9 @@
  */
 
 import { i18n } from '@kbn/i18n';
+import React, { lazy } from 'react';
 import { BehaviorSubject } from 'rxjs';
-import {
-  TriggersAndActionsUIPublicPluginSetup,
-  TriggersAndActionsUIPublicPluginStart,
-} from '../../triggers_actions_ui/public';
+import { ConfigSchema } from '.';
 import {
   AppMountParameters,
   AppUpdater,
@@ -28,17 +26,32 @@ import type {
   HomePublicPluginSetup,
   HomePublicPluginStart,
 } from '../../../../src/plugins/home/public';
+import {
+  Adapters,
+  InspectorViewProps,
+  Setup as InspectorPluginSetup,
+  Start as InspectorPluginStart,
+} from '../../../../src/plugins/inspector/public';
 import type { LensPublicStart } from '../../lens/public';
+import {
+  TriggersAndActionsUIPublicPluginSetup,
+  TriggersAndActionsUIPublicPluginStart,
+} from '../../triggers_actions_ui/public';
 import { registerDataHandler } from './data_handler';
+import type { AlertsAsCodeInspectorAdapters } from './pages/alerts_as_code_demo/alerts_as_code_inspector_view';
+import { createObservabilityRuleTypeRegistry } from './rules/create_observability_rule_type_registry';
 import { createCallObservabilityApi } from './services/call_observability_api';
 import { toggleOverviewLinkInNav } from './toggle_overview_link_in_nav';
-import { ConfigSchema } from '.';
-import { createObservabilityRuleTypeRegistry } from './rules/create_observability_rule_type_registry';
+
+const AlertsAsCodeInspectorViewComponent = lazy(
+  () => import('./pages/alerts_as_code_demo/alerts_as_code_inspector_view')
+);
 
 export type ObservabilityPublicSetup = ReturnType<Plugin['setup']>;
 
 export interface ObservabilityPublicPluginsSetup {
   data: DataPublicPluginSetup;
+  inspector: InspectorPluginSetup;
   triggersActionsUi: TriggersAndActionsUIPublicPluginSetup;
   home?: HomePublicPluginSetup;
 }
@@ -47,6 +60,7 @@ export interface ObservabilityPublicPluginsStart {
   home?: HomePublicPluginStart;
   triggersActionsUi: TriggersAndActionsUIPublicPluginStart;
   data: DataPublicPluginStart;
+  inspector: InspectorPluginStart;
   lens: LensPublicStart;
 }
 
@@ -161,6 +175,15 @@ export class Plugin
         order: 200,
       });
     }
+
+    pluginsSetup.inspector.registerView({
+      title: 'Metric rule',
+      component: (props: InspectorViewProps<Adapters>) => (
+        <AlertsAsCodeInspectorViewComponent
+          {...(props as InspectorViewProps<AlertsAsCodeInspectorAdapters>)}
+        />
+      ),
+    });
 
     return {
       dashboard: { register: registerDataHandler },

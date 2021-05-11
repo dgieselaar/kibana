@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { Axis, Chart, Position, Settings } from '@elastic/charts';
+import { Axis, Chart, LineSeries, Position, Settings } from '@elastic/charts';
 import { EuiTable } from '@elastic/eui';
 import datemath from '@elastic/datemath';
 import {
@@ -18,7 +18,8 @@ import {
   EuiText,
   EuiTitle,
 } from '@elastic/eui';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { isNumber } from 'lodash';
 import { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { callObservabilityApi } from '../../services/call_observability_api';
@@ -69,7 +70,29 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     [preview]
   );
 
-  const yMax = 100;
+  const yMax =
+    (data &&
+      Math.max(
+        ...data.preview.flatMap(({ coordinates }) => {
+          return coordinates.map((coord) => (isNumber(coord.y) ? coord.y : 0));
+        })
+      )) ||
+    100;
+
+  const series = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+    return (
+      data.preview.map(({ labels, metricName, coordinates }, index) => {
+        const id = JSON.stringify({ labels, metricName });
+
+        return <LineSeries data={coordinates} id={id} name={id} />;
+      }) ?? []
+    );
+  }, [data]);
+
+  console.log({ series });
 
   const tabs: EuiTabbedContentTab[] = [
     {
@@ -80,6 +103,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
           <Settings showLegend legendPosition={Position.Bottom} />
           <Axis id="x-axis" position={Position.Bottom} showOverlappingTicks />
           <Axis id="y-axis" position={Position.Left} domain={{ min: 0, max: yMax }} />
+          {series}
         </Chart>
       ),
     },
