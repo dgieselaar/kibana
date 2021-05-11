@@ -163,11 +163,23 @@ export class APMPlugin
                 dynamic: 'runtime',
                 dynamic_templates: [
                   {
-                    metrics_as_float: {
-                      match_mapping_type: 'double',
-                      match: 'metric_',
+                    double: {
                       mapping: {
                         type: 'double',
+                      },
+                    },
+                  },
+                  {
+                    byte: {
+                      mapping: {
+                        type: 'byte',
+                      },
+                    },
+                  },
+                  {
+                    keyword: {
+                      mapping: {
+                        type: 'keyword',
                       },
                     },
                   },

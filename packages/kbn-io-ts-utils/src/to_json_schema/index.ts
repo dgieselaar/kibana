@@ -109,7 +109,7 @@ export const toJsonSchema = (type: t.Mixed): JSONSchema => {
         return { type: 'string' };
     }
   }
-  console.log(type);
+
   return {
     type: 'object',
   };

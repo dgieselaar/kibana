@@ -7,18 +7,29 @@
 
 import { parseInterval } from '../../../../../../../src/plugins/data/common';
 
-export function getSteps({
-  step,
-  from,
-  to,
-  max,
-}: {
-  step: string;
-  from: number;
+interface Options {
   to: number;
   max: number;
-}) {
-  const stepInMs = parseInterval(step)!.asMilliseconds();
+  from?: number;
+  step?: string;
+}
+
+export function getSteps({ step, from, to, max }: Options) {
+  if (!from && !step) {
+    return [
+      {
+        index: 0,
+        time: to,
+      },
+    ];
+  }
+
+  const stepInMs = step ? parseInterval(step)!.asMilliseconds() : to - from!;
+
+  if (!from) {
+    from = to - stepInMs;
+  }
+
   const steps = Math.min(max, Math.ceil((to - from) / stepInMs));
 
   return new Array(steps).fill(undefined).map((_, index) => {

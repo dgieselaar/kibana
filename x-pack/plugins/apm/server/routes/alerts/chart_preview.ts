@@ -112,13 +112,14 @@ const ruleEvaluationPreview = createApmServerRoute({
   options: {
     tags: ['access:apm'],
   },
-  handler: async ({ params, context }) => {
-    console.log(require('util').inspect(params.body, { depth: null }));
+  handler: async ({ params, context, ruleDataClient }) => {
+    const ruleDataWriter = ruleDataClient.getWriter();
 
     const preview = await getRuleEvaluationPreview({
       config: params.body.config,
       from: params.body.from,
       to: Date.now(),
+      ruleDataWriter,
       clusterClient: {
         search: async (request) => {
           const body = await unwrapEsResponse(
@@ -128,8 +129,6 @@ const ruleEvaluationPreview = createApmServerRoute({
         },
       },
     });
-
-    console.log(require('util').inspect(preview, { depth: null }));
 
     return {
       preview,

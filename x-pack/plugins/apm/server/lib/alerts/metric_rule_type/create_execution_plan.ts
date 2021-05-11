@@ -7,9 +7,10 @@
 import { ValuesType, UnionToIntersection } from 'utility-types';
 import { isRight } from 'fp-ts/lib/Either';
 import { PathReporter } from 'io-ts/lib/PathReporter';
-import { mapValues, flatten, pickBy, uniq } from 'lodash';
+import { mapValues, flatten, pickBy } from 'lodash';
 import * as math from 'mathjs';
 import { ESSearchClient } from 'typings/elasticsearch';
+import { PromiseReturnType } from '../../../../../observability/typings/common';
 import { arrayUnionToCallable } from '../../../../common/utils/array_union_to_callable';
 import {
   getMetricQueryResolver,
@@ -38,7 +39,9 @@ interface BaseParsedMetric<
 > {
   name: string;
   type: TType;
-  record?: boolean;
+  record?: {
+    type: 'keyword' | 'double' | 'byte';
+  };
   meta: TMeta;
 }
 
@@ -56,6 +59,7 @@ type ParsedQueryMetric = BaseParsedMetric<
     range: {
       start: number;
       end: number;
+      time: number;
     };
     aggregation: QueryMetricAggregation;
     evaluate: (scope: any) => any;
@@ -76,19 +80,25 @@ function parseMetrics({
   return mapValues(
     query.metrics,
     (metricConfig, name): ParsedMetric => {
+      const record = metricConfig.record
+        ? {
+            type: 'double' as const,
+          }
+        : undefined;
+
       if ('expression' in metricConfig) {
         const evalFn = math.compile(metricConfig.expression);
         return {
           name,
           type: 'expression',
-          record: metricConfig.record,
+          record,
           meta: {
             evaluate: evalFn.evaluate,
           },
         };
       }
 
-      const { record, ...meta } = metricConfig;
+      const { record: _record, ...meta } = metricConfig;
 
       const { range, offset } = (meta as any)[
         Object.keys(meta)[0]
@@ -98,8 +108,7 @@ function parseMetrics({
         time -
         (query.query_delay
           ? parseInterval(query.query_delay)!.asMilliseconds()
-          : 0) -
-        (offset ? parseInterval(offset)!.asMilliseconds() : 0);
+          : 0);
 
       const stepInMs = step ? parseInterval(step)!.asMilliseconds() : 0;
       const roundInMs = query.round
@@ -115,6 +124,11 @@ function parseMetrics({
       const resolver = getMetricQueryResolver(meta);
 
       const decoded = metricQueryRt.decode(meta);
+      const offsetInMs = offset ? parseInterval(offset)!.asMilliseconds() : 0;
+
+      const timeOfMeasurement = end;
+
+      end = end - offsetInMs;
 
       if (!isRight(decoded)) {
         throw new Error(PathReporter.report(decoded).join('\n'));
@@ -135,6 +149,7 @@ function parseMetrics({
           range: {
             start,
             end,
+            time: timeOfMeasurement,
           },
         },
       };
@@ -200,7 +215,7 @@ export function createExecutionPlan({
               return prev;
             },
             [] as Array<{
-              range: { start: number; end: number };
+              range: { start: number; end: number; time: number };
               metrics: Record<string, ParsedQueryMetric>;
             }>
           );
@@ -296,7 +311,7 @@ export function createExecutionPlan({
                 );
 
                 return {
-                  time,
+                  time: search.range.time,
                   labels,
                   metrics: aggregatedMetrics,
                 };
@@ -330,7 +345,10 @@ export function createExecutionPlan({
 
           return {
             evaluations: searchEvaluations,
-            record: Object.keys(pickBy(metrics, (metric) => !!metric.record)),
+            record: pickBy(
+              mapValues(metrics, (metric) => metric.record),
+              Boolean
+            ),
           };
         })
       );
@@ -339,8 +357,15 @@ export function createExecutionPlan({
         evaluations: mergeByLabels(
           flatten(queryResults.map((result) => result.evaluations))
         ),
-        record: uniq(flatten(queryResults.map((result) => result.record))),
+        record: Object.assign(
+          {},
+          ...queryResults.map((result) => result.record)
+        ) as Record<string, Required<BaseParsedMetric<any, any>>['record']>,
       };
     },
   };
 }
+
+export type QueryResults = PromiseReturnType<
+  ReturnType<typeof createExecutionPlan>['evaluate']
+>;

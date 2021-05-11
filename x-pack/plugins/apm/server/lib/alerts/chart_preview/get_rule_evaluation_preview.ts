@@ -6,21 +6,25 @@
  */
 
 import pLimit from 'p-limit';
+import { RuleDataWriter } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { createExecutionPlan } from '../metric_rule_type/create_execution_plan';
 import { getSteps } from '../metric_rule_type/get_steps';
+import { recordResults } from '../metric_rule_type/record_results';
 
 export async function getRuleEvaluationPreview({
   config,
   from,
   to,
   clusterClient,
+  ruleDataWriter,
 }: {
   config: AlertingConfig;
   from?: number;
   to: number;
   clusterClient: ESSearchClient;
+  ruleDataWriter: RuleDataWriter;
 }) {
   const plan = createExecutionPlan({
     config,
@@ -28,7 +32,8 @@ export async function getRuleEvaluationPreview({
   });
 
   if (!config.step || !from) {
-    return [await plan.evaluate({ time: to })];
+    const results = await plan.evaluate({ time: to });
+    return [results];
   }
 
   const steps = getSteps({
@@ -38,16 +43,20 @@ export async function getRuleEvaluationPreview({
     max: 20,
   });
 
-  console.log(JSON.stringify(steps));
-
   const limiter = pLimit(5);
 
-  return await Promise.all(
+  return Promise.all(
     steps.map((step) =>
-      limiter(() => {
-        return plan.evaluate({
+      limiter(async () => {
+        const results = await plan.evaluate({
           time: step.time,
         });
+        await recordResults({
+          defaults: {},
+          results,
+          ruleDataWriter,
+        });
+        return results;
       })
     )
   );

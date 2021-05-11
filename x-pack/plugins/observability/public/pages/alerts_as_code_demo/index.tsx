@@ -12,6 +12,7 @@ import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 export function AlertsAsCodeDemoPage() {
   return (
     <EuiPageTemplate
+      template="default"
       pageHeader={{
         pageTitle: (
           <>
