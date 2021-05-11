@@ -23,6 +23,7 @@ import { EuiSelect } from '@elastic/eui';
 import { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { callObservabilityApi } from '../../services/call_observability_api';
+import { EuiTableFieldDataColumnType } from '@elastic/eui';
 
 enum PreviewTab {
   XyChart = 'xyChart',
@@ -144,6 +145,21 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
 
   const metricNames = [...new Set(data?.preview.map(({ metricName }) => metricName) ?? [])];
 
+  const tableData = allSeries
+    .map((series) => {
+      const items = series.data.map((item) => {
+        return { name: series.name, [selectedMetric ?? '']: item.y, '@timestamp': item.x };
+      });
+      return items;
+    })
+    .flat();
+
+  const tableColumns: EuiTableFieldDataColumnType<typeof tableData[0]> = [
+    { name: 'name', field: 'name', dataType: 'string' },
+    { name: selectedMetric, field: selectedMetric, dataType: 'number' },
+    { name: '@timestamp', field: '@timestamp', dataType: 'date' },
+  ];
+
   const tabs: EuiTabbedContentTab[] = [
     {
       id: PreviewTab.XyChart,
@@ -189,7 +205,9 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     {
       id: PreviewTab.Table,
       name: 'Table',
-      content: <EuiTable style={{ width: '100%', height: 600 }} />,
+      content: (
+        <EuiTable columns={tableColumns} items={tableData} style={{ width: '100%', height: 600 }} />
+      ),
     },
   ];
 
