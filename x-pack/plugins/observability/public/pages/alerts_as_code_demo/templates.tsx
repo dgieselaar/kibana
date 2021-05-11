@@ -4,9 +4,11 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-
+import { EuiFieldNumber } from '@elastic/eui';
+import { EuiFieldText, EuiFormRow } from '@elastic/eui';
 import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
 import * as t from 'io-ts';
+import React from 'react';
 import type { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 
 const SERVICE_NAME = 'service.name';
@@ -17,6 +19,10 @@ export interface Template<TType extends t.Mixed = t.Mixed> {
   icon: EuiIconType;
   title: string;
   description: string;
+  form: (options: {
+    values: t.TypeOf<TType>;
+    onChange: (values: t.TypeOf<TType>) => void;
+  }) => React.ReactNode;
   toRawTemplate: (props: t.TypeOf<TType>) => AlertingConfig;
 }
 
@@ -32,11 +38,60 @@ export const templates: Array<Template<any>> = [
     type: t.type({
       ruleName: t.string,
       latencyThreshold: t.number,
-      interval: t.number,
+      window: t.number,
     }),
     icon: 'faceHappy',
+    form: ({ values, onChange }) => {
+      return (
+        <>
+          <EuiFormRow label="Rule name" helpText="Give the rule a name">
+            <EuiFieldText
+              value={values.ruleName}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  ruleName: e.target.value,
+                });
+              }}
+            />
+          </EuiFormRow>
+
+          <EuiFormRow
+            label="Set latency threshold"
+            helpText="The apdex score is defined by the latency threshold set"
+          >
+            <EuiFieldNumber
+              value={values.latencyThreshold}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  latencyThreshold: e.target.valueAsNumber,
+                });
+              }}
+              append="ms"
+            />
+          </EuiFormRow>
+
+          <EuiFormRow
+            label="Set interval"
+            helpText="Define the window over which the apdex score should be measured"
+          >
+            <EuiFieldNumber
+              value={values.latencyThreshold}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  window: e.target.valueAsNumber,
+                });
+              }}
+              append="mins"
+            />
+          </EuiFormRow>
+        </>
+      );
+    },
     toRawTemplate: (props) => {
-      const range = `${props.interval}m` as const;
+      const range = `${props.window}m` as const;
       const satisfied = `satisfied_count_${range}` as const;
       const tolerated = `tolerated_count_${range}`;
       const score = `apdex_score_${range}`;

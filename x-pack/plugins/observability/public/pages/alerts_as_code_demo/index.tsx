@@ -5,23 +5,53 @@
  * 2.0.
  */
 
-import { EuiPage } from '@elastic/eui';
-import { EuiTitle } from '@elastic/eui';
-import { EuiSpacer } from '@elastic/eui';
-import { EuiFlexGrid } from '@elastic/eui';
-import { EuiIcon } from '@elastic/eui';
-import { EuiButton } from '@elastic/eui';
-import { EuiText } from '@elastic/eui';
-import { EuiFlexGroup, EuiFlexItem, EuiPanel, EuiPageHeader, EuiPageBody } from '@elastic/eui';
+import { EuiFormRow } from '@elastic/eui';
+import {
+  EuiButton,
+  EuiFlexGrid,
+  EuiFlexGroup,
+  EuiFlexItem,
+  EuiForm,
+  EuiIcon,
+  EuiPage,
+  EuiPageBody,
+  EuiPageHeader,
+  EuiPanel,
+  EuiSpacer,
+  EuiText,
+  EuiTitle,
+} from '@elastic/eui';
+import { isLeft } from 'fp-ts/lib/Either';
+import { PathReporter } from 'io-ts/lib/PathReporter';
 import React, { useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 import { useTheme } from '../../hooks/use_theme';
-import { templates, Template } from './templates';
+import { Template, templates } from './templates';
 
 export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
 
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | undefined>();
+  const [selectedTemplate, setSelectedTemplate] = useState<
+    { template: Template; values: Record<string, any> } | undefined
+  >({ template: templates[0], values: {} });
+
+  const onChange = (values: Record<string, any>) => {
+    setSelectedTemplate((state) => {
+      return state?.template
+        ? {
+            ...state,
+            values,
+          }
+        : undefined;
+    });
+  };
+
+  const validation = selectedTemplate?.template.type.decode(selectedTemplate?.values);
+
+  const errors = validation && isLeft(validation) ? validation.left : [];
+
+  const valid = errors.length === 0;
+
   return (
     <EuiPage restrictWidth>
       <EuiPageBody>
@@ -42,7 +72,7 @@ export function AlertsAsCodeDemoPage() {
         >
           Create metric-based rules and alerts with a template or manually configure it yourself.
         </EuiPageHeader>
-        <EuiFlexGroup>
+        <EuiFlexGroup direction="column">
           <EuiFlexItem>
             <EuiPanel paddingSize="l">
               <EuiFlexGroup direction="column" gutterSize="none">
@@ -73,10 +103,10 @@ export function AlertsAsCodeDemoPage() {
                           </EuiText>
                         </EuiFlexItem>
                         <EuiFlexItem style={{ alignSelf: 'stretch' }}>
-                          {template !== selectedTemplate ? (
+                          {template !== selectedTemplate?.template ? (
                             <EuiButton
                               onClick={() => {
-                                setSelectedTemplate(template);
+                                setSelectedTemplate({ template, values: {} });
                               }}
                             >
                               Select
@@ -98,6 +128,38 @@ export function AlertsAsCodeDemoPage() {
               </EuiFlexGrid>
             </EuiPanel>
           </EuiFlexItem>
+
+          {selectedTemplate ? (
+            <EuiFlexItem>
+              <EuiPanel paddingSize="l">
+                <EuiFlexGroup direction="column" gutterSize="none">
+                  <EuiFlexItem>
+                    <EuiTitle>
+                      <h3>Configure {selectedTemplate.template.title}</h3>
+                    </EuiTitle>
+                    <EuiSpacer size="s" />
+                    <EuiText>
+                      These are the settings needed to configure {selectedTemplate.template.title}.
+                    </EuiText>
+                  </EuiFlexItem>
+                  <EuiFlexItem>
+                    <EuiSpacer size="m" />
+                  </EuiFlexItem>
+                  <EuiFlexItem>
+                    <EuiForm>
+                      {selectedTemplate.template.form({
+                        values: selectedTemplate.values,
+                        onChange,
+                      })}
+                      <EuiFormRow fullWidth>
+                        <EuiButton type="button">Convert to free-form</EuiButton>
+                      </EuiFormRow>
+                    </EuiForm>
+                  </EuiFlexItem>
+                </EuiFlexGroup>
+              </EuiPanel>
+            </EuiFlexItem>
+          ) : null}
         </EuiFlexGroup>
       </EuiPageBody>
     </EuiPage>
