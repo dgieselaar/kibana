@@ -20,9 +20,9 @@ import {
   EuiSpacer,
   EuiText,
   EuiTitle,
+  EuiButtonEmpty,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
-import { PathReporter } from 'io-ts/lib/PathReporter';
 import React, { useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 import { useTheme } from '../../hooks/use_theme';
@@ -152,7 +152,16 @@ export function AlertsAsCodeDemoPage() {
                         onChange,
                       })}
                       <EuiFormRow fullWidth>
-                        <EuiButton type="button">Convert to free-form</EuiButton>
+                        <EuiFlexGroup direction="row" justifyContent="flexEnd">
+                          <EuiFlexItem grow={false}>
+                            <EuiButtonEmpty type="button" iconType="magnifyWithPlus">
+                              <EuiText size="s">Inspect and copy JSON</EuiText>
+                            </EuiButtonEmpty>
+                          </EuiFlexItem>
+                          <EuiFlexItem grow={false}>
+                            <EuiButton type="button">Convert to free-form</EuiButton>
+                          </EuiFlexItem>
+                        </EuiFlexGroup>
                       </EuiFormRow>
                     </EuiForm>
                   </EuiFlexItem>
