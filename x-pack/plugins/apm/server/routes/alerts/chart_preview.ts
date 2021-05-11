@@ -5,10 +5,7 @@
  * 2.0.
  */
 
-import { toNumberRt } from '@kbn/io-ts-utils';
 import * as t from 'io-ts';
-import { unwrapEsResponse } from '../../../../observability/server';
-import { configRt } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { getTransactionDurationChartPreview } from '../../lib/alerts/chart_preview/get_transaction_duration';
 import { getTransactionErrorCountChartPreview } from '../../lib/alerts/chart_preview/get_transaction_error_count';
 import { getTransactionErrorRateChartPreview } from '../../lib/alerts/chart_preview/get_transaction_error_rate';
@@ -16,7 +13,6 @@ import { setupRequest } from '../../lib/helpers/setup_request';
 import { createApmServerRoute } from '../create_apm_server_route';
 import { createApmServerRouteRepository } from '../create_apm_server_route_repository';
 import { rangeRt } from '../default_api_types';
-import { getRuleEvaluationPreview } from '../../lib/alerts/chart_preview/get_rule_evaluation_preview';
 
 const alertParamsRt = t.intersection([
   t.partial({
@@ -91,54 +87,8 @@ const transactionDurationChartPreview = createApmServerRoute({
   },
 });
 
-const ruleEvaluationPreview = createApmServerRoute({
-  endpoint: 'POST /api/apm/alerts/rule_evaluation_preview',
-  params: t.type({
-    body: t.intersection([
-      t.partial(
-        {
-          from: toNumberRt,
-        },
-        'from'
-      ),
-      t.type(
-        {
-          config: configRt,
-        },
-        'config'
-      ),
-    ]),
-  }),
-  options: {
-    tags: ['access:apm'],
-  },
-  handler: async ({ params, context, ruleDataClient }) => {
-    const ruleDataWriter = ruleDataClient.getWriter();
-
-    const preview = await getRuleEvaluationPreview({
-      config: params.body.config,
-      from: params.body.from,
-      to: Date.now(),
-      ruleDataWriter,
-      clusterClient: {
-        search: async (request) => {
-          const body = await unwrapEsResponse(
-            context.core.elasticsearch.client.asCurrentUser.search(request)
-          );
-          return body as any;
-        },
-      },
-    });
-
-    return {
-      preview,
-    };
-  },
-});
-
 export const alertsChartPreviewRouteRepository = createApmServerRouteRepository()
   .add(transactionErrorRateChartPreview)
   .add(transactionDurationChartPreview)
   .add(transactionErrorCountChartPreview)
-  .add(transactionDurationChartPreview)
-  .add(ruleEvaluationPreview);
+  .add(transactionDurationChartPreview);

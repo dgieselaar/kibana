@@ -25,11 +25,15 @@ import {
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
+import { usePluginContext } from '../../hooks/use_plugin_context';
 import { useTheme } from '../../hooks/use_theme';
+import { PreviewComponent } from './preview_component';
 import { Template, templates } from './templates';
 
 export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
+
+  const {} = usePluginContext();
 
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
@@ -51,6 +55,11 @@ export function AlertsAsCodeDemoPage() {
   const errors = validation && isLeft(validation) ? validation.left : [];
 
   const valid = errors.length === 0;
+
+  const config =
+    selectedTemplate && valid
+      ? selectedTemplate.template.toRawTemplate(selectedTemplate.values)
+      : undefined;
 
   return (
     <EuiPage restrictWidth>
@@ -130,44 +139,66 @@ export function AlertsAsCodeDemoPage() {
           </EuiFlexItem>
 
           {selectedTemplate ? (
-            <EuiFlexItem>
-              <EuiPanel paddingSize="l">
-                <EuiFlexGroup direction="column" gutterSize="none">
-                  <EuiFlexItem>
-                    <EuiTitle>
-                      <h3>Configure {selectedTemplate.template.title}</h3>
-                    </EuiTitle>
-                    <EuiSpacer size="s" />
-                    <EuiText>
-                      These are the settings needed to configure {selectedTemplate.template.title}.
-                    </EuiText>
-                  </EuiFlexItem>
-                  <EuiFlexItem>
+            <>
+              <EuiFlexItem>
+                <EuiPanel paddingSize="l">
+                  <EuiFlexGroup direction="column" gutterSize="none">
+                    <EuiFlexItem>
+                      <EuiTitle>
+                        <h3>Configure {selectedTemplate.template.title}</h3>
+                      </EuiTitle>
+                      <EuiSpacer size="s" />
+                      <EuiText>
+                        These are the settings needed to configure {selectedTemplate.template.title}
+                        .
+                      </EuiText>
+                    </EuiFlexItem>
+                    <EuiFlexItem>
+                      <EuiSpacer size="m" />
+                    </EuiFlexItem>
+                    <EuiFlexItem>
+                      <EuiForm>
+                        {selectedTemplate.template.form({
+                          values: selectedTemplate.values,
+                          onChange,
+                        })}
+                        <EuiFormRow fullWidth>
+                          <EuiFlexGroup direction="row" justifyContent="flexEnd">
+                            <EuiFlexItem grow={false}>
+                              <EuiButtonEmpty
+                                disabled={!valid}
+                                type="button"
+                                iconType="magnifyWithPlus"
+                              >
+                                <EuiText size="s">Inspect and copy JSON</EuiText>
+                              </EuiButtonEmpty>
+                            </EuiFlexItem>
+                            <EuiFlexItem grow={false}>
+                              <EuiButton disabled={!valid} type="button">
+                                Convert to free-form
+                              </EuiButton>
+                            </EuiFlexItem>
+                          </EuiFlexGroup>
+                        </EuiFormRow>
+                      </EuiForm>
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
+                </EuiPanel>
+              </EuiFlexItem>
+              <EuiFlexItem>
+                <EuiPanel paddingSize="l">
+                  <EuiFlexGroup direction="column" gutterSize="none">
+                    <EuiFlexItem>
+                      <PreviewComponent config={config} />
+                    </EuiFlexItem>
                     <EuiSpacer size="m" />
-                  </EuiFlexItem>
-                  <EuiFlexItem>
-                    <EuiForm>
-                      {selectedTemplate.template.form({
-                        values: selectedTemplate.values,
-                        onChange,
-                      })}
-                      <EuiFormRow fullWidth>
-                        <EuiFlexGroup direction="row" justifyContent="flexEnd">
-                          <EuiFlexItem grow={false}>
-                            <EuiButtonEmpty type="button" iconType="magnifyWithPlus">
-                              <EuiText size="s">Inspect and copy JSON</EuiText>
-                            </EuiButtonEmpty>
-                          </EuiFlexItem>
-                          <EuiFlexItem grow={false}>
-                            <EuiButton type="button">Convert to free-form</EuiButton>
-                          </EuiFlexItem>
-                        </EuiFlexGroup>
-                      </EuiFormRow>
-                    </EuiForm>
-                  </EuiFlexItem>
-                </EuiFlexGroup>
-              </EuiPanel>
-            </EuiFlexItem>
+                    <EuiFlexItem style={{ alignSelf: 'flex-end' }}>
+                      <EuiButton>Create rule</EuiButton>
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
+                </EuiPanel>
+              </EuiFlexItem>
+            </>
           ) : null}
         </EuiFlexGroup>
       </EuiPageBody>

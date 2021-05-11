@@ -6,9 +6,12 @@
  */
 import * as t from 'io-ts';
 import { isoToEpochRt, toNumberRt } from '@kbn/io-ts-utils';
+import { getRuleEvaluationPreview } from '../../../apm/server';
+import { configRt } from '../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { createObservabilityServerRoute } from './create_observability_server_route';
 import { createObservabilityServerRouteRepository } from './create_observability_server_route_repository';
 import { getTopAlerts } from '../lib/rules/get_top_alerts';
+import { unwrapEsResponse } from '../utils/unwrap_es_response';
 
 const alertsListRoute = createObservabilityServerRoute({
   endpoint: 'GET /api/observability/rules/alerts/top',
@@ -54,6 +57,47 @@ const alertsDynamicIndexPatternRoute = createObservabilityServerRoute({
   },
 });
 
+const ruleEvaluationPreviewRoute = createObservabilityServerRoute({
+  endpoint: 'POST /api/observability/rules/rule_evaluation_preview',
+  params: t.type({
+    body: t.intersection([
+      t.partial({
+        from: toNumberRt,
+      }),
+      t.type({
+        config: configRt,
+        to: toNumberRt,
+      }),
+    ]),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async ({ params, context, ruleDataClient }) => {
+    const ruleDataWriter = ruleDataClient.getWriter();
+
+    const preview = await getRuleEvaluationPreview({
+      config: params.body.config,
+      from: params.body.from,
+      to: Date.now(),
+      ruleDataWriter,
+      clusterClient: {
+        search: async (request) => {
+          const body = await unwrapEsResponse(
+            context.core.elasticsearch.client.asCurrentUser.search(request)
+          );
+          return body as any;
+        },
+      },
+    });
+
+    return {
+      preview,
+    };
+  },
+});
+
 export const rulesRouteRepository = createObservabilityServerRouteRepository()
   .add(alertsListRoute)
-  .add(alertsDynamicIndexPatternRoute);
+  .add(alertsDynamicIndexPatternRoute)
+  .add(ruleEvaluationPreviewRoute);

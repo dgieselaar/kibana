@@ -21,7 +21,7 @@ export interface Template<TType extends t.Mixed = t.Mixed> {
   description: string;
   form: (options: {
     values: t.TypeOf<TType>;
-    onChange: (values: t.TypeOf<TType>) => void;
+    onChange: (values: Partial<t.TypeOf<TType>>) => void;
   }) => React.ReactNode;
   toRawTemplate: (props: t.TypeOf<TType>) => AlertingConfig;
 }
@@ -46,7 +46,7 @@ export const templates: Array<Template<any>> = [
         <>
           <EuiFormRow label="Rule name" helpText="Give the rule a name">
             <EuiFieldText
-              value={values.ruleName}
+              value={values.ruleName ?? ''}
               onChange={(e) => {
                 onChange({
                   ...values,
@@ -61,7 +61,7 @@ export const templates: Array<Template<any>> = [
             helpText="The apdex score is defined by the latency threshold set"
           >
             <EuiFieldNumber
-              value={values.latencyThreshold}
+              value={values.latencyThreshold ?? ''}
               onChange={(e) => {
                 onChange({
                   ...values,
@@ -77,11 +77,11 @@ export const templates: Array<Template<any>> = [
             helpText="Define the window over which the apdex score should be measured"
           >
             <EuiFieldNumber
-              value={values.latencyThreshold}
+              value={values.window ?? ''}
               onChange={(e) => {
                 onChange({
                   ...values,
-                  window: e.target.valueAsNumber,
+                  window: isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber,
                 });
               }}
               append="mins"
@@ -107,16 +107,16 @@ export const templates: Array<Template<any>> = [
             [satisfied]: {
               count_over_time: {
                 range,
+                filter: `transaction.duration.us<=${thresholdUs}`,
               },
               record: true,
-              filter: `transaction.duration.us<=${thresholdUs}`,
             },
             [tolerated]: {
               count_over_time: {
                 range,
+                filter: `transaction.duration.us>${thresholdUs} and transaction.duration.us<=${thresholdUs}`,
               },
               record: true,
-              filter: `transaction.duration.us>${thresholdUs} and transaction.duration.us<=${thresholdUs}`,
             },
             [total]: {
               count_over_time: {

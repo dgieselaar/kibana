@@ -124,5 +124,6 @@ export { APMPlugin } from './plugin';
 export { APMPluginSetup } from './types';
 export { APMServerRouteRepository } from './routes/get_global_apm_server_route_repository';
 export { InspectResponse, APMRouteHandlerResources } from './routes/typings';
+export { getRuleEvaluationPreview } from './lib/alerts/chart_preview/get_rule_evaluation_preview';
 
 export type { ProcessorEvent } from '../common/processor_event';
