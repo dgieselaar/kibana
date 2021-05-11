@@ -25,12 +25,13 @@ import {
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
+import { usePluginContext } from '../../hooks/use_plugin_context';
 import { useTheme } from '../../hooks/use_theme';
 import { Template, templates } from './templates';
 
 export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
-
+  const { inspector } = usePluginContext().plugins;
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
   >({ template: templates[0], values: {} });
@@ -154,8 +155,22 @@ export function AlertsAsCodeDemoPage() {
                       <EuiFormRow fullWidth>
                         <EuiFlexGroup direction="row" justifyContent="flexEnd">
                           <EuiFlexItem grow={false}>
-                            <EuiButtonEmpty type="button" iconType="magnifyWithPlus">
-                              <EuiText size="s">Inspect and copy JSON</EuiText>
+                            <EuiButtonEmpty
+                              type="button"
+                              iconType="inspect"
+                              onClick={() =>
+                                inspector.open(
+                                  {
+                                    json: selectedTemplate.template.toRawTemplate(
+                                      // FIXME: use actual values
+                                      { window: 5, latencyThreshold: 500 }
+                                    ),
+                                  },
+                                  { title: `${selectedTemplate.template.title} JSON` }
+                                )
+                              }
+                            >
+                              <EuiText size="s">Inspect</EuiText>
                             </EuiButtonEmpty>
                           </EuiFlexItem>
                           <EuiFlexItem grow={false}>
