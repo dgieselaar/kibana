@@ -5,25 +5,25 @@
  * 2.0.
  */
 import { Axis, Chart, LineSeries, niceTimeFormatter, Position, Settings } from '@elastic/charts';
-import { EuiTable } from '@elastic/eui';
 import datemath from '@elastic/datemath';
 import {
   EuiButton,
   EuiFlexGroup,
   EuiFlexItem,
+  EuiSelect,
   EuiSpacer,
   EuiSuperDatePicker,
   EuiTabbedContent,
   EuiTabbedContentTab,
+  EuiTable,
+  EuiTableFieldDataColumnType,
   EuiTitle,
 } from '@elastic/eui';
-import React, { useState, useMemo } from 'react';
 import { isNumber } from 'lodash';
-import { EuiSelect } from '@elastic/eui';
+import React, { useMemo, useState } from 'react';
 import { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { callObservabilityApi } from '../../services/call_observability_api';
-import { EuiTableFieldDataColumnType } from '@elastic/eui';
 
 enum PreviewTab {
   XyChart = 'xyChart',
@@ -135,13 +135,6 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     .map((coord) => (isNumber(coord.y) ? coord.y : 0));
 
   const yMax = Math.max(...visibleCoordinates);
-
-  console.log({
-    allSeries,
-    yMax,
-    xMin,
-    xMax,
-  });
 
   const metricNames = [...new Set(data?.preview.map(({ metricName }) => metricName) ?? [])];
 

@@ -9,6 +9,12 @@ import { schema } from '@kbn/config-schema';
 import { compact } from 'lodash';
 import { ESSearchResponse } from 'typings/elasticsearch';
 import { QueryContainer } from '@elastic/elasticsearch/api/types';
+import {
+  ALERT_EVALUATION_THRESHOLD,
+  ALERT_EVALUATION_VALUE,
+  ALERT_SEVERITY_LEVEL,
+  ALERT_SEVERITY_VALUE,
+} from '@kbn/rule-data-utils/target/technical_field_names';
 import { createLifecycleRuleTypeFactory } from '../../../../rule_registry/server';
 import { ProcessorEvent } from '../../../common/processor_event';
 import { getSeverity } from '../../../common/anomaly_detection';
@@ -238,10 +244,10 @@ export function registerTransactionDurationAnomalyAlertType({
                   : {}),
                 [TRANSACTION_TYPE]: transactionType,
                 [PROCESSOR_EVENT]: ProcessorEvent.transaction,
-                'kibana.rac.alert.severity.level': severityLevel,
-                'kibana.rac.alert.severity.value': score,
-                'kibana.observability.evaluation.value': score,
-                'kibana.observability.evaluation.threshold': threshold,
+                [ALERT_SEVERITY_LEVEL]: severityLevel,
+                [ALERT_SEVERITY_VALUE]: score,
+                [ALERT_EVALUATION_VALUE]: score,
+                [ALERT_EVALUATION_THRESHOLD]: threshold,
               },
             })
             .scheduleActions(alertTypeConfig.defaultActionGroupId, {
