@@ -148,7 +148,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
 
   const tableColumns: Array<EuiTableFieldDataColumnType<typeof tableData[0]>> = [
     { name: 'name', field: 'name', dataType: 'string' },
-    { name: selectedMetric, field: selectedMetric, dataType: 'number' },
+    { name: selectedMetric, field: selectedMetric ?? '', dataType: 'number' },
     { name: '@timestamp', field: '@timestamp', dataType: 'date' },
   ];
 
@@ -197,12 +197,14 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     {
       id: PreviewTab.Table,
       name: 'Table',
-      content: (
+      content: selectedMetric ? (
         <EuiBasicTable
           columns={tableColumns}
           items={tableData}
           style={{ width: '100%', height: 600 }}
         />
+      ) : (
+        <></>
       ),
     },
   ];

@@ -172,10 +172,10 @@ export function AlertsAsCodeDemoPage() {
                             }}
                           />
                         </EuiFormRow>
-                        {selectedTemplate.template.form({
-                          values: selectedTemplate.values,
-                          onChange,
-                        })}
+                        <selectedTemplate.template.Form
+                          values={selectedTemplate.values}
+                          onChange={onChange}
+                        />
                         <EuiFormRow fullWidth>
                           <EuiFlexGroup direction="row" justifyContent="flexEnd">
                             <EuiFlexItem grow={false}>
@@ -186,7 +186,6 @@ export function AlertsAsCodeDemoPage() {
                                   inspector.open(
                                     {
                                       json: selectedTemplate.template.toRawTemplate(
-                                        // FIXME: use actual values
                                         selectedTemplate.values
                                       ),
                                     },

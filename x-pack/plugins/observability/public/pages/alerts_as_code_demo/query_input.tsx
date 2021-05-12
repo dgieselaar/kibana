@@ -27,6 +27,7 @@ export function QueryInput({
 
   return (
     <QueryStringInput
+      disableAutoFocus={true}
       indexPatterns={indexPatterns}
       size="s"
       disableLanguageSwitcher
@@ -37,7 +38,7 @@ export function QueryInput({
         language: 'kuery',
         query: value,
       }}
-      placeholder
+      placeholder={placeholder}
     />
   );
 }
