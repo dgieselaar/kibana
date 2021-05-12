@@ -5,14 +5,14 @@
  * 2.0.
  */
 
-import { EuiFormRow } from '@elastic/eui';
-import { EuiFieldText } from '@elastic/eui';
 import {
   EuiButton,
-  EuiFlexGrid,
+  EuiCard,
+  EuiFieldText,
   EuiFlexGroup,
   EuiFlexItem,
   EuiForm,
+  EuiFormRow,
   EuiIcon,
   EuiPage,
   EuiPageBody,
@@ -21,19 +21,16 @@ import {
   EuiSpacer,
   EuiText,
   EuiTitle,
-  EuiButtonEmpty,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
-import { usePluginContext } from '../../hooks/use_plugin_context';
 import { useTheme } from '../../hooks/use_theme';
 import { PreviewComponent } from './preview_component';
 import { Template, templates } from './templates';
 
 export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
-  const { inspector } = usePluginContext().plugins;
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
   >({ template: templates[1], values: {} });
@@ -91,53 +88,23 @@ export function AlertsAsCodeDemoPage() {
                 <EuiText>Templates that are available to use.</EuiText>
               </EuiFlexGroup>
               <EuiSpacer size="m" />
-              <EuiFlexGrid columns={3}>
+              <EuiFlexGroup>
                 {templates.map((template) => (
-                  <EuiFlexItem grow={false} key={template.id} style={{ width: 320 }}>
-                    <EuiPanel>
-                      <EuiFlexGroup
-                        direction="column"
-                        alignItems="center"
-                        justifyContent="spaceBetween"
-                      >
-                        <EuiSpacer size="s" />
-                        <EuiFlexItem>
-                          <EuiIcon type={template.icon} size="xxl" />
-                        </EuiFlexItem>
-                        <EuiFlexItem style={{ textAlign: 'center' }}>
-                          <EuiTitle>
-                            <h3>{template.title}</h3>
-                          </EuiTitle>
-                        </EuiFlexItem>
-                        <EuiFlexItem>
-                          <EuiText textAlign="center" size="s">
-                            {template.description}
-                          </EuiText>
-                        </EuiFlexItem>
-                        <EuiFlexItem grow style={{ alignSelf: 'stretch', alignItems: 'flexEnd' }}>
-                          {template !== selectedTemplate?.template ? (
-                            <EuiButton
-                              onClick={() => {
-                                setSelectedTemplate({ template, values: {} });
-                              }}
-                            >
-                              Select
-                            </EuiButton>
-                          ) : (
-                            <EuiButton
-                              iconType="checkInCircleFilled"
-                              iconSide="left"
-                              color="secondary"
-                            >
-                              Selected
-                            </EuiButton>
-                          )}
-                        </EuiFlexItem>
-                      </EuiFlexGroup>
-                    </EuiPanel>
+                  <EuiFlexItem key={template.id}>
+                    <EuiCard
+                      description={template.description}
+                      title={template.title}
+                      icon={<EuiIcon size="xxl" type={template.icon} />}
+                      selectable={{
+                        onClick: () => {
+                          setSelectedTemplate({ template, values: {} });
+                        },
+                        isSelected: selectedTemplate?.template.id === template.id,
+                      }}
+                    />
                   </EuiFlexItem>
                 ))}
-              </EuiFlexGrid>
+              </EuiFlexGroup>
             </EuiPanel>
           </EuiFlexItem>
 
