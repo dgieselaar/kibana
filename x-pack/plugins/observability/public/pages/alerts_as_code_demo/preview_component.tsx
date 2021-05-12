@@ -6,6 +6,7 @@
  */
 import { Axis, Chart, LineSeries, niceTimeFormatter, Position, Settings } from '@elastic/charts';
 import datemath from '@elastic/datemath';
+import { EuiCodeBlock } from '@elastic/eui';
 import {
   EuiBasicTable,
   EuiButton,
@@ -20,7 +21,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 import { isNumber } from 'lodash';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { callObservabilityApi } from '../../services/call_observability_api';
@@ -28,6 +29,7 @@ import { callObservabilityApi } from '../../services/call_observability_api';
 enum PreviewTab {
   XyChart = 'xyChart',
   Table = 'table',
+  JSON = 'json',
 }
 
 export function PreviewComponent({ config }: { config?: AlertingConfig }) {
@@ -44,6 +46,17 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     start: 'now-1h',
     end: 'now',
   });
+
+  useEffect(() => {
+    if (config) {
+      setPreview({
+        config,
+        ...time,
+      });
+    } else {
+      setPreview(undefined);
+    }
+  }, [config, time]);
 
   const [selectedTab, setSelectedTab] = useState<string>(PreviewTab.XyChart);
 
@@ -77,7 +90,8 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
       });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [preview]
+    [preview],
+    { preservePreviousData: false }
   );
 
   const allCoordinates =
@@ -155,27 +169,12 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
   const tabs: EuiTabbedContentTab[] = [
     {
       id: PreviewTab.XyChart,
+      // @ts-ignore
+      disabled: !config,
       name: 'Chart',
       content: (
-        <EuiFlexGroup direction="column" alignItems="flexEnd">
+        <EuiFlexGroup direction="column" alignItems="flexEnd" style={{ opacity: config ? 1 : 0 }}>
           <EuiSpacer size="s" />
-          <EuiFlexItem grow={false} style={{ width: 320 }}>
-            <EuiSelect
-              prepend="Select metric"
-              onChange={(e) => {
-                setSelectedMetric(e.target.value);
-              }}
-              options={
-                metricNames.length
-                  ? metricNames.map((name) => {
-                      return {
-                        text: name,
-                      };
-                    })
-                  : [{ disabled: true, text: '...' }]
-              }
-            />
-          </EuiFlexItem>
           <EuiFlexItem style={{ width: '100%' }}>
             <Chart size={{ height: 600 }}>
               <Settings showLegend legendPosition={Position.Bottom} />
@@ -196,6 +195,8 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     },
     {
       id: PreviewTab.Table,
+      // @ts-ignore
+      disabled: !config,
       name: 'Table',
       content: selectedMetric ? (
         <EuiBasicTable
@@ -205,6 +206,20 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
         />
       ) : (
         <></>
+      ),
+    },
+    {
+      id: PreviewTab.JSON,
+      // @ts-ignore
+      disabled: !config,
+      name: 'JSON',
+      content: (
+        <>
+          <EuiSpacer />
+          <EuiCodeBlock isCopyable={true} language="json">
+            {JSON.stringify(config, null, 2)}
+          </EuiCodeBlock>
+        </>
       ),
     },
   ];
@@ -218,9 +233,10 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
       </EuiFlexItem>
       <EuiSpacer size="l" />
       <EuiFlexItem>
-        <EuiFlexGroup direction="row" justifyContent="flexEnd">
-          <EuiFlexItem grow={false}>
+        <EuiFlexGroup direction="row" justifyContent="spaceBetween">
+          <EuiFlexItem>
             <EuiSuperDatePicker
+              isDisabled={!config}
               css="{ width: 100%; }"
               showUpdateButton={false}
               start={time.start}
@@ -231,8 +247,29 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
             />
           </EuiFlexItem>
           <EuiFlexItem>
+            <EuiSelect
+              disabled={metricNames.length === 0}
+              prepend="Select metric"
+              onChange={(e) => {
+                setSelectedMetric(e.target.value);
+              }}
+              options={
+                metricNames.length
+                  ? metricNames.map((name) => {
+                      return {
+                        text: name,
+                      };
+                    })
+                  : [{ disabled: true, text: '...' }]
+              }
+            />
+          </EuiFlexItem>
+          <EuiFlexItem grow={false}>
             <EuiButton
               disabled={!config}
+              color="primary"
+              fill={true}
+              iconType="refresh"
               onClick={() => {
                 if (config) {
                   setPreview({
@@ -242,7 +279,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
                 }
               }}
             >
-              Preview
+              Refresh
             </EuiButton>
           </EuiFlexItem>
         </EuiFlexGroup>

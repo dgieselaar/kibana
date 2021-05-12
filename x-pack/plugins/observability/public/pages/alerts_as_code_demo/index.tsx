@@ -179,25 +179,9 @@ export function AlertsAsCodeDemoPage() {
                         <EuiFormRow fullWidth>
                           <EuiFlexGroup direction="row" justifyContent="flexEnd">
                             <EuiFlexItem grow={false}>
-                              <EuiButtonEmpty
-                                type="button"
-                                iconType="inspect"
-                                onClick={() =>
-                                  inspector.open(
-                                    {
-                                      json: selectedTemplate.template.toRawTemplate(
-                                        selectedTemplate.values
-                                      ),
-                                    },
-                                    { title: `${selectedTemplate.template.title} JSON` }
-                                  )
-                                }
-                              >
-                                <EuiText size="s">Inspect</EuiText>
-                              </EuiButtonEmpty>
-                            </EuiFlexItem>
-                            <EuiFlexItem grow={false}>
-                              <EuiButton type="button">Convert to free-form</EuiButton>
+                              <EuiButton disabled={!config} type="button">
+                                Convert to free-form
+                              </EuiButton>
                             </EuiFlexItem>
                           </EuiFlexGroup>
                         </EuiFormRow>
@@ -214,7 +198,9 @@ export function AlertsAsCodeDemoPage() {
                     </EuiFlexItem>
                     <EuiSpacer size="m" />
                     <EuiFlexItem style={{ alignSelf: 'flex-end' }}>
-                      <EuiButton>Create rule</EuiButton>
+                      <EuiButton disabled={!config} color="primary" fill={true}>
+                        Create rule
+                      </EuiButton>
                     </EuiFlexItem>
                   </EuiFlexGroup>
                 </EuiPanel>
