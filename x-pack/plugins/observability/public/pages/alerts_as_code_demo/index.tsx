@@ -115,7 +115,12 @@ export function AlertsAsCodeDemoPage() {
                   <EuiFlexGroup direction="column" gutterSize="none">
                     <EuiFlexItem>
                       <EuiTitle>
-                        <h3>Configure {selectedTemplate.template.title}</h3>
+                        <h3>
+                          <EuiIcon size="xl" type={selectedTemplate.template.icon} />
+                          <span style={{ marginLeft: '1rem', verticalAlign: 'bottom' }}>
+                            Configure {selectedTemplate.template.title}
+                          </span>
+                        </h3>
                       </EuiTitle>
                       <EuiSpacer size="s" />
                       <EuiText>
