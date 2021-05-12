@@ -7,6 +7,7 @@
 import { Axis, Chart, LineSeries, niceTimeFormatter, Position, Settings } from '@elastic/charts';
 import datemath from '@elastic/datemath';
 import {
+  EuiBasicTable,
   EuiButton,
   EuiFlexGroup,
   EuiFlexItem,
@@ -15,7 +16,6 @@ import {
   EuiSuperDatePicker,
   EuiTabbedContent,
   EuiTabbedContentTab,
-  EuiTable,
   EuiTableFieldDataColumnType,
   EuiTitle,
 } from '@elastic/eui';
@@ -76,7 +76,8 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
         return response;
       });
     },
-    [preview, selectedMetric]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [preview]
   );
 
   const allCoordinates =
@@ -106,20 +107,18 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
       });
     });
 
-    let uniqueLabels = Object.keys(labelSets).filter((key) => {
+    const uniqueLabels = Object.keys(labelSets).filter((key) => {
       const set = labelSets[key];
       return set.size > 1;
     });
 
-    if (!uniqueLabels.length) {
-      uniqueLabels = Object.keys(labelSets).slice(0, 1);
-    }
-
     return (
       data.preview
         .filter((series) => series.metricName === selectedMetric)
-        .map(({ labels, coordinates }) => {
-          const id = uniqueLabels.map((name) => labels[name]).join('-');
+        .map(({ labels, coordinates, metricName }) => {
+          const id = uniqueLabels.length
+            ? uniqueLabels.map((name) => labels[name]).join('-')
+            : metricName;
 
           return {
             data: coordinates,
@@ -147,7 +146,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     })
     .flat();
 
-  const tableColumns: EuiTableFieldDataColumnType<typeof tableData[0]> = [
+  const tableColumns: Array<EuiTableFieldDataColumnType<typeof tableData[0]>> = [
     { name: 'name', field: 'name', dataType: 'string' },
     { name: selectedMetric, field: selectedMetric, dataType: 'number' },
     { name: '@timestamp', field: '@timestamp', dataType: 'date' },
@@ -199,7 +198,11 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
       id: PreviewTab.Table,
       name: 'Table',
       content: (
-        <EuiTable columns={tableColumns} items={tableData} style={{ width: '100%', height: 600 }} />
+        <EuiBasicTable
+          columns={tableColumns}
+          items={tableData}
+          style={{ width: '100%', height: 600 }}
+        />
       ),
     },
   ];

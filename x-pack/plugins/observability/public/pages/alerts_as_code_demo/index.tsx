@@ -6,6 +6,7 @@
  */
 
 import { EuiFormRow } from '@elastic/eui';
+import { EuiFieldText } from '@elastic/eui';
 import {
   EuiButton,
   EuiFlexGrid,
@@ -35,7 +36,7 @@ export function AlertsAsCodeDemoPage() {
   const { inspector } = usePluginContext().plugins;
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
-  >({ template: templates[0], values: {} });
+  >({ template: templates[1], values: {} });
 
   const onChange = (values: Record<string, any>) => {
     setSelectedTemplate((state) => {
@@ -94,12 +95,16 @@ export function AlertsAsCodeDemoPage() {
                 {templates.map((template) => (
                   <EuiFlexItem grow={false} key={template.id} style={{ width: 320 }}>
                     <EuiPanel>
-                      <EuiFlexGroup direction="column" alignItems="center">
+                      <EuiFlexGroup
+                        direction="column"
+                        alignItems="center"
+                        justifyContent="spaceBetween"
+                      >
                         <EuiSpacer size="s" />
                         <EuiFlexItem>
                           <EuiIcon type={template.icon} size="xxl" />
                         </EuiFlexItem>
-                        <EuiFlexItem>
+                        <EuiFlexItem style={{ textAlign: 'center' }}>
                           <EuiTitle>
                             <h3>{template.title}</h3>
                           </EuiTitle>
@@ -109,7 +114,7 @@ export function AlertsAsCodeDemoPage() {
                             {template.description}
                           </EuiText>
                         </EuiFlexItem>
-                        <EuiFlexItem style={{ alignSelf: 'stretch' }}>
+                        <EuiFlexItem grow style={{ alignSelf: 'stretch', alignItems: 'flexEnd' }}>
                           {template !== selectedTemplate?.template ? (
                             <EuiButton
                               onClick={() => {
@@ -156,6 +161,17 @@ export function AlertsAsCodeDemoPage() {
                     </EuiFlexItem>
                     <EuiFlexItem>
                       <EuiForm>
+                        <EuiFormRow label="Rule name" helpText="Give the rule a name">
+                          <EuiFieldText
+                            value={selectedTemplate.values.ruleName ?? ''}
+                            onChange={(e) => {
+                              onChange({
+                                ...selectedTemplate.values,
+                                ruleName: e.target.value,
+                              });
+                            }}
+                          />
+                        </EuiFormRow>
                         {selectedTemplate.template.form({
                           values: selectedTemplate.values,
                           onChange,

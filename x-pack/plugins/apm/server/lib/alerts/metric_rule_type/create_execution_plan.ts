@@ -304,8 +304,9 @@ export function createExecutionPlan({
                 );
 
                 const aggregatedMetrics = mapValues(
-                  queryMetricResolvers,
-                  (fn, key) => {
+                  search.metrics,
+                  (_, key) => {
+                    const fn = queryMetricResolvers[key];
                     return fn(bucket[key as keyof typeof bucket]);
                   }
                 );
