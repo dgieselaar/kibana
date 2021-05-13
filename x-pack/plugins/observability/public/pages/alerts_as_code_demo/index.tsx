@@ -5,6 +5,8 @@
  * 2.0.
  */
 
+import { EuiModalBody } from '@elastic/eui';
+import { EuiModalHeader } from '@elastic/eui';
 import {
   EuiButton,
   EuiCard,
@@ -21,6 +23,7 @@ import {
   EuiSpacer,
   EuiText,
   EuiTitle,
+  EuiModal,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useState } from 'react';
@@ -34,6 +37,8 @@ export function AlertsAsCodeDemoPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
   >({ template: templates[1], values: {} });
+
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
   const onChange = (values: Record<string, any>) => {
     setSelectedTemplate((state) => {
@@ -58,111 +63,122 @@ export function AlertsAsCodeDemoPage() {
       : undefined;
 
   return (
-    <EuiPage restrictWidth>
-      <EuiPageBody>
-        <EuiPageHeader
-          bottomBorder
-          paddingSize="l"
-          css={`
-             {
-              margin: 0;
-              padding-bottom: ${theme.eui.paddingSizes.l};
+    <>
+      <EuiPage restrictWidth>
+        <EuiPageBody>
+          <EuiPageHeader
+            bottomBorder
+            paddingSize="l"
+            css={`
+               {
+                margin: 0;
+                padding-bottom: ${theme.eui.paddingSizes.l};
+              }
+            `}
+            pageTitle={
+              <>
+                Metric rules <ExperimentalBadge />
+              </>
             }
-          `}
-          pageTitle={
-            <>
-              Metric rules <ExperimentalBadge />
-            </>
-          }
-        >
-          Create metric-based rules and alerts with a template or manually configure it yourself.
-        </EuiPageHeader>
-        <EuiFlexGroup direction="column">
-          <EuiFlexItem>
-            <EuiPanel paddingSize="l">
-              <EuiFlexGroup direction="column" gutterSize="none">
-                <EuiTitle>
-                  <h3>Choose template</h3>
-                </EuiTitle>
-                <EuiSpacer size="s" />
-                <EuiText>Templates that are available to use.</EuiText>
-              </EuiFlexGroup>
-              <EuiSpacer size="m" />
-              <EuiFlexGroup>
-                {templates.map((template) => (
-                  <EuiFlexItem key={template.id}>
-                    <EuiCard
-                      description={template.description}
-                      title={template.title}
-                      icon={<EuiIcon size="xxl" type={template.icon} />}
-                      selectable={{
-                        onClick: () => {
-                          setSelectedTemplate({ template, values: {} });
-                        },
-                        isSelected: selectedTemplate?.template.id === template.id,
-                      }}
-                    />
-                  </EuiFlexItem>
-                ))}
-              </EuiFlexGroup>
-            </EuiPanel>
-          </EuiFlexItem>
+          >
+            Create metric-based rules and alerts with a template or manually configure it yourself.
+          </EuiPageHeader>
+          <EuiFlexGroup direction="column">
+            <EuiFlexItem>
+              <EuiPanel paddingSize="l">
+                <EuiFlexGroup direction="column" gutterSize="none">
+                  <EuiTitle>
+                    <h3>Choose template</h3>
+                  </EuiTitle>
+                  <EuiSpacer size="s" />
+                  <EuiText>Templates that are available to use.</EuiText>
+                </EuiFlexGroup>
+                <EuiSpacer size="m" />
+                <EuiFlexGroup>
+                  {templates.map((template) => (
+                    <EuiFlexItem key={template.id}>
+                      <EuiCard
+                        description={template.description}
+                        title={template.title}
+                        icon={<EuiIcon size="xxl" type={template.icon} />}
+                        selectable={{
+                          onClick: () => {
+                            setSelectedTemplate({ template, values: {} });
+                          },
+                          isSelected: selectedTemplate?.template.id === template.id,
+                        }}
+                      />
+                    </EuiFlexItem>
+                  ))}
+                </EuiFlexGroup>
+              </EuiPanel>
+            </EuiFlexItem>
 
-          {selectedTemplate ? (
-            <>
-              <EuiFlexItem>
-                <EuiPanel paddingSize="l">
-                  <EuiFlexGroup direction="column" gutterSize="none">
-                    <EuiFlexItem>
-                      <EuiTitle>
-                        <h3>
-                          <EuiIcon size="xl" type={selectedTemplate.template.icon} />
-                          <span style={{ marginLeft: '1rem', verticalAlign: 'bottom' }}>
-                            Configure {selectedTemplate.template.title}
-                          </span>
-                        </h3>
-                      </EuiTitle>
-                      <EuiSpacer size="s" />
-                      <EuiText>
-                        These are the settings needed to configure {selectedTemplate.template.title}
-                        .
-                      </EuiText>
-                    </EuiFlexItem>
-                    <EuiFlexItem>
-                      <EuiSpacer size="m" />
-                    </EuiFlexItem>
-                    <EuiFlexItem>
-                      <EuiForm>
-                        <EuiFormRow label="Rule name" helpText="Give the rule a name">
-                          <EuiFieldText
-                            value={selectedTemplate.values.ruleName ?? ''}
-                            onChange={(e) => {
-                              onChange({
-                                ...selectedTemplate.values,
-                                ruleName: e.target.value,
-                              });
-                            }}
+            {selectedTemplate ? (
+              <>
+                <EuiFlexItem>
+                  <EuiPanel paddingSize="l">
+                    <EuiFlexGroup direction="column" gutterSize="none">
+                      <EuiFlexItem>
+                        <EuiTitle>
+                          <h3>
+                            <EuiIcon size="xl" type={selectedTemplate.template.icon} />
+                            <span style={{ marginLeft: '1rem', verticalAlign: 'bottom' }}>
+                              Configure {selectedTemplate.template.title}
+                            </span>
+                          </h3>
+                        </EuiTitle>
+                        <EuiSpacer size="s" />
+                        <EuiText>
+                          These are the settings needed to configure{' '}
+                          {selectedTemplate.template.title}.
+                        </EuiText>
+                      </EuiFlexItem>
+                      <EuiFlexItem>
+                        <EuiSpacer size="m" />
+                      </EuiFlexItem>
+                      <EuiFlexItem>
+                        <EuiForm>
+                          <EuiFormRow label="Rule name" helpText="Give the rule a name">
+                            <EuiFieldText
+                              value={selectedTemplate.values.ruleName ?? ''}
+                              onChange={(e) => {
+                                onChange({
+                                  ...selectedTemplate.values,
+                                  ruleName: e.target.value,
+                                });
+                              }}
+                            />
+                          </EuiFormRow>
+                          <selectedTemplate.template.Form
+                            values={selectedTemplate.values}
+                            onChange={onChange}
                           />
-                        </EuiFormRow>
-                        <selectedTemplate.template.Form
-                          values={selectedTemplate.values}
-                          onChange={onChange}
-                        />
-                        <EuiFormRow fullWidth>
-                          <EuiFlexGroup direction="row" justifyContent="flexEnd">
-                            <EuiFlexItem grow={false}>
-                              <EuiButton disabled={!config} type="button">
-                                Convert to free-form
-                              </EuiButton>
-                            </EuiFlexItem>
-                          </EuiFlexGroup>
-                        </EuiFormRow>
-                      </EuiForm>
-                    </EuiFlexItem>
-                  </EuiFlexGroup>
-                </EuiPanel>
-              </EuiFlexItem>
-              <EuiFlexItem>
+                          <EuiFormRow fullWidth>
+                            <EuiFlexGroup direction="row" justifyContent="flexEnd">
+                              <EuiFlexItem grow={false}>
+                                <EuiButton
+                                  disabled={!config}
+                                  color="text"
+                                  type="button"
+                                  onClick={() => setPreviewModalVisible(true)}
+                                >
+                                  Preview rule
+                                </EuiButton>
+                              </EuiFlexItem>
+                              <EuiFlexItem grow={false}>
+                                <EuiButton disabled={!config} type="button">
+                                  Convert to free-form
+                                </EuiButton>
+                              </EuiFlexItem>
+                            </EuiFlexGroup>
+                          </EuiFormRow>
+                        </EuiForm>
+                      </EuiFlexItem>
+                    </EuiFlexGroup>
+                  </EuiPanel>
+                </EuiFlexItem>
+                {/* <EuiFlexItem>
                 <EuiPanel paddingSize="l">
                   <EuiFlexGroup direction="column" gutterSize="none">
                     <EuiFlexItem>
@@ -176,11 +192,24 @@ export function AlertsAsCodeDemoPage() {
                     </EuiFlexItem>
                   </EuiFlexGroup>
                 </EuiPanel>
-              </EuiFlexItem>
-            </>
-          ) : null}
-        </EuiFlexGroup>
-      </EuiPageBody>
-    </EuiPage>
+              </EuiFlexItem> */}
+              </>
+            ) : null}
+          </EuiFlexGroup>
+        </EuiPageBody>
+      </EuiPage>
+      {previewModalVisible && (
+        <EuiModal
+          maxWidth={false}
+          onClose={() => {
+            setPreviewModalVisible(false);
+          }}
+        >
+          <EuiModalBody>
+            <PreviewComponent config={config} />
+          </EuiModalBody>
+        </EuiModal>
+      )}
+    </>
   );
 }
