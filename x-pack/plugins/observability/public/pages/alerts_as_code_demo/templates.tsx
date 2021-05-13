@@ -9,7 +9,7 @@ import { EuiFieldNumber } from '@elastic/eui';
 import { EuiFormRow } from '@elastic/eui';
 import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
 import * as t from 'io-ts';
-import React from 'react';
+import React, { ComponentType } from 'react';
 import type { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { QueryInput } from './query_input';
 import { useIndexPatterns } from './use_index_patterns';
@@ -22,10 +22,10 @@ export interface Template<TType extends t.Mixed = t.Mixed> {
   icon: EuiIconType;
   title: string;
   description: string;
-  form: (options: {
+  Form: ComponentType<{
     values: Partial<t.TypeOf<TType>>;
     onChange: (values: Partial<t.TypeOf<TType>>) => void;
-  }) => React.ReactNode;
+  }>;
   toRawTemplate: (props: t.TypeOf<TType>) => AlertingConfig;
 }
 
@@ -44,7 +44,7 @@ export const templates: Array<Template<any>> = [
       window: t.number,
     }),
     icon: 'faceHappy',
-    form: ({ values, onChange }) => {
+    Form: ({ values, onChange }) => {
       return (
         <>
           <EuiFormRow
@@ -141,7 +141,7 @@ export const templates: Array<Template<any>> = [
       allFilter: t.string,
       onTargetFilter: t.string,
     }),
-    form: ({ values, onChange }) => {
+    Form: ({ values, onChange }) => {
       const { indexPatterns } = useIndexPatterns(values.index ?? []);
 
       return (
