@@ -6,10 +6,10 @@
  */
 import { Axis, Chart, LineSeries, niceTimeFormatter, Position, Settings } from '@elastic/charts';
 import datemath from '@elastic/datemath';
-import { EuiCodeBlock } from '@elastic/eui';
 import {
   EuiBasicTable,
   EuiButton,
+  EuiCodeBlock,
   EuiFlexGroup,
   EuiFlexItem,
   EuiSelect,
@@ -18,7 +18,6 @@ import {
   EuiTabbedContent,
   EuiTabbedContentTab,
   EuiTableFieldDataColumnType,
-  EuiTitle,
 } from '@elastic/eui';
 import { isNumber } from 'lodash';
 import React, { useEffect, useMemo, useState } from 'react';

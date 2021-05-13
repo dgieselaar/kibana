@@ -4,12 +4,13 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiComboBox, EuiFieldNumber, EuiFormRow, EuiSpacer } from '@elastic/eui';
+import { EuiComboBox, EuiFieldNumber, EuiFormErrorText, EuiFormRow, EuiSpacer } from '@elastic/eui';
 import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
+import { isLeft } from 'fp-ts/lib/Either';
 import * as t from 'io-ts';
-import React, { ComponentType } from 'react';
+import React, { ComponentType, useEffect, useMemo, useState } from 'react';
 import { CodeEditor } from '../../../../../../src/plugins/kibana_react/public';
-import type { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
+import { AlertingConfig, configRt } from '../../../common/rules/alerting_dsl_rt';
 import { QueryInput } from './query_input';
 import { useIndexPatterns } from './use_index_patterns';
 
@@ -39,19 +40,93 @@ export const templates: Array<Template<any>> = [
     description: 'Free-form editing of rules',
     icon: 'snowflake',
     type: t.type({
-      config: t.UnknownRecord,
+      ruleName: t.string,
+      config: configRt,
     }),
     Form: ({ values, onChange }) => {
-      const defaultValue: AlertingConfig = { query: { index: 'apm-*' } };
+      // Just the default for apdex
+      const defaultValue: AlertingConfig = useMemo(
+        () => ({
+          step: '1m',
+          query: {
+            index: ['apm-*', 'traces-apm*'],
+            filter: 'transaction.type:page-load or transaction.type:request',
+            metrics: {
+              satisfied_count_10m: {
+                count_over_time: {
+                  range: '10m',
+                  filter: 'transaction.duration.us<=100000',
+                },
+                record: true,
+              },
+              tolerated_count_10m: {
+                count_over_time: {
+                  range: '10m',
+                  filter: 'transaction.duration.us>100000 and transaction.duration.us<=100000',
+                },
+                record: true,
+              },
+              total_count_10m: {
+                count_over_time: {
+                  range: '10m',
+                },
+                record: true,
+              },
+              apdex_score_10m: {
+                expression: '(satisfied_count_10m + (tolerated_count_10m / 2)) / total_count_10m',
+                record: true,
+              },
+            },
+            by: {
+              'service.name': {
+                field: 'service.name',
+              },
+            },
+            query_delay: '30s',
+          },
+          alert: {},
+        }),
+        []
+      );
+      const [errors, setErrors] = useState<string | undefined>(undefined);
+      const [text, setText] = useState(JSON.stringify(values.config ?? defaultValue, null, 2));
+
+      useEffect(() => {
+        onChange({ ...values, config: defaultValue });
+      }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
       return (
         <>
           <EuiSpacer />
           <CodeEditor
             height={350}
             languageId="json"
-            onChange={(value) => onChange({ config: JSON.parse(value) })}
-            value={JSON.stringify(values.config ?? defaultValue, null, 2)}
+            onChange={(value) => {
+              setText(value);
+              try {
+                const config = JSON.parse(value);
+                const validation = configRt.decode(config);
+                const validationErrors = validation && isLeft(validation) ? validation.left : [];
+                if (validationErrors.length === 0) {
+                  setErrors(undefined);
+                  onChange({ ...values, config });
+                } else {
+                  setErrors('Invalid rule definition');
+                  onChange({ ...values, config: {} as AlertingConfig });
+                  // eslint-disable-next-line no-console
+                  console.warn(validationErrors);
+                }
+              } catch (e) {
+                setErrors(e.message);
+                onChange({ ...values, config: {} as AlertingConfig });
+                // eslint-disable-next-line no-console
+                console.warn(e.message);
+              }
+            }}
+            value={text}
           />
+          <EuiSpacer size="s" />
+          <EuiFormErrorText>{errors}</EuiFormErrorText>
           <EuiSpacer />
         </>
       );

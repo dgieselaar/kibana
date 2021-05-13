@@ -28,7 +28,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 import { useTheme } from '../../hooks/use_theme';
 import { PreviewComponent } from './preview_component';
@@ -42,16 +42,19 @@ export function AlertsAsCodeDemoPage() {
 
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
-  const onChange = (values: Record<string, any>) => {
-    setSelectedTemplate((state) => {
-      return state?.template
-        ? {
-            ...state,
-            values,
-          }
-        : undefined;
-    });
-  };
+  const onChange = useCallback(
+    (values: Record<string, any>) => {
+      setSelectedTemplate((state) => {
+        return state?.template
+          ? {
+              ...state,
+              values,
+            }
+          : undefined;
+      });
+    },
+    [setSelectedTemplate]
+  );
 
   const validation = selectedTemplate?.template.type.decode(selectedTemplate?.values);
 
@@ -171,6 +174,7 @@ export function AlertsAsCodeDemoPage() {
                               )}
                               <EuiFlexItem grow={false}>
                                 <EuiButton
+                                  fill={true}
                                   disabled={!config}
                                   type="button"
                                   iconType="play"
