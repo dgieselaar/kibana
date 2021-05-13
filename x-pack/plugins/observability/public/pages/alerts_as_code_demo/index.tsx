@@ -5,11 +5,9 @@
  * 2.0.
  */
 
-import { EuiModalBody } from '@elastic/eui';
-import { EuiButtonEmpty } from '@elastic/eui';
-import { EuiModalHeader } from '@elastic/eui';
 import {
   EuiButton,
+  EuiButtonEmpty,
   EuiCard,
   EuiFieldText,
   EuiFlexGroup,
@@ -17,6 +15,10 @@ import {
   EuiForm,
   EuiFormRow,
   EuiIcon,
+  EuiModal,
+  EuiModalBody,
+  EuiModalHeader,
+  EuiModalHeaderTitle,
   EuiPage,
   EuiPageBody,
   EuiPageHeader,
@@ -24,7 +26,6 @@ import {
   EuiSpacer,
   EuiText,
   EuiTitle,
-  EuiModal,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useState } from 'react';
@@ -37,7 +38,7 @@ export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
-  >({ template: templates[1], values: {} });
+  >({ template: templates[0], values: {} });
 
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
@@ -157,11 +158,17 @@ export function AlertsAsCodeDemoPage() {
                           />
                           <EuiFormRow fullWidth>
                             <EuiFlexGroup direction="row" justifyContent="flexEnd">
-                              <EuiFlexItem grow={false}>
-                                <EuiButtonEmpty disabled={!config} type="button" iconType="pencil">
-                                  Convert to free-form
-                                </EuiButtonEmpty>
-                              </EuiFlexItem>
+                              {selectedTemplate.template.id !== 'free-form' && (
+                                <EuiFlexItem grow={false}>
+                                  <EuiButtonEmpty
+                                    disabled={!config}
+                                    type="button"
+                                    iconType="pencil"
+                                  >
+                                    Convert to free-form
+                                  </EuiButtonEmpty>
+                                </EuiFlexItem>
+                              )}
                               <EuiFlexItem grow={false}>
                                 <EuiButton
                                   disabled={!config}
@@ -187,10 +194,16 @@ export function AlertsAsCodeDemoPage() {
       {previewModalVisible && (
         <EuiModal
           maxWidth={false}
+          style={{ width: '100%', height: '100%' }}
           onClose={() => {
             setPreviewModalVisible(false);
           }}
         >
+          <EuiModalHeader>
+            <EuiModalHeaderTitle>
+              <h1>Preview</h1>
+            </EuiModalHeaderTitle>
+          </EuiModalHeader>
           <EuiModalBody>
             <PreviewComponent config={config} />
           </EuiModalBody>

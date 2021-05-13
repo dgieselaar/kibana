@@ -4,12 +4,11 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiComboBox } from '@elastic/eui';
-import { EuiFieldNumber } from '@elastic/eui';
-import { EuiFormRow } from '@elastic/eui';
+import { EuiComboBox, EuiFieldNumber, EuiFormRow, EuiSpacer } from '@elastic/eui';
 import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
 import * as t from 'io-ts';
 import React, { ComponentType } from 'react';
+import { CodeEditor } from '../../../../../../src/plugins/kibana_react/public';
 import type { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { QueryInput } from './query_input';
 import { useIndexPatterns } from './use_index_patterns';
@@ -34,6 +33,33 @@ function createTemplate<TType extends t.Mixed>(template: Template<TType>): Templ
 }
 
 export const templates: Array<Template<any>> = [
+  createTemplate({
+    id: 'free-form',
+    title: 'Free-form',
+    description: 'Free-form editing of rules',
+    icon: 'snowflake',
+    type: t.type({
+      config: t.UnknownRecord,
+    }),
+    Form: ({ values, onChange }) => {
+      const defaultValue: AlertingConfig = { query: { index: 'apm-*' } };
+      return (
+        <>
+          <EuiSpacer />
+          <CodeEditor
+            height={350}
+            languageId="json"
+            onChange={(value) => onChange({ config: JSON.parse(value) })}
+            value={JSON.stringify(values.config ?? defaultValue, null, 2)}
+          />
+          <EuiSpacer />
+        </>
+      );
+    },
+    toRawTemplate: ({ config }) => {
+      return config as AlertingConfig;
+    },
+  }),
   createTemplate({
     id: 'apdex_score',
     title: 'Apdex score',
