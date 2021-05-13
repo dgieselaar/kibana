@@ -6,6 +6,7 @@
  */
 
 import { EuiModalBody } from '@elastic/eui';
+import { EuiButtonEmpty } from '@elastic/eui';
 import { EuiModalHeader } from '@elastic/eui';
 import {
   EuiButton,
@@ -157,18 +158,18 @@ export function AlertsAsCodeDemoPage() {
                           <EuiFormRow fullWidth>
                             <EuiFlexGroup direction="row" justifyContent="flexEnd">
                               <EuiFlexItem grow={false}>
+                                <EuiButtonEmpty disabled={!config} type="button" iconType="pencil">
+                                  Convert to free-form
+                                </EuiButtonEmpty>
+                              </EuiFlexItem>
+                              <EuiFlexItem grow={false}>
                                 <EuiButton
                                   disabled={!config}
-                                  color="text"
                                   type="button"
+                                  iconType="play"
                                   onClick={() => setPreviewModalVisible(true)}
                                 >
                                   Preview rule
-                                </EuiButton>
-                              </EuiFlexItem>
-                              <EuiFlexItem grow={false}>
-                                <EuiButton disabled={!config} type="button">
-                                  Convert to free-form
                                 </EuiButton>
                               </EuiFlexItem>
                             </EuiFlexGroup>
@@ -178,21 +179,6 @@ export function AlertsAsCodeDemoPage() {
                     </EuiFlexGroup>
                   </EuiPanel>
                 </EuiFlexItem>
-                {/* <EuiFlexItem>
-                <EuiPanel paddingSize="l">
-                  <EuiFlexGroup direction="column" gutterSize="none">
-                    <EuiFlexItem>
-                      <PreviewComponent config={config} />
-                    </EuiFlexItem>
-                    <EuiSpacer size="m" />
-                    <EuiFlexItem style={{ alignSelf: 'flex-end' }}>
-                      <EuiButton disabled={!config} color="primary" fill={true}>
-                        Create rule
-                      </EuiButton>
-                    </EuiFlexItem>
-                  </EuiFlexGroup>
-                </EuiPanel>
-              </EuiFlexItem> */}
               </>
             ) : null}
           </EuiFlexGroup>
