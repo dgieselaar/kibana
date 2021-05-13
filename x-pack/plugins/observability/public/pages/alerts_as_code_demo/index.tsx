@@ -67,6 +67,16 @@ export function AlertsAsCodeDemoPage() {
       ? selectedTemplate.template.toRawTemplate(selectedTemplate.values)
       : undefined;
 
+  const convertToFreeForm = () => {
+    setSelectedTemplate((prev) => ({
+      template: templates[0],
+      values: {
+        ruleName: prev?.values.ruleName,
+        config: prev?.template.toRawTemplate(prev.values),
+      },
+    }));
+  };
+
   return (
     <>
       <EuiPage restrictWidth>
@@ -166,7 +176,8 @@ export function AlertsAsCodeDemoPage() {
                                   <EuiButtonEmpty
                                     disabled={!config}
                                     type="button"
-                                    iconType="pencil"
+                                    iconType="snowflake"
+                                    onClick={convertToFreeForm}
                                   >
                                     Convert to free-form
                                   </EuiButtonEmpty>

@@ -92,7 +92,9 @@ export const templates: Array<Template<any>> = [
       const [text, setText] = useState(JSON.stringify(values.config ?? defaultValue, null, 2));
 
       useEffect(() => {
-        onChange({ ...values, config: defaultValue });
+        if (!values.config) {
+          onChange({ ...values, config: defaultValue });
+        }
       }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
       return (
