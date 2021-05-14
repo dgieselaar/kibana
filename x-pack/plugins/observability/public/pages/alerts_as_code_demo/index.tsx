@@ -13,14 +13,14 @@ import {
   EuiFlexGrid,
   EuiFlexGroup,
   EuiFlexItem,
+  EuiFlyout,
+  EuiFlyoutBody,
+  EuiFlyoutFooter,
+  EuiFlyoutHeader,
   EuiForm,
   EuiFormRow,
   EuiIcon,
   EuiLink,
-  EuiModal,
-  EuiModalBody,
-  EuiModalHeader,
-  EuiModalHeaderTitle,
   EuiPageTemplate,
   EuiPanel,
   EuiSpacer,
@@ -38,7 +38,7 @@ export function AlertsAsCodeDemoPage() {
     { template: Template; values: Record<string, any> } | undefined
   >();
 
-  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const onChange = useCallback(
     (values: Record<string, any>) => {
@@ -206,7 +206,7 @@ export function AlertsAsCodeDemoPage() {
                                 disabled={!config}
                                 type="button"
                                 iconType="play"
-                                onClick={() => setPreviewModalVisible(true)}
+                                onClick={() => setPreviewVisible(true)}
                               >
                                 Preview rule
                               </EuiButton>
@@ -222,23 +222,31 @@ export function AlertsAsCodeDemoPage() {
           ) : null}
         </EuiFlexGroup>
       </EuiPageTemplate>
-      {previewModalVisible && (
-        <EuiModal
-          maxWidth={false}
-          style={{ width: '100%', height: '100%' }}
+      {previewVisible && (
+        <EuiFlyout
           onClose={() => {
-            setPreviewModalVisible(false);
+            setPreviewVisible(false);
           }}
+          size="l"
         >
-          <EuiModalHeader>
-            <EuiModalHeaderTitle>
+          <EuiFlyoutHeader>
+            <EuiTitle>
               <h1>Preview</h1>
-            </EuiModalHeaderTitle>
-          </EuiModalHeader>
-          <EuiModalBody>
+            </EuiTitle>
+          </EuiFlyoutHeader>
+          <EuiFlyoutBody>
             <PreviewComponent config={config} />
-          </EuiModalBody>
-        </EuiModal>
+          </EuiFlyoutBody>
+          <EuiFlyoutFooter>
+            <EuiFlexGroup justifyContent="flexEnd">
+              <EuiFlexItem grow={false}>
+                <EuiButton fill={true} onClick={() => setPreviewVisible(false)}>
+                  Close
+                </EuiButton>
+              </EuiFlexItem>
+            </EuiFlexGroup>
+          </EuiFlyoutFooter>
+        </EuiFlyout>
       )}
     </>
   );
