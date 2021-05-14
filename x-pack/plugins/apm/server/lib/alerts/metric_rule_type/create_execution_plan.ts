@@ -10,18 +10,21 @@ import { PathReporter } from 'io-ts/lib/PathReporter';
 import { mapValues, flatten, pickBy } from 'lodash';
 import * as math from 'mathjs';
 import { ESSearchClient } from 'typings/elasticsearch';
+import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
+import { RuleDataClient } from '../../../../../../plugins/rule_registry/server';
 import { PromiseReturnType } from '../../../../../observability/typings/common';
 import { arrayUnionToCallable } from '../../../../common/utils/array_union_to_callable';
 import {
   getMetricQueryResolver,
   QueryMetricAggregation,
 } from '../../../../common/rules/alerting_dsl/metric_resolvers';
-import { metricQueryRt } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
-import { parseInterval } from '../../../../../../../src/plugins/data/common';
-import type {
-  AlertingConfig,
-  AlertingQuery,
+import {
+  AlertingEsQuery,
+  AlertsDataQuery,
+  metricQueryRt,
 } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
+import { parseInterval } from '../../../../../../../src/plugins/data/common';
+import type { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { kqlQuery, rangeQuery } from '../../../utils/queries';
 import { mergeByLabels } from './merge_by_labels';
 
@@ -32,6 +35,32 @@ const relaxedMath: typeof math = math.create(math.all) as any;
   to: 'number',
   convert: () => 0,
 });
+
+function alertsQuery({
+  ruleUuid,
+  query,
+}: {
+  ruleUuid?: string;
+  query: AlertsDataQuery;
+}) {
+  return [
+    ...(ruleUuid
+      ? [
+          {
+            bool: {
+              must_not: [
+                {
+                  term: {
+                    [RULE_UUID]: ruleUuid,
+                  },
+                },
+              ],
+            },
+          },
+        ]
+      : []),
+  ];
+}
 
 interface BaseParsedMetric<
   TType extends string,
@@ -73,7 +102,7 @@ function parseMetrics({
   time,
   step,
 }: {
-  query: AlertingQuery;
+  query: Pick<AlertingEsQuery, 'metrics' | 'query_delay' | 'round'>;
   time: number;
   step?: string;
 }) {
@@ -160,16 +189,25 @@ function parseMetrics({
 export function createExecutionPlan({
   config,
   clusterClient,
+  ruleDataClient,
 }: {
   config: AlertingConfig;
   clusterClient: ESSearchClient;
+  ruleDataClient: RuleDataClient;
 }) {
   return {
     async evaluate({ time }: { time: number }) {
       const queries = 'query' in config ? [config.query] : config.queries;
 
       const queryResults = await Promise.all(
-        queries.map(async (query) => {
+        queries.map(async (queryConfig) => {
+          const query =
+            'alerts' in queryConfig
+              ? {
+                  ...queryConfig.alerts,
+                }
+              : queryConfig;
+
           const metrics = parseMetrics({ query, time, step: config.step });
 
           const expressionMetrics = pickBy(
@@ -239,42 +277,51 @@ export function createExecutionPlan({
                   })
                 : [];
 
-              const response = await clusterClient.search({
-                index: query.index,
-                body: {
-                  query: {
-                    bool: {
-                      filter: [
-                        ...rangeQuery(search.range.start, search.range.end),
-                        ...kqlQuery(query.filter),
-                      ],
-                    },
+              const searchRequestBody = {
+                query: {
+                  bool: {
+                    filter: [
+                      ...rangeQuery(search.range.start, search.range.end),
+                      ...kqlQuery(query.filter),
+                      ...('alerts' in queryConfig
+                        ? alertsQuery({ query: queryConfig })
+                        : []),
+                    ],
                   },
-                  aggs: !sources.length
-                    ? aggs
-                    : {
-                        groups: {
-                          ...(sources.length === 1
-                            ? {
-                                terms: {
-                                  ...sources[0].source,
-                                  size: groupConfig!.limit,
-                                },
-                              }
-                            : {
-                                multi_terms: {
-                                  terms: sources.map((source) => source.source),
-                                  ...({
-                                    size: groupConfig!.limit ?? 10000,
-                                  } as {}),
-                                },
-                              }),
-                          aggs,
-                        },
-                      },
-                  size: 0,
                 },
-              });
+                aggs: !sources.length
+                  ? aggs
+                  : {
+                      groups: {
+                        ...(sources.length === 1
+                          ? {
+                              terms: {
+                                ...sources[0].source,
+                                size: groupConfig!.limit,
+                              },
+                            }
+                          : {
+                              multi_terms: {
+                                terms: sources.map((source) => source.source),
+                                ...({
+                                  size: groupConfig!.limit ?? 10000,
+                                } as {}),
+                              },
+                            }),
+                        aggs,
+                      },
+                    },
+                size: 0,
+              };
+
+              const response = !('alerts' in queryConfig)
+                ? await clusterClient.search({
+                    index: queryConfig.index,
+                    body: searchRequestBody,
+                  })
+                : await ruleDataClient.getReader().search({
+                    body: searchRequestBody,
+                  });
 
               const { aggregations } = response;
 

@@ -11,6 +11,8 @@ import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
 import * as t from 'io-ts';
 import React, { ComponentType } from 'react';
 import type { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
+import { GroupBySelect } from './group_by_select';
+import { IndexSelect } from './index_select';
 import { QueryInput } from './query_input';
 import { useIndexPatterns } from './use_index_patterns';
 
@@ -90,7 +92,6 @@ export const templates: Array<Template<any>> = [
       const thresholdUs = props.latencyThreshold * 1000;
 
       return {
-        step: '1m',
         query: {
           index: ['apm-*', 'traces-apm*'],
           filter: 'transaction.type:page-load or transaction.type:request',
@@ -147,24 +148,14 @@ export const templates: Array<Template<any>> = [
       return (
         <>
           <EuiFormRow label="Source index" helpText="The index to query for">
-            <EuiComboBox
-              compressed
-              selectedOptions={(values.index ?? []).map((index) => ({
-                label: index,
-              }))}
-              onChange={(options) => {
+            <IndexSelect
+              value={values.index ?? []}
+              onChange={(index) => {
                 onChange({
                   ...values,
-                  index: options.map((option) => option.label),
+                  index,
                 });
               }}
-              onCreateOption={(index) => {
-                onChange({
-                  ...values,
-                  index: (values.index ?? []).concat(index),
-                });
-              }}
-              noSuggestions
             />
           </EuiFormRow>
 
@@ -200,7 +191,6 @@ export const templates: Array<Template<any>> = [
     },
     toRawTemplate: (props) => {
       return {
-        step: '1m',
         query: {
           index: props.index,
           filter: props.allFilter,
@@ -317,6 +307,270 @@ export const templates: Array<Template<any>> = [
               expression:
                 '1 - (slo_count_on_target_3d / (slo_count_all_3d + slo_count_on_target_3d))',
               record: true,
+            },
+          },
+        },
+        alert: {},
+      };
+    },
+  }),
+  createTemplate({
+    id: 'missing_data',
+    title: 'Missing data',
+    description: 'Detect and alert when an entity has stopped reporting data',
+    icon: 'partial',
+    type: t.intersection([
+      t.type({
+        index: t.array(t.string),
+        groups: t.array(t.string),
+        lookbackWindowDays: t.number,
+        evaluationWindowMinutes: t.number,
+      }),
+      t.partial({
+        filter: t.string,
+      }),
+    ]),
+    Form: ({ values, onChange }) => {
+      const { indexPatterns } = useIndexPatterns(values.index ?? []);
+
+      return (
+        <>
+          <EuiFormRow label="Source index" helpText="The index to query for">
+            <EuiComboBox
+              compressed
+              selectedOptions={(values.index ?? []).map((index) => ({
+                label: index,
+              }))}
+              onChange={(options) => {
+                onChange({
+                  ...values,
+                  index: options.map((option) => option.label),
+                });
+              }}
+              onCreateOption={(index) => {
+                onChange({
+                  ...values,
+                  index: (values.index ?? []).concat(index),
+                });
+              }}
+              noSuggestions
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Lookback window" helpText="The lookback window to compare to">
+            <EuiFieldNumber
+              value={values.lookbackWindowDays ?? ''}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  lookbackWindowDays: e.target.valueAsNumber,
+                });
+              }}
+              append="days"
+            />
+          </EuiFormRow>
+
+          <EuiFormRow
+            label="Evaluation window"
+            helpText="Which period to check for missing entities"
+          >
+            <EuiFieldNumber
+              value={values.evaluationWindowMinutes ?? ''}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  evaluationWindowMinutes: e.target.valueAsNumber,
+                });
+              }}
+              append="mins"
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Filter" helpText="Filter to apply to your search">
+            <QueryInput
+              placeholder="Query"
+              indexPatterns={indexPatterns}
+              value={values.filter ?? ''}
+              onChange={(filter) => {
+                onChange({
+                  ...values,
+                  filter,
+                });
+              }}
+            />
+          </EuiFormRow>
+        </>
+      );
+    },
+    toRawTemplate: (props) => {
+      return {
+        queries: [
+          {
+            index: props.index,
+            filter: props.filter,
+            query_delay: '5s',
+            metrics: {
+              group_document_count: {
+                count_over_time: {
+                  range: `${props.evaluationWindowMinutes}m`,
+                },
+              },
+            },
+          },
+          {
+            alerts: {
+              query_delay: '5s',
+              metrics: {
+                group_document_count_lookback: {
+                  count_over_time: {
+                    range: `${props.lookbackWindowDays}d`,
+                  },
+                },
+              },
+            },
+          },
+        ],
+        metrics: {
+          missing_entity_data: {
+            expression: '!absent(group_document_count_lookback) && absent(group_document_count)',
+          },
+        },
+        alert: {},
+      };
+    },
+  }),
+  createTemplate({
+    id: 'new_data',
+    title: 'New data',
+    description: 'Detect and alert when a new entity has been detected',
+    icon: 'asterisk',
+    type: t.intersection([
+      t.type({
+        index: t.array(t.string),
+        groups: t.array(t.string),
+        lookbackWindowDays: t.number,
+        evaluationWindowMinutes: t.number,
+      }),
+      t.partial({
+        filter: t.string,
+      }),
+    ]),
+    Form: ({ values, onChange }) => {
+      const { indexPatterns } = useIndexPatterns(values.index ?? []);
+
+      return (
+        <>
+          <EuiFormRow label="Source index" helpText="The index to query for">
+            <EuiComboBox
+              compressed
+              selectedOptions={(values.index ?? []).map((index) => ({
+                label: index,
+              }))}
+              onChange={(options) => {
+                onChange({
+                  ...values,
+                  index: options.map((option) => option.label),
+                });
+              }}
+              onCreateOption={(index) => {
+                onChange({
+                  ...values,
+                  index: (values.index ?? []).concat(index),
+                });
+              }}
+              noSuggestions
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Lookback window" helpText="The lookback window to compare to">
+            <EuiFieldNumber
+              value={values.lookbackWindowDays ?? ''}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  lookbackWindowDays: e.target.valueAsNumber,
+                });
+              }}
+              append="days"
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Evaluation window" helpText="Which period to check for new entities">
+            <EuiFieldNumber
+              value={values.evaluationWindowMinutes ?? ''}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  evaluationWindowMinutes: e.target.valueAsNumber,
+                });
+              }}
+              append="mins"
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Group by" helpText="Group entities by">
+            <GroupBySelect
+              indexPatterns={indexPatterns}
+              value={values.groups ?? []}
+              onChange={(groups) => {
+                onChange({
+                  ...values,
+                  groups,
+                });
+              }}
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Filter" helpText="Filter to apply to your search">
+            <QueryInput
+              placeholder="Query"
+              indexPatterns={indexPatterns}
+              value={values.filter ?? ''}
+              onChange={(filter) => {
+                onChange({
+                  ...values,
+                  filter,
+                });
+              }}
+            />
+          </EuiFormRow>
+        </>
+      );
+    },
+    toRawTemplate: (props) => {
+      return {
+        queries: [
+          {
+            index: props.index,
+            filter: props.filter,
+            query_delay: '5s',
+            metrics: {
+              group_document_count: {
+                count_over_time: {
+                  range: `${props.evaluationWindowMinutes}m`,
+                },
+                record: true,
+              },
+            },
+          },
+          {
+            alerts: {
+              query_delay: '5s',
+              metrics: {
+                group_document_count_lookback: {
+                  count_over_time: {
+                    range: `${props.lookbackWindowDays}d`,
+                  },
+                },
+              },
+            },
+          },
+        ],
+        metrics: {
+          new_entity_data: {
+            expression: 'absent(group_document_count_lookback) && !absent(group_document_count)',
+            record: {
+              type: 'boolean',
             },
           },
         },

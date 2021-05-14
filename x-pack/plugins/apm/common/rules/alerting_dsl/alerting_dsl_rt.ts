@@ -74,7 +74,22 @@ const runtimeMappingsRt = t.record(
   'runtime_mappings'
 );
 
-const queryRt = t.intersection(
+const alertsQueryRt = t.type({
+  alerts: t.intersection([
+    groupingRt,
+    t.type({
+      metrics: metricContainerRt,
+    }),
+    t.partial({
+      filter: kqlRt,
+      round: durationRt,
+      runtime_mappings: runtimeMappingsRt,
+      query_delay: durationRt,
+    }),
+  ]),
+});
+
+const esQueryRt = t.intersection(
   [
     groupingRt,
     t.type({
@@ -90,6 +105,8 @@ const queryRt = t.intersection(
   ],
   'query'
 );
+
+const queryRt = t.union([esQueryRt, alertsQueryRt]);
 
 const configRt = t.intersection(
   [
@@ -112,5 +129,7 @@ export { configRt, metricQueryRt };
 export type AlertingConfig = t.TypeOf<typeof configRt>;
 export type MetricQueryContainer = t.TypeOf<typeof metricQueryRt>;
 
+export type AlertingEsQuery = t.TypeOf<typeof esQueryRt>;
+export type AlertsDataQuery = t.TypeOf<typeof alertsQueryRt>;
 export type AlertingQuery = t.TypeOf<typeof queryRt>;
 export type MetricQueryType = keyof UnionToIntersection<MetricQueryContainer>;

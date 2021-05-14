@@ -6,8 +6,8 @@
  */
 
 import { EuiModalBody } from '@elastic/eui';
+import { EuiFlexGrid } from '@elastic/eui';
 import { EuiButtonEmpty } from '@elastic/eui';
-import { EuiModalHeader } from '@elastic/eui';
 import {
   EuiButton,
   EuiCard,
@@ -37,7 +37,7 @@ export function AlertsAsCodeDemoPage() {
   const theme = useTheme();
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
-  >({ template: templates[1], values: {} });
+  >({ template: templates[2], values: {} });
 
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
@@ -95,9 +95,9 @@ export function AlertsAsCodeDemoPage() {
                   <EuiText>Templates that are available to use.</EuiText>
                 </EuiFlexGroup>
                 <EuiSpacer size="m" />
-                <EuiFlexGroup>
+                <EuiFlexGrid columns={4}>
                   {templates.map((template) => (
-                    <EuiFlexItem key={template.id}>
+                    <EuiFlexItem key={template.id} grow>
                       <EuiCard
                         description={template.description}
                         title={template.title}
@@ -111,7 +111,7 @@ export function AlertsAsCodeDemoPage() {
                       />
                     </EuiFlexItem>
                   ))}
-                </EuiFlexGroup>
+                </EuiFlexGrid>
               </EuiPanel>
             </EuiFlexItem>
 
