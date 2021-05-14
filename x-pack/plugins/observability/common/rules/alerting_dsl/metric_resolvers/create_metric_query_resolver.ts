@@ -9,10 +9,9 @@ import * as t from 'io-ts';
 import { ValuesType } from 'utility-types';
 import { AggregateOf } from 'typings/elasticsearch/search';
 
-type AggregationFactory<
-  TType extends t.Type<any>,
-  TAggregation extends AggregationContainer
-> = (type: ValuesType<t.TypeOf<TType>>) => TAggregation;
+type AggregationFactory<TType extends t.Type<any>, TAggregation extends AggregationContainer> = (
+  type: ValuesType<t.TypeOf<TType>>
+) => TAggregation;
 
 type ResolverFn<TAggregation extends AggregationContainer> = (
   response: AggregateOf<TAggregation, unknown>
@@ -37,9 +36,7 @@ interface MetricResolverFactory<
   setAggregationFactory<TNextAggregation extends AggregationContainer>(
     factory: AggregationFactory<TType, TNextAggregation>
   ): MetricResolverFactory<TType, TNextAggregation>;
-  setResolver(
-    resolverFn: ResolverFn<TAggregation>
-  ): MetricResolverFactory<TType, TAggregation>;
+  setResolver(resolverFn: ResolverFn<TAggregation>): MetricResolverFactory<TType, TAggregation>;
   get: () => MetricResolver<TType, TAggregation>;
 }
 
@@ -58,9 +55,7 @@ export function createMetricQueryResolver(defaults?: Record<string, any>) {
         type,
       });
     },
-    setAggregationFactory: (
-      aggregationFactory: AggregationFactory<any, any>
-    ) => {
+    setAggregationFactory: (aggregationFactory: AggregationFactory<any, any>) => {
       return createMetricQueryResolver({
         ...defaults,
         getAggregation: aggregationFactory,

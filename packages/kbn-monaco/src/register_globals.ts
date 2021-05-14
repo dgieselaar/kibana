@@ -11,6 +11,8 @@ import { PainlessLang } from './painless';
 import { EsqlLang } from './esql';
 import { monaco } from './monaco_imports';
 // @ts-ignore
+import jsonWorkerSrc from '!!raw-loader!../target/public/json.editor.worker.js';
+// @ts-ignore
 import xJsonWorkerSrc from '!!raw-loader!../target/public/xjson.editor.worker.js';
 // @ts-ignore
 import defaultWorkerSrc from '!!raw-loader!../target/public/default.editor.worker.js';
@@ -35,6 +37,7 @@ monaco.languages.setMonarchTokensProvider(EsqlLang.ID, EsqlLang.lexerRules);
 const mapLanguageIdToWorker: { [key: string]: any } = {
   [XJsonLang.ID]: xJsonWorkerSrc,
   [PainlessLang.ID]: painlessWorkerSrc,
+  json: jsonWorkerSrc,
 };
 
 // @ts-ignore

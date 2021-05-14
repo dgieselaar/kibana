@@ -10,9 +10,7 @@ import { Measurement } from './types';
 
 export function mergeByLabels(measurements: Measurement[]) {
   return measurements.reduce((prev, entry) => {
-    const entryForLabels = prev.find((item) =>
-      isEqual(item.labels, entry.labels)
-    );
+    const entryForLabels = prev.find((item) => isEqual(item.labels, entry.labels));
 
     if (!entryForLabels) {
       prev.push(entry);

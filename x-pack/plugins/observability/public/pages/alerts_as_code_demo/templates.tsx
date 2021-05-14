@@ -4,20 +4,35 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiComboBox, EuiFieldNumber, EuiFormErrorText, EuiFormRow, EuiSpacer } from '@elastic/eui';
+import { EuiComboBox, EuiFieldNumber, EuiFormRow, EuiSpacer } from '@elastic/eui';
 import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
-import { isLeft } from 'fp-ts/lib/Either';
+import { toJsonSchema } from '@kbn/io-ts-utils/target/to_json_schema';
+import { monaco } from '@kbn/monaco';
 import * as t from 'io-ts';
 import React, { ComponentType, useEffect, useMemo, useState } from 'react';
 import { CodeEditor } from '../../../../../../src/plugins/kibana_react/public';
-import {
-  AlertingConfig,
-  configRt,
-} from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
+import { AlertingConfig, configRt } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { GroupBySelect } from './group_by_select';
 import { IndexSelect } from './index_select';
 import { QueryInput } from './query_input';
 import { useIndexPatterns } from './use_index_patterns';
+
+const MODEL_URI = monaco.Uri.parse('elastic://alerting-dsl.json');
+const SCHEMA_URI = 'https://elastic.co/alerting-dsl-schema.json';
+
+const schema = toJsonSchema(configRt);
+
+monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+  validate: true,
+  schemas: [
+    ...(monaco.languages.json.jsonDefaults.diagnosticsOptions.schemas ?? []),
+    {
+      uri: SCHEMA_URI,
+      fileMatch: [MODEL_URI.toString()],
+      schema,
+    },
+  ],
+});
 
 const SERVICE_NAME = 'service.name';
 
@@ -93,7 +108,6 @@ export const templates: Array<Template<any>> = [
         }),
         []
       );
-      const [errors, setErrors] = useState<string | undefined>(undefined);
       const [text, setText] = useState(JSON.stringify(values.config ?? defaultValue, null, 2));
 
       useEffect(() => {
@@ -108,33 +122,23 @@ export const templates: Array<Template<any>> = [
           <CodeEditor
             height={350}
             languageId="json"
+            editorDidMount={(editor) => {
+              editor.setModel(monaco.editor.createModel(text, 'json', MODEL_URI));
+            }}
             onChange={(value) => {
               setText(value);
               try {
-                const config = JSON.parse(value);
-                const validation = configRt.decode(config);
-                const validationErrors = validation && isLeft(validation) ? validation.left : [];
-                if (validationErrors.length === 0) {
-                  setErrors(undefined);
-                  onChange({ ...values, config });
-                } else {
-                  setErrors('Invalid rule definition');
-                  onChange({ ...values, config: {} as AlertingConfig });
-                  // eslint-disable-next-line no-console
-                  console.warn(validationErrors);
-                }
+                const parsed = JSON.parse(value);
+                onChange({
+                  ...values,
+                  config: parsed,
+                });
               } catch (e) {
-                setErrors(e.message);
                 onChange({ ...values, config: {} as AlertingConfig });
-                // eslint-disable-next-line no-console
-                console.warn(e.message);
               }
             }}
             value={text}
           />
-          <EuiSpacer size="s" />
-          <EuiFormErrorText>{errors}</EuiFormErrorText>
-          <EuiSpacer />
         </>
       );
     },

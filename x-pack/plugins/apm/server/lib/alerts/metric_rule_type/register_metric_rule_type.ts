@@ -4,21 +4,21 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import * as t from 'io-ts';
 import { propsToSchema } from '@kbn/io-ts-utils/target/props_to_schema';
-import { mapValues, chunk } from 'lodash';
-import { TIMESTAMP } from '../../../../../rule_registry/common/technical_rule_data_field_names';
-import { isFiniteNumber } from '../../../../common/utils/is_finite_number';
-import { AlertType, ALERT_TYPES_CONFIG } from '../../../../common/alert_types';
+import * as t from 'io-ts';
+import { configRt } from '../../../../../observability/common/rules/alerting_dsl/alerting_dsl_rt';
+import {
+  createExecutionPlan,
+  getSteps,
+  recordResults,
+} from '../../../../../observability/server';
 import {
   createLifecycleRuleTypeFactory,
   getRuleExecutorData,
 } from '../../../../../rule_registry/server';
+import { AlertType, ALERT_TYPES_CONFIG } from '../../../../common/alert_types';
+import { isFiniteNumber } from '../../../../common/utils/is_finite_number';
 import { RegisterRuleDependencies } from '../register_apm_alerts';
-import { configRt } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
-import { createExecutionPlan } from './create_execution_plan';
-import { getSteps } from './get_steps';
-import { recordResults } from './record_results';
 
 const BULK_LIMIT = 1000;
 
@@ -59,6 +59,7 @@ export function registerMetricRuleType({
 
         const plan = createExecutionPlan({
           config,
+          ruleDataClient,
           clusterClient: {
             search: async (request) => {
               const { body } = await scopedClusterClient.asCurrentUser.search(

@@ -7,12 +7,12 @@
 
 import { isEqual, flatten } from 'lodash';
 import pLimit from 'p-limit';
-import { RuleDataWriter } from '../../../../../rule_registry/server';
+import { RuleDataClient, RuleDataWriter } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
-import { createExecutionPlan } from '../metric_rule_type/create_execution_plan';
-import { getSteps } from '../metric_rule_type/get_steps';
-import { Measurement } from '../metric_rule_type/types';
+import { createExecutionPlan } from './create_execution_plan';
+import { getSteps } from './get_steps';
+import { Measurement } from './types';
 
 function toSeries(measurements: Measurement[]) {
   const allSeries: Array<{
@@ -21,9 +21,7 @@ function toSeries(measurements: Measurement[]) {
     coordinates: Array<{ x: number; y?: unknown }>;
   }> = [];
 
-  const times = [
-    ...new Set(measurements.map((measurement) => measurement.time)),
-  ];
+  const times = [...new Set(measurements.map((measurement) => measurement.time))];
 
   function getOrCreateSeries({
     labels,
@@ -32,9 +30,7 @@ function toSeries(measurements: Measurement[]) {
     labels: Record<string, string>;
     metricName: string;
   }) {
-    let series = allSeries.find(
-      (s) => isEqual(s.labels, labels) && s.metricName === metricName
-    );
+    let series = allSeries.find((s) => isEqual(s.labels, labels) && s.metricName === metricName);
 
     if (!series) {
       series = {
@@ -57,8 +53,7 @@ function toSeries(measurements: Measurement[]) {
     const metrics = measurement.metrics;
     Object.keys(measurement.metrics).forEach((metricName) => {
       const series = getOrCreateSeries({ labels, metricName });
-      series.coordinates.find((coord) => coord.x === measurement.time)!.y =
-        metrics[metricName];
+      series.coordinates.find((coord) => coord.x === measurement.time)!.y = metrics[metricName];
     });
   });
 
@@ -70,17 +65,18 @@ export async function getRuleEvaluationPreview({
   from,
   to,
   clusterClient,
-  ruleDataWriter,
+  ruleDataClient,
 }: {
   config: AlertingConfig;
   from?: number;
   to: number;
   clusterClient: ESSearchClient;
-  ruleDataWriter: RuleDataWriter;
+  ruleDataClient: RuleDataClient;
 }) {
   const plan = createExecutionPlan({
     config,
     clusterClient,
+    ruleDataClient,
   });
 
   const steps =

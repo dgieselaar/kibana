@@ -21,7 +21,7 @@ import {
 } from '@elastic/eui';
 import { isNumber } from 'lodash';
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertingConfig } from '../../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
+import { AlertingConfig } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { callObservabilityApi } from '../../services/call_observability_api';
 

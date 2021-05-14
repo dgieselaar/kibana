@@ -36,13 +36,7 @@ const relaxedMath: typeof math = math.create(math.all) as any;
   convert: () => 0,
 });
 
-function alertsQuery({
-  ruleUuid,
-  query,
-}: {
-  ruleUuid?: string;
-  query: AlertsDataQuery;
-}) {
+function alertsQuery({ ruleUuid, query }: { ruleUuid?: string; query: AlertsDataQuery }) {
   return [
     ...(ruleUuid
       ? [
@@ -62,10 +56,7 @@ function alertsQuery({
   ];
 }
 
-interface BaseParsedMetric<
-  TType extends string,
-  TMeta extends Record<string, any>
-> {
+interface BaseParsedMetric<TType extends string, TMeta extends Record<string, any>> {
   name: string;
   type: TType;
   record?: {
@@ -129,20 +120,14 @@ function parseMetrics({
 
       const { record: _record, ...meta } = metricConfig;
 
-      const { range, offset } = (meta as any)[
-        Object.keys(meta)[0]
-      ] as ValuesType<UnionToIntersection<typeof meta>>;
+      const { range, offset } = (meta as any)[Object.keys(meta)[0]] as ValuesType<
+        UnionToIntersection<typeof meta>
+      >;
 
-      let end =
-        time -
-        (query.query_delay
-          ? parseInterval(query.query_delay)!.asMilliseconds()
-          : 0);
+      let end = time - (query.query_delay ? parseInterval(query.query_delay)!.asMilliseconds() : 0);
 
       const stepInMs = step ? parseInterval(step)!.asMilliseconds() : 0;
-      const roundInMs = query.round
-        ? parseInterval(query.round)!.asMilliseconds()
-        : 0;
+      const roundInMs = query.round ? parseInterval(query.round)!.asMilliseconds() : 0;
 
       const round = Math.max(stepInMs, roundInMs);
 
@@ -163,9 +148,7 @@ function parseMetrics({
         throw new Error(PathReporter.report(decoded).join('\n'));
       }
 
-      const aggregation = resolver.getAggregation(
-        Object.values(decoded.right)[0] as any
-      );
+      const aggregation = resolver.getAggregation(Object.values(decoded.right)[0] as any);
 
       return {
         name,
@@ -212,24 +195,19 @@ export function createExecutionPlan({
 
           const expressionMetrics = pickBy(
             metrics,
-            (metric): metric is ParsedExpressionMetric =>
-              metric.type === 'expression'
+            (metric): metric is ParsedExpressionMetric => metric.type === 'expression'
           );
 
           const queryMetrics = pickBy(
             metrics,
-            (metric): metric is ParsedQueryMetric =>
-              metric.type === 'query_over_time'
+            (metric): metric is ParsedQueryMetric => metric.type === 'query_over_time'
           );
 
           const expressionResolvers = mapValues(
             expressionMetrics,
             (metric) => metric.meta.evaluate
           );
-          const queryMetricResolvers = mapValues(
-            queryMetrics,
-            (metric) => metric.meta.evaluate
-          );
+          const queryMetricResolvers = mapValues(queryMetrics, (metric) => metric.meta.evaluate);
 
           const searches = Object.values(queryMetrics).reduce(
             (prev, metric) => {
@@ -238,9 +216,7 @@ export function createExecutionPlan({
               } = metric;
 
               let searchForTimeRange = prev.find(
-                (search) =>
-                  search.range.start === range.start &&
-                  search.range.end === range.end
+                (search) => search.range.start === range.start && search.range.end === range.end
               );
 
               if (!searchForTimeRange) {
@@ -264,9 +240,7 @@ export function createExecutionPlan({
                 return metric.meta.aggregation;
               });
 
-              const groupConfig = query.by
-                ? { by: query.by, limit: query.limit }
-                : undefined;
+              const groupConfig = query.by ? { by: query.by, limit: query.limit } : undefined;
 
               const sources = groupConfig
                 ? Object.entries(groupConfig.by).map(([name, source]) => {
@@ -283,9 +257,7 @@ export function createExecutionPlan({
                     filter: [
                       ...rangeQuery(search.range.start, search.range.end),
                       ...kqlQuery(query.filter),
-                      ...('alerts' in queryConfig
-                        ? alertsQuery({ query: queryConfig })
-                        : []),
+                      ...('alerts' in queryConfig ? alertsQuery({ query: queryConfig }) : []),
                     ],
                   },
                 },
@@ -341,22 +313,17 @@ export function createExecutionPlan({
                     ];
 
               return arrayUnionToCallable(buckets).map((bucket) => {
-                const keys = Array.isArray(bucket.key)
-                  ? bucket.key
-                  : [bucket.key as string];
+                const keys = Array.isArray(bucket.key) ? bucket.key : [bucket.key as string];
                 const labels = Object.fromEntries(
                   keys.map((key, index) => {
                     return [sources[index].name, key];
                   })
                 );
 
-                const aggregatedMetrics = mapValues(
-                  search.metrics,
-                  (_, key) => {
-                    const fn = queryMetricResolvers[key];
-                    return fn(bucket[key as keyof typeof bucket]);
-                  }
-                );
+                const aggregatedMetrics = mapValues(search.metrics, (_, key) => {
+                  const fn = queryMetricResolvers[key];
+                  return fn(bucket[key as keyof typeof bucket]);
+                });
 
                 return {
                   time: search.range.time,
@@ -367,29 +334,24 @@ export function createExecutionPlan({
             })
           );
 
-          const searchEvaluations = mergeByLabels(flatten(measurements)).map(
-            (measurement) => {
-              const scope = {
-                ...measurement.labels,
-                ...measurement.metrics,
-              };
+          const searchEvaluations = mergeByLabels(flatten(measurements)).map((measurement) => {
+            const scope = {
+              ...measurement.labels,
+              ...measurement.metrics,
+            };
 
-              const evaluatedExpressionMetrics = mapValues(
-                expressionResolvers,
-                (resolver, key) => {
-                  return resolver(scope);
-                }
-              );
-              return {
-                time: measurement.time,
-                labels: measurement.labels,
-                metrics: {
-                  ...measurement.metrics,
-                  ...evaluatedExpressionMetrics,
-                },
-              };
-            }
-          );
+            const evaluatedExpressionMetrics = mapValues(expressionResolvers, (resolver, key) => {
+              return resolver(scope);
+            });
+            return {
+              time: measurement.time,
+              labels: measurement.labels,
+              metrics: {
+                ...measurement.metrics,
+                ...evaluatedExpressionMetrics,
+              },
+            };
+          });
 
           return {
             evaluations: searchEvaluations,
@@ -402,18 +364,14 @@ export function createExecutionPlan({
       );
 
       return {
-        evaluations: mergeByLabels(
-          flatten(queryResults.map((result) => result.evaluations))
-        ),
-        record: Object.assign(
-          {},
-          ...queryResults.map((result) => result.record)
-        ) as Record<string, Required<BaseParsedMetric<any, any>>['record']>,
+        evaluations: mergeByLabels(flatten(queryResults.map((result) => result.evaluations))),
+        record: Object.assign({}, ...queryResults.map((result) => result.record)) as Record<
+          string,
+          Required<BaseParsedMetric<any, any>>['record']
+        >,
       };
     },
   };
 }
 
-export type QueryResults = PromiseReturnType<
-  ReturnType<typeof createExecutionPlan>['evaluate']
->;
+export type QueryResults = PromiseReturnType<ReturnType<typeof createExecutionPlan>['evaluate']>;

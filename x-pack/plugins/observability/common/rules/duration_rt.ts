@@ -16,17 +16,17 @@ export const durationRt = new t.Type<Duration, string, unknown>(
     return true;
   },
   (input, context) => {
-    return either.chain(
-      t.string.validate(input, context),
-      (durationAsString) => {
-        const interval = parseInterval(durationAsString);
+    return either.chain(t.string.validate(input, context), (durationAsString) => {
+      const interval = parseInterval(durationAsString);
 
-        if (interval) {
-          return t.success(durationAsString);
-        }
-        return t.failure(input, context, 'Failed to parse duration');
+      if (interval) {
+        return t.success(durationAsString);
       }
-    );
+      return t.failure(input, context, 'Failed to parse duration');
+    });
   },
   (a) => a
 );
+
+// @ts-ignore
+durationRt._tag = 'StringType';

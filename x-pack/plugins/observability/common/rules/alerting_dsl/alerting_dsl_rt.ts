@@ -19,13 +19,7 @@ import {
 const alertRt = t.type({});
 
 const metricQueryRt = t.union(
-  [
-    avgOverTime.type,
-    countOverTime.type,
-    sumOverTime.type,
-    minOverTime.type,
-    maxOverTime.type,
-  ],
+  [avgOverTime.type, countOverTime.type, sumOverTime.type, minOverTime.type, maxOverTime.type],
   'metric_query'
 );
 
@@ -116,10 +110,7 @@ const configRt = t.intersection(
     t.partial({
       step: durationRt,
     }),
-    t.union([
-      t.type({ query: queryRt }),
-      t.type({ queries: t.array(queryRt) }),
-    ]),
+    t.union([t.type({ query: queryRt }), t.type({ queries: t.array(queryRt) })]),
   ],
   'config'
 );

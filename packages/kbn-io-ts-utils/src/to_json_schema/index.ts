@@ -49,6 +49,7 @@ const isSchemableValueType = (type: t.Mixed): type is JSONSchemableValueType => 
 
 interface JSONSchemaObject {
   type: 'object';
+  required?: string[];
   properties?: Record<string, JSONSchema>;
   additionalProperties?: boolean | JSONSchema;
 }
@@ -61,10 +62,13 @@ interface JSONSchemaAllOf {
   allOf: JSONSchema[];
 }
 
+interface JSONSchemaAnyOf {
+  anyOf: JSONSchema[];
+}
+
 interface JSONSchemaArray {
   type: 'array';
-  item?: JSONSchema;
-  items?: JSONSchema[];
+  items?: JSONSchema;
 }
 
 interface BaseJSONSchema {
@@ -76,13 +80,14 @@ type JSONSchema =
   | JSONSchemaArray
   | BaseJSONSchema
   | JSONSchemaOneOf
-  | JSONSchemaAllOf;
+  | JSONSchemaAllOf
+  | JSONSchemaAnyOf;
 
 export const toJsonSchema = (type: t.Mixed): JSONSchema => {
   if (isSchemableValueType(type)) {
     switch (type._tag) {
       case 'ArrayType':
-        return { type: 'array', item: toJsonSchema(type.type) };
+        return { type: 'array', items: toJsonSchema(type.type) };
 
       case 'BooleanType':
         return { type: 'boolean' };
@@ -91,13 +96,17 @@ export const toJsonSchema = (type: t.Mixed): JSONSchema => {
         return { type: 'object', additionalProperties: toJsonSchema(type.codomain) };
 
       case 'InterfaceType':
-        return { type: 'object', properties: mapValues(type.props, toJsonSchema) };
+        return {
+          type: 'object',
+          properties: mapValues(type.props, toJsonSchema),
+          required: Object.keys(type.props),
+        };
 
       case 'PartialType':
         return { type: 'object', properties: mapValues(type.props, toJsonSchema) };
 
       case 'UnionType':
-        return { oneOf: type.types.map(toJsonSchema) };
+        return { anyOf: type.types.map(toJsonSchema) };
 
       case 'IntersectionType':
         return { allOf: type.types.map(toJsonSchema) };

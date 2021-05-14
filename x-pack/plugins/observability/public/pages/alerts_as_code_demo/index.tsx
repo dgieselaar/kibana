@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import { EuiFlexGrid } from '@elastic/eui';
 import {
   EuiButton,
   EuiCard,
@@ -97,16 +98,16 @@ export function AlertsAsCodeDemoPage() {
                 <h3>Choose template</h3>
               </EuiTitle>
               <EuiSpacer size="m" />
-              <EuiFlexGroup>
+              <EuiFlexGrid columns={4}>
                 {templates.map((template) => (
-                  <EuiFlexItem key={template.id}>
+                  <EuiFlexItem key={template.id} grow>
                     <EuiCard
                       description={template.description}
                       title={template.title}
-                      titleSize="xs"
-                      icon={<EuiIcon size="m" type={template.icon} />}
+                      titleSize="s"
+                      icon={<EuiIcon size="l" type={template.icon} />}
                       layout="horizontal"
-                      paddingSize="s"
+                      paddingSize="l"
                       selectable={{
                         onClick: () => {
                           setSelectedTemplate({ template, values: {} });
@@ -116,7 +117,7 @@ export function AlertsAsCodeDemoPage() {
                     />
                   </EuiFlexItem>
                 ))}
-              </EuiFlexGroup>
+              </EuiFlexGrid>
             </EuiPanel>
           </EuiFlexItem>
 

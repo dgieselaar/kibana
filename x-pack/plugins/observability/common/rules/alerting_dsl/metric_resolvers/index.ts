@@ -4,10 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import {
-  AggregationContainer,
-  QueryContainer,
-} from '@elastic/elasticsearch/api/types';
+import { AggregationContainer, QueryContainer } from '@elastic/elasticsearch/api/types';
 import * as t from 'io-ts';
 import { kqlQuery } from '../../../../../observability/common/utils/queries';
 import { durationRt } from '../../duration_rt';
@@ -153,9 +150,7 @@ export function getMetricQueryResolver(meta: unknown) {
     return maxOverTime;
   }
 
-  throw new Error(
-    `Unsupported metric query type ${Object.keys(meta as any)[0]}`
-  );
+  throw new Error(`Unsupported metric query type ${Object.keys(meta as any)[0]}`);
 }
 
 export type QueryMetricAggregation = ReturnType<

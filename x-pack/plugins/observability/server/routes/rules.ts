@@ -6,12 +6,12 @@
  */
 import * as t from 'io-ts';
 import { isoToEpochRt, toNumberRt } from '@kbn/io-ts-utils';
-import { getRuleEvaluationPreview } from '../../../apm/server';
-import { configRt } from '../../../apm/common/rules/alerting_dsl/alerting_dsl_rt';
 import { createObservabilityServerRoute } from './create_observability_server_route';
 import { createObservabilityServerRouteRepository } from './create_observability_server_route_repository';
 import { getTopAlerts } from '../lib/rules/get_top_alerts';
 import { unwrapEsResponse } from '../utils/unwrap_es_response';
+import { configRt } from '../../common/rules/alerting_dsl/alerting_dsl_rt';
+import { getRuleEvaluationPreview } from '../lib/rules/metric_rule/get_rule_evaluation_preview';
 
 const alertsListRoute = createObservabilityServerRoute({
   endpoint: 'GET /api/observability/rules/alerts/top',
@@ -71,16 +71,14 @@ const ruleEvaluationPreviewRoute = createObservabilityServerRoute({
     ]),
   }),
   options: {
-    tags: ['access:apm'],
+    tags: [],
   },
   handler: async ({ params, context, ruleDataClient }) => {
-    const ruleDataWriter = ruleDataClient.getWriter();
-
     const preview = await getRuleEvaluationPreview({
       config: params.body.config,
       from: params.body.from,
-      to: Date.now(),
-      ruleDataWriter,
+      to: params.body.to,
+      ruleDataClient,
       clusterClient: {
         search: async (request) => {
           const body = await unwrapEsResponse(

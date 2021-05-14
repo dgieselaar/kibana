@@ -9,10 +9,19 @@
 const path = require('path');
 
 const createLangWorkerConfig = (lang) => {
-  const entry =
-    lang === 'default'
-      ? 'monaco-editor/esm/vs/editor/editor.worker.js'
-      : path.resolve(__dirname, 'src', lang, 'worker', `${lang}.worker.ts`);
+  let entry;
+  switch (lang) {
+    case 'default':
+      entry = 'monaco-editor/esm/vs/editor/editor.worker.js';
+      break;
+    case 'json':
+      entry = 'monaco-editor/esm/vs/language/json/json.worker.js';
+      break;
+
+    default:
+      entry = path.resolve(__dirname, 'src', lang, 'worker', `${lang}.worker.ts`);
+      break;
+  }
 
   return {
     mode: 'production',
@@ -48,4 +57,5 @@ module.exports = [
   createLangWorkerConfig('xjson'),
   createLangWorkerConfig('painless'),
   createLangWorkerConfig('default'),
+  createLangWorkerConfig('json'),
 ];
