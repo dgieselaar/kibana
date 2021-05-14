@@ -5,17 +5,18 @@
  * 2.0.
  */
 
-import { EuiFlexGrid } from '@elastic/eui';
 import {
   EuiButton,
+  EuiButtonEmpty,
   EuiCard,
   EuiFieldText,
+  EuiFlexGrid,
   EuiFlexGroup,
-  EuiButtonEmpty,
   EuiFlexItem,
   EuiForm,
   EuiFormRow,
   EuiIcon,
+  EuiLink,
   EuiModal,
   EuiModalBody,
   EuiModalHeader,
@@ -27,7 +28,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 import { PreviewComponent } from './preview_component';
 import { Template, templates } from './templates';
@@ -103,6 +104,14 @@ export function AlertsAsCodeDemoPage() {
               Metric rules <ExperimentalBadge />
             </>
           ),
+          rightSideItems: [
+            <EuiLink
+              target="_blank"
+              href="https://gist.github.com/dgieselaar/d512d97d6e1040ad2dac29d73fe511d4"
+            >
+              About
+            </EuiLink>,
+          ],
         }}
       >
         <EuiFlexGroup direction="column" gutterSize="s">
