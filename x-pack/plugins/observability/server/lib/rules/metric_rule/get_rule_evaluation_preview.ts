@@ -23,6 +23,10 @@ function toSeries(measurements: Measurement[]) {
 
   const times = [...new Set(measurements.map((measurement) => measurement.time))];
 
+  console.log({
+    times,
+  });
+
   function getOrCreateSeries({
     labels,
     metricName,
@@ -62,14 +66,12 @@ function toSeries(measurements: Measurement[]) {
 
 export async function getRuleEvaluationPreview({
   config,
-  from,
-  to,
+  steps,
   clusterClient,
   ruleDataClient,
 }: {
   config: AlertingConfig;
-  from?: number;
-  to: number;
+  steps: Array<{ time: number }>;
   clusterClient: ESSearchClient;
   ruleDataClient: RuleDataClient;
 }) {
@@ -78,20 +80,6 @@ export async function getRuleEvaluationPreview({
     clusterClient,
     ruleDataClient,
   });
-
-  const steps =
-    !config.step || !from
-      ? [
-          {
-            time: to,
-          },
-        ]
-      : getSteps({
-          from,
-          to,
-          step: config.step,
-          max: 20,
-        });
 
   const limiter = pLimit(5);
 

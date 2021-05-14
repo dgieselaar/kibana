@@ -24,6 +24,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertingConfig } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
 import { callObservabilityApi } from '../../services/call_observability_api';
+import { getBucketSize } from '../../utils/get_bucket_size';
 
 enum PreviewTab {
   XyChart = 'xyChart',
@@ -67,15 +68,28 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
         return;
       }
 
-      const from = datemath.parse(preview.start)?.toDate().getTime();
-      const to = datemath.parse(preview.end, { roundUp: true })?.toDate().getTime();
+      const start = datemath.parse(preview.start)?.toDate().getTime();
+      const end = datemath.parse(preview.end, { roundUp: true })?.toDate().getTime();
+
+      if (!start || !end) {
+        return;
+      }
+
+      const stepSize =
+        getBucketSize({ start, end, numBuckets: 20, minInterval: '0ms' }).bucketSize * 1000;
+      const numSteps = Math.ceil(end - start) / stepSize;
+      const steps: Array<{ time: number }> = [];
+      for (let i = 0; i < numSteps; i++) {
+        steps.push({
+          time: end - i * stepSize,
+        });
+      }
 
       return callObservabilityApi({
         endpoint: 'POST /api/observability/rules/rule_evaluation_preview',
         params: {
           body: JSON.stringify({
-            from,
-            to,
+            steps,
             config: preview.config,
           }) as any,
         },

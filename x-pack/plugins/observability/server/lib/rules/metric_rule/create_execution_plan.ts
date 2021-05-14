@@ -131,7 +131,7 @@ function parseMetrics({
 
       const round = Math.max(stepInMs, roundInMs);
 
-      end = Math.floor(end / round) * round;
+      end = round ? Math.floor(end / round) * round : end;
 
       const start = end - parseInterval(range)!.asMilliseconds();
 

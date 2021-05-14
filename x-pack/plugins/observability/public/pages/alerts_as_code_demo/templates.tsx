@@ -34,7 +34,21 @@ monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
   ],
 });
 
+const model = monaco.editor.createModel('{\n}\n', 'json', MODEL_URI);
+
 const SERVICE_NAME = 'service.name';
+
+function toBy(groups: string[]) {
+  return groups.length
+    ? {
+        by: Object.fromEntries(
+          groups.map((group) => {
+            return [group, { field: group }];
+          })
+        ),
+      }
+    : {};
+}
 
 export interface Template<TType extends t.Mixed = t.Mixed> {
   id: string;
@@ -46,6 +60,7 @@ export interface Template<TType extends t.Mixed = t.Mixed> {
     values: Partial<t.TypeOf<TType>>;
     onChange: (values: Partial<t.TypeOf<TType>>) => void;
   }>;
+  defaults?: () => Partial<t.TypeOf<TType>>;
   toRawTemplate: (props: t.TypeOf<TType>) => AlertingConfig;
 }
 
@@ -55,110 +70,68 @@ function createTemplate<TType extends t.Mixed>(template: Template<TType>): Templ
 
 export const templates: Array<Template<any>> = [
   createTemplate({
-    id: 'free-form',
-    title: 'Free-form',
-    description: 'Free-form editing of rules',
-    icon: 'snowflake',
-    type: t.type({
-      ruleName: t.string,
-      config: configRt,
-    }),
-    Form: ({ values, onChange }) => {
-      // Just the default for apdex
-      const defaultValue: AlertingConfig = useMemo(
-        () => ({
-          step: '1m',
-          query: {
-            index: ['apm-*', 'traces-apm*'],
-            filter: 'transaction.type:page-load or transaction.type:request',
-            metrics: {
-              satisfied_count_10m: {
-                count_over_time: {
-                  range: '10m',
-                  filter: 'transaction.duration.us<=100000',
-                },
-                record: true,
-              },
-              tolerated_count_10m: {
-                count_over_time: {
-                  range: '10m',
-                  filter: 'transaction.duration.us>100000 and transaction.duration.us<=100000',
-                },
-                record: true,
-              },
-              total_count_10m: {
-                count_over_time: {
-                  range: '10m',
-                },
-                record: true,
-              },
-              apdex_score_10m: {
-                expression: '(satisfied_count_10m + (tolerated_count_10m / 2)) / total_count_10m',
-                record: true,
-              },
-            },
-            by: {
-              'service.name': {
-                field: 'service.name',
-              },
-            },
-            query_delay: '30s',
-          },
-          alert: {},
-        }),
-        []
-      );
-      const [text, setText] = useState(JSON.stringify(values.config ?? defaultValue, null, 2));
-
-      useEffect(() => {
-        if (!values.config) {
-          onChange({ ...values, config: defaultValue });
-        }
-      }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-      return (
-        <>
-          <EuiSpacer />
-          <CodeEditor
-            height={350}
-            languageId="json"
-            editorDidMount={(editor) => {
-              editor.setModel(monaco.editor.createModel(text, 'json', MODEL_URI));
-            }}
-            onChange={(value) => {
-              setText(value);
-              try {
-                const parsed = JSON.parse(value);
-                onChange({
-                  ...values,
-                  config: parsed,
-                });
-              } catch (e) {
-                onChange({ ...values, config: {} as AlertingConfig });
-              }
-            }}
-            value={text}
-          />
-        </>
-      );
-    },
-    toRawTemplate: ({ config }) => {
-      return config as AlertingConfig;
-    },
-  }),
-  createTemplate({
     id: 'apdex_score',
     title: 'Apdex score',
     description: 'User satisfaction score based on latency thresholds.',
     type: t.type({
-      ruleName: t.string,
+      index: t.array(t.string),
+      groupBy: t.array(t.string),
+      filter: t.string,
       latencyThreshold: t.number,
       window: t.number,
     }),
     icon: 'faceHappy',
+    defaults: () => ({
+      index: ['apm-*'],
+      filter: '',
+      groupBy: ['service.name'],
+      latencyThreshold: 500,
+      window: 10,
+    }),
     Form: ({ values, onChange }) => {
+      const { indexPatterns } = useIndexPatterns(values.index ?? []);
+
       return (
         <>
+          <EuiFormRow label="Index" helpText="The indices to search">
+            <IndexSelect
+              value={values.index ?? []}
+              onChange={(index) => {
+                onChange({
+                  ...values,
+                  index,
+                });
+              }}
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Filter" helpText="Filter to apply to the search">
+            <QueryInput
+              placeholder="Filter"
+              indexPatterns={indexPatterns}
+              value={values.filter ?? ''}
+              onChange={(filter) => {
+                onChange({
+                  ...values,
+                  filter,
+                });
+              }}
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Grouping" helpText="Fields to group by">
+            <GroupBySelect
+              indexPatterns={indexPatterns}
+              value={values.groupBy ?? []}
+              onChange={(groupBy) => {
+                onChange({
+                  ...values,
+                  groupBy,
+                });
+              }}
+            />
+          </EuiFormRow>
+
           <EuiFormRow
             label="Set latency threshold"
             helpText="The apdex score is defined by the latency threshold set"
@@ -203,8 +176,11 @@ export const templates: Array<Template<any>> = [
 
       return {
         query: {
-          index: ['apm-*', 'traces-apm*'],
-          filter: 'transaction.type:page-load or transaction.type:request',
+          index: props.index,
+          filter:
+            '(transaction.type:page-load or transaction.type:request)' +
+            (props.filter ? `and (${props.filter})` : ''),
+          ...toBy(props.groupBy),
           metrics: {
             [satisfied]: {
               count_over_time: {
@@ -249,9 +225,18 @@ export const templates: Array<Template<any>> = [
     icon: 'stats',
     type: t.type({
       index: t.array(t.string),
+      groupBy: t.array(t.string),
       allFilter: t.string,
       onTargetFilter: t.string,
     }),
+    defaults: () => {
+      return {
+        index: ['apm-*'],
+        groupBy: ['service.name'],
+        allFilter: 'event.outcome:(success or failure)',
+        onTargetFilter: 'event.outcome:success',
+      };
+    },
     Form: ({ values, onChange }) => {
       const { indexPatterns } = useIndexPatterns(values.index ?? []);
 
@@ -264,6 +249,19 @@ export const templates: Array<Template<any>> = [
                 onChange({
                   ...values,
                   index,
+                });
+              }}
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Grouping" helpText="Fields to group by">
+            <GroupBySelect
+              indexPatterns={indexPatterns}
+              value={values.groupBy ?? []}
+              onChange={(groupBy) => {
+                onChange({
+                  ...values,
+                  groupBy,
                 });
               }}
             />
@@ -305,6 +303,7 @@ export const templates: Array<Template<any>> = [
           index: props.index,
           filter: props.allFilter,
           query_delay: '5s',
+          ...toBy(props.groupBy),
           metrics: {
             slo_count_on_target_5m: {
               count_over_time: {
@@ -429,41 +428,63 @@ export const templates: Array<Template<any>> = [
     title: 'Missing data',
     description: 'Detect and alert when an entity has stopped reporting data',
     icon: 'partial',
-    type: t.intersection([
-      t.type({
-        index: t.array(t.string),
-        groups: t.array(t.string),
-        lookbackWindowDays: t.number,
-        evaluationWindowMinutes: t.number,
-      }),
-      t.partial({
-        filter: t.string,
-      }),
-    ]),
+    type: t.type({
+      index: t.array(t.string),
+      filter: t.string,
+      groupBy: t.array(t.string),
+      lookbackWindowDays: t.number,
+      evaluationWindowMinutes: t.number,
+    }),
+    defaults: () => {
+      return {
+        index: [],
+        filter: '',
+        groupBy: [],
+        lookbackWindowDays: 30,
+        evaluationWindowMinutes: 5,
+      };
+    },
     Form: ({ values, onChange }) => {
       const { indexPatterns } = useIndexPatterns(values.index ?? []);
 
       return (
         <>
-          <EuiFormRow label="Source index" helpText="The index to query for">
-            <EuiComboBox
-              compressed
-              selectedOptions={(values.index ?? []).map((index) => ({
-                label: index,
-              }))}
-              onChange={(options) => {
+          <EuiFormRow label="Index" helpText="The indices to search">
+            <IndexSelect
+              value={values.index ?? []}
+              onChange={(index) => {
                 onChange({
                   ...values,
-                  index: options.map((option) => option.label),
+                  index,
                 });
               }}
-              onCreateOption={(index) => {
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Filter" helpText="Filter to apply to the search">
+            <QueryInput
+              placeholder="Filter"
+              indexPatterns={indexPatterns}
+              value={values.filter ?? ''}
+              onChange={(filter) => {
                 onChange({
                   ...values,
-                  index: (values.index ?? []).concat(index),
+                  filter,
                 });
               }}
-              noSuggestions
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Grouping" helpText="Fields to group by">
+            <GroupBySelect
+              indexPatterns={indexPatterns}
+              value={values.groupBy ?? []}
+              onChange={(groupBy) => {
+                onChange({
+                  ...values,
+                  groupBy,
+                });
+              }}
             />
           </EuiFormRow>
 
@@ -495,20 +516,6 @@ export const templates: Array<Template<any>> = [
               append="mins"
             />
           </EuiFormRow>
-
-          <EuiFormRow label="Filter" helpText="Filter to apply to your search">
-            <QueryInput
-              placeholder="Query"
-              indexPatterns={indexPatterns}
-              value={values.filter ?? ''}
-              onChange={(filter) => {
-                onChange({
-                  ...values,
-                  filter,
-                });
-              }}
-            />
-          </EuiFormRow>
         </>
       );
     },
@@ -518,6 +525,7 @@ export const templates: Array<Template<any>> = [
           {
             index: props.index,
             filter: props.filter,
+            ...toBy(props.groupBy),
             query_delay: '5s',
             metrics: {
               group_document_count: {
@@ -529,6 +537,7 @@ export const templates: Array<Template<any>> = [
           },
           {
             alerts: {
+              ...toBy(props.groupBy),
               query_delay: '5s',
               metrics: {
                 group_document_count_lookback: {
@@ -554,41 +563,63 @@ export const templates: Array<Template<any>> = [
     title: 'New data',
     description: 'Detect and alert when a new entity has been detected',
     icon: 'asterisk',
-    type: t.intersection([
-      t.type({
-        index: t.array(t.string),
-        groups: t.array(t.string),
-        lookbackWindowDays: t.number,
-        evaluationWindowMinutes: t.number,
-      }),
-      t.partial({
-        filter: t.string,
-      }),
-    ]),
+    type: t.type({
+      index: t.array(t.string),
+      filter: t.string,
+      groupBy: t.array(t.string),
+      lookbackWindowDays: t.number,
+      evaluationWindowMinutes: t.number,
+    }),
+    defaults: () => {
+      return {
+        index: [],
+        filter: '',
+        groupBy: [],
+        lookbackWindowDays: 30,
+        evaluationWindowMinutes: 5,
+      };
+    },
     Form: ({ values, onChange }) => {
       const { indexPatterns } = useIndexPatterns(values.index ?? []);
 
       return (
         <>
-          <EuiFormRow label="Source index" helpText="The index to query for">
-            <EuiComboBox
-              compressed
-              selectedOptions={(values.index ?? []).map((index) => ({
-                label: index,
-              }))}
-              onChange={(options) => {
+          <EuiFormRow label="Index" helpText="The indices to search">
+            <IndexSelect
+              value={values.index ?? []}
+              onChange={(index) => {
                 onChange({
                   ...values,
-                  index: options.map((option) => option.label),
+                  index,
                 });
               }}
-              onCreateOption={(index) => {
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Filter" helpText="Filter to apply to the search">
+            <QueryInput
+              placeholder="Filter"
+              indexPatterns={indexPatterns}
+              value={values.filter ?? ''}
+              onChange={(filter) => {
                 onChange({
                   ...values,
-                  index: (values.index ?? []).concat(index),
+                  filter,
                 });
               }}
-              noSuggestions
+            />
+          </EuiFormRow>
+
+          <EuiFormRow label="Grouping" helpText="Fields to group by">
+            <GroupBySelect
+              indexPatterns={indexPatterns}
+              value={values.groupBy ?? []}
+              onChange={(groupBy) => {
+                onChange({
+                  ...values,
+                  groupBy,
+                });
+              }}
             />
           </EuiFormRow>
 
@@ -617,33 +648,6 @@ export const templates: Array<Template<any>> = [
               append="mins"
             />
           </EuiFormRow>
-
-          <EuiFormRow label="Group by" helpText="Group entities by">
-            <GroupBySelect
-              indexPatterns={indexPatterns}
-              value={values.groups ?? []}
-              onChange={(groups) => {
-                onChange({
-                  ...values,
-                  groups,
-                });
-              }}
-            />
-          </EuiFormRow>
-
-          <EuiFormRow label="Filter" helpText="Filter to apply to your search">
-            <QueryInput
-              placeholder="Query"
-              indexPatterns={indexPatterns}
-              value={values.filter ?? ''}
-              onChange={(filter) => {
-                onChange({
-                  ...values,
-                  filter,
-                });
-              }}
-            />
-          </EuiFormRow>
         </>
       );
     },
@@ -654,6 +658,7 @@ export const templates: Array<Template<any>> = [
             index: props.index,
             filter: props.filter,
             query_delay: '5s',
+            ...toBy(props.groupBy),
             metrics: {
               group_document_count: {
                 count_over_time: {
@@ -665,6 +670,7 @@ export const templates: Array<Template<any>> = [
           },
           {
             alerts: {
+              ...toBy(props.groupBy),
               query_delay: '5s',
               metrics: {
                 group_document_count_lookback: {
@@ -686,6 +692,56 @@ export const templates: Array<Template<any>> = [
         },
         alert: {},
       };
+    },
+  }),
+  createTemplate({
+    id: 'free-form',
+    title: 'Free-form',
+    description: 'Free-form editing of rules',
+    icon: 'snowflake',
+    type: t.type({
+      config: configRt,
+    }),
+    defaults: () => {
+      return {
+        config: {} as AlertingConfig,
+      };
+    },
+    Form: ({ values, onChange }) => {
+      const [text, setText] = useState(JSON.stringify(values.config ?? {}, null, 2));
+
+      useEffect(() => {
+        if (!values.config) {
+          onChange({ ...values, config: {} as AlertingConfig });
+        }
+      }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+      return (
+        <CodeEditor
+          height={350}
+          languageId="json"
+          options={{ model }}
+          editorDidMount={() => {
+            model.setValue(text);
+          }}
+          onChange={(value) => {
+            setText(value);
+            try {
+              const parsed = JSON.parse(value);
+              onChange({
+                ...values,
+                config: parsed,
+              });
+            } catch (e) {
+              onChange({ ...values, config: {} as AlertingConfig });
+            }
+          }}
+          value={text}
+        />
+      );
+    },
+    toRawTemplate: ({ config }) => {
+      return config as AlertingConfig;
     },
   }),
 ];

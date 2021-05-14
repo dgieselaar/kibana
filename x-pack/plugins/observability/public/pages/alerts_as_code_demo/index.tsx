@@ -27,7 +27,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 import { PreviewComponent } from './preview_component';
 import { Template, templates } from './templates';
@@ -35,7 +35,7 @@ import { Template, templates } from './templates';
 export function AlertsAsCodeDemoPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
-  >({ template: templates[0], values: {} });
+  >();
 
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
@@ -66,13 +66,27 @@ export function AlertsAsCodeDemoPage() {
 
   const convertToFreeForm = () => {
     setSelectedTemplate((prev) => ({
-      template: templates[0],
+      template: templates.find((template) => template.id === 'free-form')!,
       values: {
         ruleName: prev?.values.ruleName,
         config: prev?.template.toRawTemplate(prev.values),
       },
     }));
   };
+
+  function selectTemplate(template: Template) {
+    setSelectedTemplate({
+      template,
+      values: {
+        ruleName: template.title,
+        ...(template.defaults?.() ?? {}),
+      },
+    });
+  }
+
+  useEffect(() => {
+    selectTemplate(templates[0]);
+  }, []);
 
   return (
     <>
@@ -110,7 +124,7 @@ export function AlertsAsCodeDemoPage() {
                       paddingSize="l"
                       selectable={{
                         onClick: () => {
-                          setSelectedTemplate({ template, values: {} });
+                          selectTemplate(template);
                         },
                         isSelected: selectedTemplate?.template.id === template.id,
                       }}
@@ -157,10 +171,12 @@ export function AlertsAsCodeDemoPage() {
                             }}
                           />
                         </EuiFormRow>
+                        <EuiSpacer size="m" />
                         <selectedTemplate.template.Form
                           values={selectedTemplate.values}
                           onChange={onChange}
                         />
+                        <EuiSpacer size="m" />
                         <EuiFormRow fullWidth>
                           <EuiFlexGroup direction="row" justifyContent="flexEnd">
                             {selectedTemplate.template.id !== 'free-form' && (

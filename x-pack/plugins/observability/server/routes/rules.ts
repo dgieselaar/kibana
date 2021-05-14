@@ -60,15 +60,10 @@ const alertsDynamicIndexPatternRoute = createObservabilityServerRoute({
 const ruleEvaluationPreviewRoute = createObservabilityServerRoute({
   endpoint: 'POST /api/observability/rules/rule_evaluation_preview',
   params: t.type({
-    body: t.intersection([
-      t.partial({
-        from: toNumberRt,
-      }),
-      t.type({
-        config: configRt,
-        to: toNumberRt,
-      }),
-    ]),
+    body: t.type({
+      config: configRt,
+      steps: t.array(t.type({ time: t.number })),
+    }),
   }),
   options: {
     tags: [],
@@ -76,8 +71,7 @@ const ruleEvaluationPreviewRoute = createObservabilityServerRoute({
   handler: async ({ params, context, ruleDataClient }) => {
     const preview = await getRuleEvaluationPreview({
       config: params.body.config,
-      from: params.body.from,
-      to: params.body.to,
+      steps: params.body.steps,
       ruleDataClient,
       clusterClient: {
         search: async (request) => {
