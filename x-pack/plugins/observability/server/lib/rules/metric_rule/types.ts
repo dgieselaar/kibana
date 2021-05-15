@@ -10,3 +10,11 @@ export interface Measurement {
   metrics: Record<string, number | null>;
   time: number;
 }
+
+export interface MeasurementAlert {
+  labels: Record<string, string>;
+  context?: Record<string, string>;
+  metrics: Record<string, number | null>;
+  actionGroupId?: string;
+  time: number;
+}

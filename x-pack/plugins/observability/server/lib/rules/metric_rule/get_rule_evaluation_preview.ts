@@ -5,13 +5,12 @@
  * 2.0.
  */
 
-import { isEqual, flatten } from 'lodash';
+import { isEqual } from 'lodash';
 import pLimit from 'p-limit';
-import { RuleDataClient, RuleDataWriter } from '../../../../../rule_registry/server';
+import { RuleDataClient } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { createExecutionPlan } from './create_execution_plan';
-import { getSteps } from './get_steps';
 import { Measurement } from './types';
 
 function toSeries(measurements: Measurement[]) {
@@ -22,10 +21,6 @@ function toSeries(measurements: Measurement[]) {
   }> = [];
 
   const times = [...new Set(measurements.map((measurement) => measurement.time))];
-
-  console.log({
-    times,
-  });
 
   function getOrCreateSeries({
     labels,
@@ -83,20 +78,21 @@ export async function getRuleEvaluationPreview({
 
   const limiter = pLimit(5);
 
-  const allEvaluations = flatten(
-    await Promise.all(
-      steps.map((step) => {
-        return limiter(async () => {
-          const { evaluations } = await plan.evaluate({
-            time: step.time,
-          });
-          return evaluations;
+  const allResults = await Promise.all(
+    steps.map((step) => {
+      return limiter(async () => {
+        return plan.evaluate({
+          time: step.time,
         });
-      })
-    )
+      });
+    })
   );
 
-  const allSeries = toSeries(allEvaluations);
+  const allEvaluations = allResults.flatMap((result) => result.evaluations);
+  const allAlerts = allResults.flatMap((result) => result.alerts);
 
-  return allSeries;
+  return {
+    evaluations: toSeries(allEvaluations),
+    alerts: allAlerts,
+  };
 }

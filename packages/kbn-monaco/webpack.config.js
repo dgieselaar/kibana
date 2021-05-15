@@ -15,7 +15,10 @@ const createLangWorkerConfig = (lang) => {
       entry = 'monaco-editor/esm/vs/editor/editor.worker.js';
       break;
     case 'json':
-      entry = 'monaco-editor/esm/vs/language/json/json.worker.js';
+      entry = `monaco-editor/esm/vs/language/json/json.worker.js`;
+      break;
+    case 'typescript':
+      entry = `monaco-editor/esm/vs/language/typescript/ts.worker.js`;
       break;
 
     default:
@@ -58,4 +61,5 @@ module.exports = [
   createLangWorkerConfig('painless'),
   createLangWorkerConfig('default'),
   createLangWorkerConfig('json'),
+  createLangWorkerConfig('typescript'),
 ];

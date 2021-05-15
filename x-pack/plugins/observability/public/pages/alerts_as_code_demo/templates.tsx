@@ -4,12 +4,12 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiComboBox, EuiFieldNumber, EuiFormRow, EuiSpacer } from '@elastic/eui';
+import { EuiFieldNumber, EuiFormRow } from '@elastic/eui';
 import { EuiIconType } from '@elastic/eui/src/components/icon/icon';
 import { toJsonSchema } from '@kbn/io-ts-utils/target/to_json_schema';
 import { monaco } from '@kbn/monaco';
 import * as t from 'io-ts';
-import React, { ComponentType, useEffect, useMemo, useState } from 'react';
+import React, { ComponentType, useEffect, useState } from 'react';
 import { CodeEditor } from '../../../../../../src/plugins/kibana_react/public';
 import { AlertingConfig, configRt } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { GroupBySelect } from './group_by_select';
@@ -79,6 +79,7 @@ export const templates: Array<Template<any>> = [
       filter: t.string,
       latencyThreshold: t.number,
       window: t.number,
+      threshold: t.number,
     }),
     icon: 'faceHappy',
     defaults: () => ({
@@ -87,6 +88,7 @@ export const templates: Array<Template<any>> = [
       groupBy: ['service.name'],
       latencyThreshold: 500,
       window: 10,
+      trigger: 0.9,
     }),
     Form: ({ values, onChange }) => {
       const { indexPatterns } = useIndexPatterns(values.index ?? []);
@@ -163,15 +165,30 @@ export const templates: Array<Template<any>> = [
               append="mins"
             />
           </EuiFormRow>
+
+          <EuiFormRow
+            label="Alert threshold"
+            helpText="Alert when the apdex score is below this threshold"
+          >
+            <EuiFieldNumber
+              value={values.threshold ?? ''}
+              onChange={(e) => {
+                onChange({
+                  ...values,
+                  threshold: isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber,
+                });
+              }}
+            />
+          </EuiFormRow>
         </>
       );
     },
     toRawTemplate: (props) => {
-      const range = `${props.window}m` as const;
-      const satisfied = `satisfied_count_${range}` as const;
-      const tolerated = `tolerated_count_${range}`;
-      const score = `apdex_score_${range}`;
-      const total = `total_count_${range}`;
+      const range = `${props.window}m`;
+      const satisfied = `satisfied_count`;
+      const tolerated = `tolerated_count`;
+      const total = `total_count`;
+      const score = `apdex_score`;
       const thresholdUs = props.latencyThreshold * 1000;
 
       return {
@@ -214,7 +231,9 @@ export const templates: Array<Template<any>> = [
           },
           query_delay: '30s',
         },
-        alert: {},
+        alert: {
+          expression: `apdex_score <= ${props.threshold}`,
+        },
       };
     },
   }),
@@ -419,7 +438,7 @@ export const templates: Array<Template<any>> = [
             },
           },
         },
-        alert: {},
+        alerts: [],
       };
     },
   }),
@@ -554,7 +573,7 @@ export const templates: Array<Template<any>> = [
             expression: '!absent(group_document_count_lookback) && absent(group_document_count)',
           },
         },
-        alert: {},
+        alerts: [],
       };
     },
   }),
@@ -682,15 +701,9 @@ export const templates: Array<Template<any>> = [
             },
           },
         ],
-        metrics: {
-          new_entity_data: {
-            expression: 'absent(group_document_count_lookback) && !absent(group_document_count)',
-            record: {
-              type: 'boolean',
-            },
-          },
+        alert: {
+          expression: 'absent(group_document_count_lookback) && !absent(group_document_count)',
         },
-        alert: {},
       };
     },
   }),

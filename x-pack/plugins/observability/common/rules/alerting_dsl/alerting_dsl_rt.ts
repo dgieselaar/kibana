@@ -8,6 +8,7 @@ import * as t from 'io-ts';
 import { UnionToIntersection } from 'utility-types';
 import { durationRt } from '../duration_rt';
 import { kqlRt } from '../kql_rt';
+import { expressionRt } from './expression_rt';
 import {
   avgOverTime,
   countOverTime,
@@ -15,8 +16,6 @@ import {
   minOverTime,
   maxOverTime,
 } from './metric_resolvers';
-
-const alertRt = t.type({});
 
 const metricQueryRt = t.union(
   [avgOverTime.type, countOverTime.type, sumOverTime.type, minOverTime.type, maxOverTime.type],
@@ -102,14 +101,22 @@ const esQueryRt = t.intersection(
 
 const queryRt = t.union([esQueryRt, alertsQueryRt]);
 
+const alertRt = t.intersection([
+  t.type({
+    expression: expressionRt,
+  }),
+  t.partial({
+    actionGroupId: t.string,
+  }),
+]);
+
 const configRt = t.intersection(
   [
-    t.type({
-      alert: alertRt,
-    }),
     t.partial({
       step: durationRt,
+      metrics: metricContainerRt,
     }),
+    t.union([t.type({ alert: alertRt }), t.type({ alerts: t.array(alertRt) })]),
     t.union([t.type({ query: queryRt }), t.type({ queries: t.array(queryRt) })]),
   ],
   'config'

@@ -11,6 +11,8 @@ import { PainlessLang } from './painless';
 import { EsqlLang } from './esql';
 import { monaco } from './monaco_imports';
 // @ts-ignore
+import tsWorkerSrc from '!!raw-loader!../target/public/typescript.editor.worker.js';
+// @ts-ignore
 import jsonWorkerSrc from '!!raw-loader!../target/public/json.editor.worker.js';
 // @ts-ignore
 import xJsonWorkerSrc from '!!raw-loader!../target/public/xjson.editor.worker.js';
@@ -38,6 +40,8 @@ const mapLanguageIdToWorker: { [key: string]: any } = {
   [XJsonLang.ID]: xJsonWorkerSrc,
   [PainlessLang.ID]: painlessWorkerSrc,
   json: jsonWorkerSrc,
+  typescript: tsWorkerSrc,
+  javascript: tsWorkerSrc,
 };
 
 // @ts-ignore

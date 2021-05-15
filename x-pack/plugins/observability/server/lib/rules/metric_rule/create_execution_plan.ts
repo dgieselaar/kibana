@@ -7,10 +7,10 @@
 import { ValuesType, UnionToIntersection } from 'utility-types';
 import { isRight } from 'fp-ts/lib/Either';
 import { PathReporter } from 'io-ts/lib/PathReporter';
-import { mapValues, flatten, pickBy } from 'lodash';
-import * as math from 'mathjs';
+import { mapValues, flatten, pickBy, isEmpty } from 'lodash';
 import { ESSearchClient } from 'typings/elasticsearch';
 import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
+import { expressionMath } from '../../../../common/rules/alerting_dsl/expression_math';
 import { RuleDataClient } from '../../../../../../plugins/rule_registry/server';
 import { PromiseReturnType } from '../../../../../observability/typings/common';
 import { arrayUnionToCallable } from '../../../../common/utils/array_union_to_callable';
@@ -27,14 +27,7 @@ import { parseInterval } from '../../../../../../../src/plugins/data/common';
 import type { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { kqlQuery, rangeQuery } from '../../../utils/queries';
 import { mergeByLabels } from './merge_by_labels';
-
-const relaxedMath: typeof math = math.create(math.all) as any;
-
-(relaxedMath.typed as any).conversions.unshift({
-  from: 'null',
-  to: 'number',
-  convert: () => 0,
-});
+import { MeasurementAlert } from './types';
 
 function alertsQuery({ ruleUuid, query }: { ruleUuid?: string; query: AlertsDataQuery }) {
   return [
@@ -107,7 +100,7 @@ function parseMetrics({
         : undefined;
 
       if ('expression' in metricConfig) {
-        const evalFn = math.compile(metricConfig.expression);
+        const evalFn = expressionMath.compile(metricConfig.expression);
         return {
           name,
           type: 'expression',
@@ -363,8 +356,29 @@ export function createExecutionPlan({
         })
       );
 
+      const evaluations = mergeByLabels(flatten(queryResults.map((result) => result.evaluations)));
+
+      const alertDefinitions = 'alert' in config ? [config.alert] : config.alerts;
+
+      const alerts: MeasurementAlert[] = [];
+
+      alertDefinitions.forEach((alertDefinition) => {
+        const evaluate = expressionMath.compile(alertDefinition.expression).evaluate;
+        evaluations.forEach((evaluation) => {
+          const result = evaluate(evaluation.metrics);
+          if (result) {
+            alerts.push({
+              labels: evaluation.labels,
+              metrics: evaluation.metrics,
+              time,
+            });
+          }
+        });
+      });
+
       return {
-        evaluations: mergeByLabels(flatten(queryResults.map((result) => result.evaluations))),
+        evaluations,
+        alerts,
         record: Object.assign({}, ...queryResults.map((result) => result.record)) as Record<
           string,
           Required<BaseParsedMetric<any, any>>['record']

@@ -95,7 +95,9 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
         },
         signal,
       }).then((response) => {
-        const metricNames = [...new Set(response.preview.map(({ metricName }) => metricName))];
+        const metricNames = [
+          ...new Set(response.preview.evaluations.map(({ metricName }) => metricName)),
+        ];
         if (!selectedMetric || !metricNames.includes(selectedMetric)) {
           setSelectedMetric(metricNames[0]);
         }
@@ -108,7 +110,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
   );
 
   const allCoordinates =
-    data?.preview.flatMap(({ coordinates }) => {
+    data?.preview.evaluations.flatMap(({ coordinates }) => {
       return coordinates;
     }) ?? [];
 
@@ -124,7 +126,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
 
     const labelSets: Record<string, Set<string>> = {};
 
-    data.preview.forEach(({ labels }) => {
+    data.preview.evaluations.forEach(({ labels }) => {
       Object.keys(labels).forEach((key) => {
         let set = labelSets[key];
         if (!set) {
@@ -140,7 +142,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     });
 
     return (
-      data.preview
+      data.preview.evaluations
         .filter((series) => series.metricName === selectedMetric)
         .map(({ labels, coordinates, metricName }) => {
           const id = uniqueLabels.length
@@ -162,7 +164,9 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
 
   const yMax = Math.max(...visibleCoordinates);
 
-  const metricNames = [...new Set(data?.preview.map(({ metricName }) => metricName) ?? [])];
+  const metricNames = [
+    ...new Set(data?.preview.evaluations.map(({ metricName }) => metricName) ?? []),
+  ];
 
   const tableData = allSeries
     .map((series) => {
