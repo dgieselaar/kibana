@@ -4,14 +4,12 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { keyBy, last } from 'lodash';
+import { keyBy } from 'lodash';
 import { Logger } from 'kibana/server';
 import util from 'util';
 import { maybe } from '../../../../common/utils/maybe';
-import { ProfileStackFrame } from '../../../../typings/es_schemas/ui/profile';
 import {
   ProfilingValueType,
-  ProfileNode,
   getValueTypeConfig,
 } from '../../../../common/profiling';
 import { ProcessorEvent } from '../../../../common/processor_event';
@@ -29,19 +27,12 @@ import {
 import { APMEventClient } from '../../helpers/create_es_client/create_apm_event_client';
 import { Setup, SetupTimeRange } from '../../helpers/setup_request';
 import { withApmSpan } from '../../../utils/with_apm_span';
+import { Collection } from './collection';
 
 const MAX_STACK_IDS = 10000;
 const MAX_STACKS_PER_REQUEST = 1000;
 
-const maybeAdd = (to: any[], value: any) => {
-  if (to.includes(value)) {
-    return;
-  }
-
-  to.push(value);
-};
-
-function getProfilingStats({
+async function getProfilingStats({
   apmEventClient,
   filter,
   valueTypeField,
@@ -50,8 +41,8 @@ function getProfilingStats({
   filter: ESFilter[];
   valueTypeField: string;
 }) {
-  return withApmSpan('get_profiling_stats', async () => {
-    const response = await apmEventClient.search({
+  const response = await apmEventClient.search(
+    {
       apm: {
         events: [ProcessorEvent.profile],
       },
@@ -81,18 +72,19 @@ function getProfilingStats({
           },
         },
       },
-    });
+    },
+    'get_profiling_stats'
+  );
 
-    const stacks =
-      response.aggregations?.stacks.buckets.map((stack) => {
-        return {
-          id: stack.key as string,
-          value: stack.value.value!,
-        };
-      }) ?? [];
+  const stacks =
+    response.aggregations?.stacks.buckets.map((stack) => {
+      return {
+        id: stack.key as string,
+        self: stack.value.value!,
+      };
+    }) ?? [];
 
-    return stacks;
-  });
+  return stacks;
 }
 
 function getProfilesWithStacks({
@@ -103,8 +95,8 @@ function getProfilesWithStacks({
   filter: ESFilter[];
 }) {
   return withApmSpan('get_profiles_with_stacks', async () => {
-    const cardinalityResponse = await withApmSpan('get_top_cardinality', () =>
-      apmEventClient.search({
+    const cardinalityResponse = await apmEventClient.search(
+      {
         apm: {
           events: [ProcessorEvent.profile],
         },
@@ -121,7 +113,8 @@ function getProfilesWithStacks({
             },
           },
         },
-      })
+      },
+      'get_top_cardinality'
     );
 
     const cardinality = cardinalityResponse.aggregations?.top.value ?? 0;
@@ -140,8 +133,8 @@ function getProfilesWithStacks({
     const allResponses = await withApmSpan('get_all_stacks', async () => {
       return Promise.all(
         [...new Array(partitions)].map(async (_, num) => {
-          const response = await withApmSpan('get_partition', () =>
-            apmEventClient.search({
+          const response = await apmEventClient.search(
+            {
               apm: {
                 events: [ProcessorEvent.profile],
               },
@@ -171,7 +164,8 @@ function getProfilesWithStacks({
                   },
                 },
               },
-            })
+            },
+            'get_partition'
           );
 
           return (
@@ -220,66 +214,53 @@ export async function getServiceProfilingStatistics({
       getProfilesWithStacks({ apmEventClient, filter }),
     ]);
 
-    const nodes: Record<string, ProfileNode> = {};
-    const rootNodes: string[] = [];
-
-    function getNode(frame: ProfileStackFrame) {
-      const { id, filename, function: functionName, line } = frame;
-      const location = [functionName, line].filter(Boolean).join(':');
-      const fqn = [filename, location].filter(Boolean).join('/');
-      const label = last(location.split('/'))!;
-      let node = nodes[id];
-      if (!node) {
-        node = { id, label, fqn, value: 0, children: [] };
-        nodes[id] = node;
-      }
-      return node;
-    }
+    const missingSamples: string[] = [];
 
     const stackStatsById = keyBy(profileStats, 'id');
 
-    const missingStacks: string[] = [];
+    const locations = new Collection<{
+      filename?: string;
+      line?: string;
+      function: string;
+    }>();
+    const frames = new Collection<number>();
 
-    profileStacks.forEach((profile) => {
-      const stats = maybe(stackStatsById[profile.profile.top.id]);
+    const samples: Array<{
+      value: number;
+      frames: number[];
+    }> = [];
 
-      if (!stats) {
-        missingStacks.push(profile.profile.top.id);
+    profileStacks.forEach((profile, i) => {
+      const sample = maybe(stackStatsById[profile.profile.top.id]);
+      if (!sample) {
+        missingSamples.push(profile.profile.top.id);
         return;
       }
 
-      const frames = profile.profile.stack.concat().reverse();
+      samples.push({
+        value: sample.self,
+        frames: profile.profile.stack.map((frame) => {
+          const location = locations.set(frame, frame.id);
 
-      frames.forEach((frame, index) => {
-        const node = getNode(frame);
-
-        if (index === frames.length - 1 && stats) {
-          node.value += stats.value;
-        }
-
-        if (index === 0) {
-          // root node
-          maybeAdd(rootNodes, node.id);
-        } else {
-          const parent = nodes[frames[index - 1].id];
-          maybeAdd(parent.children, node.id);
-        }
+          return frames.set(location);
+        }),
       });
     });
 
-    if (missingStacks.length > 0) {
+    if (missingSamples.length > 0) {
       logger.warn(
-        `Could not find stats for all stacks: ${util.inspect({
+        `Could not find samples for all stacks: ${util.inspect({
           numProfileStats: profileStats.length,
           numStacks: profileStacks.length,
-          missing: missingStacks,
+          missing: missingSamples,
         })}`
       );
     }
 
     return {
-      nodes,
-      rootNodes,
+      locations: locations.values(),
+      frames: frames.values(),
+      samples,
     };
   });
 }
