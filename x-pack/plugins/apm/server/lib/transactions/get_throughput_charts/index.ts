@@ -96,7 +96,7 @@ function searchThroughput({
     },
   };
 
-  return apmEventClient.search(params);
+  return apmEventClient.search(params, 'get_transaction_throughput_series');
 }
 
 export async function getThroughputCharts({
@@ -116,26 +116,24 @@ export async function getThroughputCharts({
   setup: Setup & SetupTimeRange;
   searchAggregatedTransactions: boolean;
 }) {
-  return withApmSpan('get_transaction_throughput_series', async () => {
-    const { bucketSize, intervalString } = getBucketSize(setup);
+  const { bucketSize, intervalString } = getBucketSize(setup);
 
-    const response = await searchThroughput({
-      environment,
-      kuery,
-      serviceName,
-      transactionType,
-      transactionName,
-      setup,
-      searchAggregatedTransactions,
-      intervalString,
-    });
-
-    return {
-      throughputTimeseries: getThroughputBuckets({
-        throughputResultBuckets: response.aggregations?.throughput.buckets,
-        bucketSize,
-        setupTimeRange: setup,
-      }),
-    };
+  const response = await searchThroughput({
+    environment,
+    kuery,
+    serviceName,
+    transactionType,
+    transactionName,
+    setup,
+    searchAggregatedTransactions,
+    intervalString,
   });
+
+  return {
+    throughputTimeseries: getThroughputBuckets({
+      throughputResultBuckets: response.aggregations?.throughput.buckets,
+      bucketSize,
+      setupTimeRange: setup,
+    }),
+  };
 }

@@ -21,41 +21,39 @@ export async function getMaxLatency({
   filters: ESFilter[];
   topSigTerms?: TopSigTerm[];
 }) {
-  return withApmSpan('get_max_latency', async () => {
-    const { apmEventClient } = setup;
+  const { apmEventClient } = setup;
 
-    const params = {
-      // TODO: add support for metrics
-      apm: { events: [ProcessorEvent.transaction] },
-      body: {
-        size: 0,
-        query: {
-          bool: {
-            filter: filters,
+  const params = {
+    // TODO: add support for metrics
+    apm: { events: [ProcessorEvent.transaction] },
+    body: {
+      size: 0,
+      query: {
+        bool: {
+          filter: filters,
 
-            ...(topSigTerms.length
-              ? {
-                  // only include docs containing the significant terms
-                  should: topSigTerms.map((term) => ({
-                    term: { [term.fieldName]: term.fieldValue },
-                  })),
-                  minimum_should_match: 1,
-                }
-              : null),
-          },
-        },
-        aggs: {
-          // TODO: add support for metrics
-          // max_latency: { max: { field: TRANSACTION_DURATION } },
-          max_latency: {
-            percentiles: { field: TRANSACTION_DURATION, percents: [99] },
-          },
+          ...(topSigTerms.length
+            ? {
+                // only include docs containing the significant terms
+                should: topSigTerms.map((term) => ({
+                  term: { [term.fieldName]: term.fieldValue },
+                })),
+                minimum_should_match: 1,
+              }
+            : null),
         },
       },
-    };
+      aggs: {
+        // TODO: add support for metrics
+        // max_latency: { max: { field: TRANSACTION_DURATION } },
+        max_latency: {
+          percentiles: { field: TRANSACTION_DURATION, percents: [99] },
+        },
+      },
+    },
+  };
 
-    const response = await apmEventClient.search(params);
-    // return response.aggregations?.max_latency.value;
-    return Object.values(response.aggregations?.max_latency.values ?? {})[0];
-  });
+  const response = await apmEventClient.search(params, 'get_max_latency');
+  // return response.aggregations?.max_latency.value;
+  return Object.values(response.aggregations?.max_latency.values ?? {})[0];
 }
