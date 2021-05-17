@@ -6,8 +6,10 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { ApmSystem } from '../../../../../../../src/core/public';
 import { FlatObject } from '../../../frontend_types';
 import { RestAPIAdapter } from './adapter_types';
+
 let globalAPI: AxiosInstance;
 
 export class AxiosRestAPIAdapter implements RestAPIAdapter {
@@ -54,6 +56,8 @@ export class AxiosRestAPIAdapter implements RestAPIAdapter {
     globalAPI.interceptors.request.use(
       (config) => {
         // Do something before request is sent
+        config.headers['kbn-page'] = ApmSystem.getKbnPage();
+        config.headers['kbn-app'] = ApmSystem.getKbnApp();
         return config;
       },
       (error) => {

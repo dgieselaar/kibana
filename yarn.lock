@@ -12141,7 +12141,7 @@ ejs@^3.1.2, ejs@^3.1.5, ejs@^3.1.6:
   dependencies:
     jake "^10.6.1"
 
-"elastic-apm-http-client@git+https://github.com/dgieselaar/apm-nodejs-http-client.git#2a753d3", "elastic-apm-http-client@git+https://github.com/dgieselaar/apm-nodejs-http-client.git#2a753d346e78454334feeec8f6565313b6b7459d":
+"elastic-apm-http-client@git+https://github.com/dgieselaar/apm-nodejs-http-client.git#2a753d346e78454334feeec8f6565313b6b7459d":
   version "9.8.0"
   resolved "git+https://github.com/dgieselaar/apm-nodejs-http-client.git#2a753d346e78454334feeec8f6565313b6b7459d"
   dependencies:
@@ -12154,42 +12154,6 @@ ejs@^3.1.2, ejs@^3.1.5, ejs@^3.1.6:
     object-filter-sequence "^1.0.0"
     readable-stream "^3.4.0"
     stream-chopper "^3.0.1"
-    unicode-byte-truncate "^1.0.0"
-
-"elastic-apm-node@https://github.com/dgieselaar/apm-agent-nodejs.git#2b2b059f42d8645eee9e2860a2bd21c4515d155c":
-  version "3.14.0"
-  resolved "https://github.com/dgieselaar/apm-agent-nodejs.git#2b2b059f42d8645eee9e2860a2bd21c4515d155c"
-  dependencies:
-    "@elastic/ecs-pino-format" "^1.1.0"
-    after-all-results "^2.0.0"
-    async-value-promise "^1.1.1"
-    basic-auth "^2.0.1"
-    cookie "^0.4.0"
-    core-util-is "^1.0.2"
-    elastic-apm-http-client "git+https://github.com/dgieselaar/apm-nodejs-http-client.git#2a753d3"
-    end-of-stream "^1.4.4"
-    error-stack-parser "^2.0.6"
-    escape-string-regexp "^4.0.0"
-    fast-safe-stringify "^2.0.7"
-    http-headers "^3.0.2"
-    is-native "^1.0.1"
-    measured-reporting "^1.51.1"
-    monitor-event-loop-delay "^1.0.0"
-    object-filter-sequence "^1.0.0"
-    object-identity-map "^1.0.2"
-    original-url "^1.2.3"
-    pino "^6.11.2"
-    pprof "^3.1.0"
-    read-pkg-up "^7.0.1"
-    relative-microtime "^2.0.0"
-    require-in-the-middle "^5.0.3"
-    semver "^6.3.0"
-    set-cookie-serde "^1.0.0"
-    shallow-clone-shim "^2.0.0"
-    sql-summary "^1.0.1"
-    stackman "^4.0.1"
-    traceparent "^1.0.0"
-    traverse "^0.6.6"
     unicode-byte-truncate "^1.0.0"
 
 "elastic-apm-node@https://github.com/dgieselaar/apm-agent-nodejs.git#8b04a96c3e90b4cf42bc354cf4d0040bbb06b2bc":

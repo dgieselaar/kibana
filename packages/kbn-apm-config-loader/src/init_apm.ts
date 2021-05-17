@@ -35,5 +35,35 @@ export const initApm = (
     return payload;
   });
 
+  apm.addPatch(
+    '@elastic/elasticsearch',
+    (
+      exports: { Client: any },
+      agent: any,
+      { version, enabled }: { version: string; enabled: boolean }
+    ) => {
+      if (enabled) {
+        // eslint-disable-next-line
+        exports.Client = class KibanaApmClient extends exports.Client {
+          constructor(...args: any[]) {
+            super(...args);
+
+            this.on('request', () => {
+              const currentTransaction = agent.currentTransaction;
+              const bindingSpan = agent._instrumentation.bindingSpan;
+              if (currentTransaction && bindingSpan && currentTransaction._labels) {
+                bindingSpan.addLabels({
+                  kibana_page: currentTransaction._labels.kibana_page ?? '',
+                  kibana_app: currentTransaction._labels.kibana_app ?? '',
+                });
+              }
+            });
+          }
+        };
+      }
+      return exports;
+    }
+  );
+
   apm.start(apmConfig);
 };

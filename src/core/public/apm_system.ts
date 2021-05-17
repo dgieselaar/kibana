@@ -29,11 +29,23 @@ interface StartDeps {
 }
 
 export class ApmSystem {
-  private readonly enabled: boolean;
+  private static kbnApp: string | undefined;
+  private static kbnPage: string | undefined;
   /**
    * `apmConfig` would be populated with relevant APM RUM agent
    * configuration if server is started with elastic.apm.* config.
    */
+
+  static getKbnPage() {
+    return ApmSystem.kbnPage ?? '';
+  }
+
+  static getKbnApp() {
+    return ApmSystem.kbnApp ?? '';
+  }
+
+  private readonly enabled: boolean;
+
   constructor(private readonly apmConfig?: ApmConfig, private readonly basePath = '') {
     this.enabled = apmConfig != null && !!apmConfig.active;
   }
@@ -48,6 +60,20 @@ export class ApmSystem {
 
     this.addHttpRequestNormalization(apm);
 
+    let lastPageLoadOrRouteChangeTransaction: Transaction | undefined;
+
+    apm.observe('transaction:start', (t) => {
+      if (t.type === 'page-load' || t.type === 'route-change') {
+        lastPageLoadOrRouteChangeTransaction = t;
+      }
+      if (lastPageLoadOrRouteChangeTransaction) {
+        ApmSystem.kbnPage = lastPageLoadOrRouteChangeTransaction.name;
+        apm.addLabels({
+          kibana_page: ApmSystem.kbnPage,
+        });
+      }
+    });
+
     init(apmConfig);
   }
 
@@ -60,6 +86,11 @@ export class ApmSystem {
     start.application.currentAppId$.subscribe((appId) => {
       const apmInstance = (window as any).elasticApm;
       if (appId && apmInstance && typeof apmInstance.startTransaction === 'function') {
+        ApmSystem.kbnApp = appId;
+        apmInstance.addLabels({
+          kibana_app: ApmSystem.kbnApp,
+        });
+
         apmInstance.startTransaction(`/app/${appId}`, 'route-change', {
           managed: true,
           canReuse: true,

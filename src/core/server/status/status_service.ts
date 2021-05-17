@@ -74,7 +74,7 @@ export class StatusService implements CoreService<InternalStatusServiceSetup> {
           ...Object.entries(coreStatus),
           ...Object.entries(pluginsStatus),
         ]);
-        this.logger.debug<StatusLogMeta>(`Recalculated overall status`, {
+        this.logger.trace<StatusLogMeta>(`Recalculated overall status`, {
           kibana: {
             status: summary,
           },

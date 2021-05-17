@@ -7,6 +7,7 @@
  */
 
 import { CoreStart, PluginInitializerContext, CoreSetup, Plugin } from 'src/core/public';
+import { ApmSystem } from '../../../core/public';
 import { fetchStreaming as fetchStreamingStatic, FetchStreamingParams } from './streaming';
 import { removeLeadingSlash } from '../common';
 import {
@@ -74,6 +75,8 @@ export class BfetchPublicPlugin
       headers: {
         'Content-Type': 'application/json',
         'kbn-version': version,
+        'kbn-page': ApmSystem.getKbnPage() ?? '',
+        'kbn-app': ApmSystem.getKbnApp() ?? '',
         ...(params.headers || {}),
       },
     });

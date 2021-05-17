@@ -6,6 +6,7 @@
  * Side Public License, v 1.
  */
 
+import { set } from '@elastic/safer-lodash-set';
 import {
   ICompileProvider,
   IHttpProvider,
@@ -14,16 +15,19 @@ import {
   IModule,
   IRootScopeService,
 } from 'angular';
+import { History } from 'history';
 import $ from 'jquery';
-import { set } from '@elastic/safer-lodash-set';
 import { get } from 'lodash';
 import * as Rx from 'rxjs';
-import { ChromeBreadcrumb, EnvironmentMode, PackageInfo } from 'kibana/public';
-import { History } from 'history';
-
-import { CoreStart } from 'kibana/public';
-import { isSystemApiRequest } from '../utils';
+import {
+  ApmSystem,
+  ChromeBreadcrumb,
+  CoreStart,
+  EnvironmentMode,
+  PackageInfo,
+} from '../../../../core/public';
 import { formatAngularHttpError, isAngularHttpError } from '../notify/lib';
+import { isSystemApiRequest } from '../utils';
 
 export interface RouteConfiguration {
   controller?: string | ((...args: any[]) => void);
@@ -138,6 +142,8 @@ export const $setupXsrfRequestInterceptor = (version: string) => {
   $.ajaxPrefilter(({ kbnXsrfToken = true }: any, originalOptions, jqXHR) => {
     if (kbnXsrfToken) {
       jqXHR.setRequestHeader('kbn-version', version);
+      jqXHR.setRequestHeader('kbn-page', ApmSystem.getKbnPage());
+      jqXHR.setRequestHeader('kbn-app', ApmSystem.getKbnApp());
     }
   });
 
@@ -149,6 +155,8 @@ export const $setupXsrfRequestInterceptor = (version: string) => {
           const { kbnXsrfToken = true } = opts as any;
           if (kbnXsrfToken) {
             set(opts, ['headers', 'kbn-version'], version);
+            set(opts, ['headers', 'kbn-page'], ApmSystem.getKbnPage());
+            set(opts, ['headers', 'kbn-app'], ApmSystem.getKbnApp());
           }
           return opts;
         },

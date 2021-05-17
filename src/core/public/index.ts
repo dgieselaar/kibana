@@ -334,3 +334,5 @@ export type {
 };
 
 export { __kbnBootstrap__ } from './kbn_bootstrap';
+
+export { ApmSystem } from './apm_system';

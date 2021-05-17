@@ -10,6 +10,7 @@ import moment from 'moment-timezone';
 import { merge } from '@kbn/std';
 import { schema } from '@kbn/config-schema';
 import { Ecs, LogRecord, Layout } from '@kbn/logging';
+import agent from 'elastic-apm-node';
 
 const { literal, object } = schema;
 
@@ -55,6 +56,23 @@ export class JsonLayout implements Layout {
         pid: record.pid,
       },
     };
+
+    if (agent.isStarted()) {
+      Object.assign(log, {
+        ...(agent.currentTransaction
+          ? {
+              trace: { id: agent.currentTraceIds['trace.id'] },
+              span: { id: agent.currentTraceIds['span.id'] },
+              transaction: { id: agent.currentTraceIds['transaction.id'] },
+            }
+          : {}),
+        service: {
+          name: agent.getServiceName(),
+          environment: process.env.ELASTIC_APM_SERVICE_ENVIRONMENT,
+        },
+      });
+    }
+
     const output = record.meta ? merge({ ...record.meta }, log) : log;
 
     return JSON.stringify(output);

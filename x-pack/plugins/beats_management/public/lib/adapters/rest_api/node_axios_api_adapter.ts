@@ -7,6 +7,7 @@
 
 import axios, { AxiosInstance } from 'axios';
 import fs from 'fs';
+import { ApmSystem } from 'kibana/public';
 import { join, resolve } from 'path';
 import { FlatObject } from '../../../frontend_types';
 import { RestAPIAdapter } from './adapter_types';
@@ -68,6 +69,8 @@ export class NodeAxiosAPIAdapter implements RestAPIAdapter {
     globalAPI.interceptors.request.use(
       (config) => {
         // Do something before request is sent
+        config.headers['kbn-page'] = ApmSystem.getKbnPage();
+        config.headers['kbn-app'] = ApmSystem.getKbnApp();
         return config;
       },
       (error) => {

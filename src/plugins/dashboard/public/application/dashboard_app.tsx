@@ -11,6 +11,7 @@ import { merge, Subject, Subscription } from 'rxjs';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { debounceTime, finalize, switchMap, tap } from 'rxjs/operators';
+import { apm } from '@elastic/apm-rum';
 import { useKibana } from '../../../kibana_react/public';
 import { DashboardConstants } from '../dashboard_constants';
 import { DashboardTopNav } from './top_nav/dashboard_top_nav';

@@ -6,6 +6,8 @@
  * Side Public License, v 1.
  */
 
+import agent from 'elastic-apm-node';
+import { castArray } from 'lodash';
 import { OnPostAuthHandler } from './lifecycle/on_post_auth';
 import { OnPreResponseHandler } from './lifecycle/on_pre_response';
 import { HttpConfig } from './http_config';
@@ -83,4 +85,16 @@ export const registerCoreHandlers = (
   registrar.registerOnPreResponse(createCustomHeadersPreResponseHandler(config));
   registrar.registerOnPostAuth(createXsrfPostAuthHandler(config));
   registrar.registerOnPostAuth(createVersionCheckPostAuthHandler(env.packageInfo.version));
+  registrar.registerOnPreRouting((request, response, toolkit) => {
+    if (agent.currentTransaction) {
+      const kibanaPage = castArray(request.headers['kbn-page'])[0] as string | undefined;
+      const kibanaApp = castArray(request.headers['kbn-app'])[0] as string | undefined;
+      agent.currentTransaction.addLabels({
+        kibana_page: kibanaPage ?? '',
+        kibana_app: kibanaApp ?? '',
+      });
+    }
+
+    return toolkit.next();
+  });
 };
