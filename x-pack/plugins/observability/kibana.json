@@ -24,6 +24,7 @@
   "requiredBundles": [
     "data",
     "kibanaReact",
-    "kibanaUtils"
+    "kibanaUtils",
+    "apm"
   ]
 }

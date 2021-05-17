@@ -29,16 +29,29 @@ import {
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ALERT_TYPES_CONFIG } from '../../../../apm/public';
+import { ActionForm, AlertAction } from '../../../../triggers_actions_ui/public';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
+import { usePluginContext } from '../../hooks/use_plugin_context';
 import { PreviewComponent } from './preview_component';
 import { Template, templates } from './templates';
 
+const metricRuleType = ALERT_TYPES_CONFIG['apm.metric'];
+
 export function AlertsAsCodeDemoPage() {
+  const {
+    plugins: { triggersActionsUi },
+  } = usePluginContext();
+
   const [selectedTemplate, setSelectedTemplate] = useState<
     { template: Template; values: Record<string, any> } | undefined
   >();
 
   const [previewVisible, setPreviewVisible] = useState(false);
+
+  const [rule, setRule] = useState<{ actions: AlertAction[] }>({
+    actions: [],
+  });
 
   const onChange = useCallback(
     (values: Record<string, any>) => {
@@ -74,6 +87,8 @@ export function AlertsAsCodeDemoPage() {
       },
     }));
   };
+
+  const createRule = () => {};
 
   function selectTemplate(template: Template) {
     setSelectedTemplate({
@@ -147,7 +162,7 @@ export function AlertsAsCodeDemoPage() {
           {selectedTemplate ? (
             <>
               <EuiFlexItem>
-                <EuiPanel paddingSize="m">
+                <EuiPanel paddingSize="l">
                   <EuiFlexGroup direction="column" gutterSize="none">
                     <EuiFlexItem>
                       <EuiTitle>
@@ -209,6 +224,99 @@ export function AlertsAsCodeDemoPage() {
                                 onClick={() => setPreviewVisible(true)}
                               >
                                 Preview rule
+                              </EuiButton>
+                            </EuiFlexItem>
+                          </EuiFlexGroup>
+                        </EuiFormRow>
+                      </EuiForm>
+                    </EuiFlexItem>
+                  </EuiFlexGroup>
+                </EuiPanel>
+              </EuiFlexItem>
+              <EuiFlexItem>
+                <EuiPanel paddingSize="l">
+                  <EuiFlexGroup direction="column" gutterSize="none">
+                    <EuiFlexItem>
+                      <EuiForm>
+                        <EuiFormRow>
+                          <ActionForm
+                            actions={rule.actions}
+                            actionTypeRegistry={triggersActionsUi.actionTypeRegistry}
+                            defaultActionGroupId={metricRuleType.defaultActionGroupId}
+                            setActionIdByIndex={(id, index) => {
+                              setRule((prev) => {
+                                return {
+                                  ...prev,
+                                  actions: prev.actions.map((action, i) => {
+                                    if (i !== index) {
+                                      return action;
+                                    }
+                                    return {
+                                      ...action,
+                                      id,
+                                    };
+                                  }),
+                                };
+                              });
+                            }}
+                            setActionParamsProperty={(key, value, index) => {
+                              setRule((prev) => {
+                                return {
+                                  ...prev,
+                                  actions: prev.actions.map((action, i) => {
+                                    if (i !== index) {
+                                      return action;
+                                    }
+                                    return {
+                                      ...action,
+                                      params: {
+                                        ...action.params,
+                                        [key]: value,
+                                      },
+                                    };
+                                  }),
+                                };
+                              });
+                            }}
+                            setActionGroupIdByIndex={(group, index) => {
+                              setRule((prev) => {
+                                return {
+                                  ...prev,
+                                  actions: prev.actions.map((action, i) => {
+                                    if (i !== index) {
+                                      return action;
+                                    }
+                                    return {
+                                      ...action,
+                                      group,
+                                    };
+                                  }),
+                                };
+                              });
+                            }}
+                            setActions={(actions) => {
+                              setRule((prev) => {
+                                return {
+                                  ...prev,
+                                  actions,
+                                };
+                              });
+                            }}
+                            actionGroups={metricRuleType.actionGroups}
+                          />
+                        </EuiFormRow>
+                        <EuiSpacer size="m" />
+                        <EuiFormRow fullWidth>
+                          <EuiFlexGroup direction="row" justifyContent="flexEnd">
+                            <EuiFlexItem grow={false}>
+                              <EuiButton
+                                fill={true}
+                                disabled={!config}
+                                type="button"
+                                iconType="checkInCircleFilled"
+                                onClick={() => createRule()}
+                              >
+                                Create rule
                               </EuiButton>
                             </EuiFlexItem>
                           </EuiFlexGroup>
