@@ -224,10 +224,6 @@ export class APMPlugin
       ready,
     });
 
-    ruleDataClient.createOrUpdateWriteTarget().catch((err) => {
-      this.logger!.error(err);
-    });
-
     registerRoutes({
       core: {
         setup: core,
