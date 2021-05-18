@@ -29,6 +29,7 @@ import {
 } from './route_handlers/agent_configuration';
 import { enableServiceOverview } from '../../../../../common/ui_settings_keys';
 import { useApmPluginContext } from '../../../../context/apm_plugin/use_apm_plugin_context';
+import { TransactionLink } from '../../transaction_link';
 
 /**
  * Given a path, redirect to that location, preserving the search and maintaining
@@ -326,6 +327,12 @@ export const routes: APMRouteDefinition[] = [
     exact: true,
     path: '/link-to/trace/:traceId',
     component: TraceLink,
+    breadcrumb: null,
+  },
+  {
+    exact: true,
+    path: '/link-to/transaction/:transactionId',
+    component: TransactionLink,
     breadcrumb: null,
   },
   // !! Need to be kept in sync with the searchDeepLinks in x-pack/plugins/apm/public/plugin.ts
