@@ -248,6 +248,13 @@ export class TaskManagerRunner implements TaskRunner {
       childOf: this.instance.task.traceparent,
     });
 
+    if (apmTrans) {
+      apmTrans.addLabels({
+        kibana_task_type: this.taskType,
+        kibana_context: 'taskManager',
+      });
+    }
+
     const modifiedContext = await this.beforeRun({
       taskInstance: this.instance.task,
     });

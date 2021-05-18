@@ -9,6 +9,7 @@
 import { flatten } from 'lodash';
 import { ShallowPromise } from '@kbn/utility-types';
 import { pick } from 'lodash';
+import agent from 'elastic-apm-node';
 import type { CoreId, PluginOpaqueId, RequestHandler, RequestHandlerContext } from '../..';
 
 /**
@@ -225,6 +226,14 @@ export class ContextContainer implements IContextContainer {
 
     return (async (...args: HandlerParameters<RequestHandler>) => {
       const context = await this.buildContext(source, ...args);
+
+      const sourceAsString = String(source).match(/(?:\((.*?)\))/)?.[1];
+
+      if (agent.currentTransaction) {
+        agent.currentTransaction.addLabels({
+          kibana_context: sourceAsString,
+        });
+      }
       return handler(context, ...args);
     }) as (
       ...args: HandlerParameters<RequestHandler>

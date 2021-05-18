@@ -10,6 +10,7 @@ import { Buffer } from 'buffer';
 import { stringify } from 'querystring';
 import { ApiError, Client, RequestEvent, errors } from '@elastic/elasticsearch';
 import type { RequestBody } from '@elastic/elasticsearch/lib/Transport';
+import agent from 'elastic-apm-node';
 import { Logger } from '../../logging';
 import { parseClientOptions, ElasticsearchClientConfig } from './client_config';
 
@@ -20,6 +21,15 @@ export const configureClient = (
   const clientOptions = parseClientOptions(config, scoped);
 
   const client = new Client(clientOptions);
+  client.on('request', () => {
+    // @ts-expect-error
+    if (agent.isStarted() && agent._instrumentation.bindingSpan) {
+      // @ts-expect-error
+      agent._instrumentation.bindingSpan.addLabels({
+        kibana_client_type: type,
+      });
+    }
+  });
   addLogging(client, logger.get('query', type));
 
   return client;

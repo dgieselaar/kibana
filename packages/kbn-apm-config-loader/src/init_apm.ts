@@ -55,6 +55,8 @@ export const initApm = (
                 bindingSpan.addLabels({
                   kibana_page: currentTransaction._labels.kibana_page ?? '',
                   kibana_app: currentTransaction._labels.kibana_app ?? '',
+                  kibana_context: currentTransaction._labels.kibana_context ?? '',
+                  kibana_task_type: currentTransaction._labels.kibana_task_type ?? '',
                 });
               }
             });
