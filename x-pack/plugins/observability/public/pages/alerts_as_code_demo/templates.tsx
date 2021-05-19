@@ -10,11 +10,13 @@ import { toJsonSchema } from '@kbn/io-ts-utils/target/to_json_schema';
 import { monaco } from '@kbn/monaco';
 import * as t from 'io-ts';
 import React, { ComponentType, useEffect, useState } from 'react';
+import { AlertSeverityLevel } from '../../../../apm/public';
 import { CodeEditor } from '../../../../../../src/plugins/kibana_react/public';
 import { AlertingConfig, configRt } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { GroupBySelect } from './group_by_select';
 import { IndexSelect } from './index_select';
 import { QueryInput } from './query_input';
+import { TriggerList, triggerRt } from './trigger_list';
 import { useIndexPatterns } from './use_index_patterns';
 
 const MODEL_URI = monaco.Uri.parse('elastic://alerting-dsl.json');
@@ -79,7 +81,7 @@ export const templates: Array<Template<any>> = [
       filter: t.string,
       latencyThreshold: t.number,
       window: t.number,
-      threshold: t.number,
+      triggers: t.array(triggerRt),
     }),
     icon: 'faceHappy',
     defaults: () => ({
@@ -88,7 +90,16 @@ export const templates: Array<Template<any>> = [
       groupBy: ['service.name'],
       latencyThreshold: 500,
       window: 10,
-      trigger: 0.9,
+      triggers: [
+        {
+          severity: AlertSeverityLevel.Warning,
+          expression: 'apdex_score < 0.9',
+        },
+        {
+          severity: AlertSeverityLevel.Critical,
+          expression: 'apdex_score < 0.8',
+        },
+      ],
     }),
     Form: ({ values, onChange }) => {
       const { indexPatterns } = useIndexPatterns(values.index ?? []);
@@ -166,17 +177,12 @@ export const templates: Array<Template<any>> = [
             />
           </EuiFormRow>
 
-          <EuiFormRow
-            label="Alert threshold"
-            helpText="Alert when the apdex score is below this threshold"
-          >
-            <EuiFieldNumber
-              value={values.threshold ?? ''}
-              onChange={(e) => {
-                onChange({
-                  ...values,
-                  threshold: isNaN(e.target.valueAsNumber) ? undefined : e.target.valueAsNumber,
-                });
+          <EuiFormRow label="Alert triggers" helpText="Define when alerts should fire">
+            <TriggerList
+              fields={['apdex_score']}
+              value={values.triggers ?? []}
+              onChange={(triggers) => {
+                onChange({ ...values, triggers });
               }}
             />
           </EuiFormRow>
@@ -231,9 +237,10 @@ export const templates: Array<Template<any>> = [
           },
           query_delay: '30s',
         },
-        alert: {
-          expression: `apdex_score <= ${props.threshold}`,
-        },
+        alerts: props.triggers.map((trigger) => ({
+          expression: trigger.expression,
+          actionGroupId: trigger.severity,
+        })),
       };
     },
   }),
@@ -247,6 +254,7 @@ export const templates: Array<Template<any>> = [
       groupBy: t.array(t.string),
       allFilter: t.string,
       onTargetFilter: t.string,
+      target: t.number,
     }),
     defaults: () => {
       return {
@@ -254,6 +262,7 @@ export const templates: Array<Template<any>> = [
         groupBy: ['service.name'],
         allFilter: 'event.outcome:(success or failure)',
         onTargetFilter: 'event.outcome:success',
+        target: 99.9,
       };
     },
     Form: ({ values, onChange }) => {
@@ -313,10 +322,29 @@ export const templates: Array<Template<any>> = [
               }}
             />
           </EuiFormRow>
+
+          <EuiFormRow
+            label="SLO target"
+            helpText="Percentage of events that should be considered a success"
+          >
+            <EuiFieldNumber
+              placeholder="Target"
+              value={values.target ?? ''}
+              onChange={(event) => {
+                onChange({
+                  ...values,
+                  target: event.target.valueAsNumber,
+                });
+              }}
+              append="%"
+            />
+          </EuiFormRow>
         </>
       );
     },
     toRawTemplate: (props) => {
+      const budget = (100 - props.target) / 100;
+
       return {
         query: {
           index: props.index,
@@ -329,116 +357,132 @@ export const templates: Array<Template<any>> = [
                 range: '5m',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_5m: {
               count_over_time: {
                 range: '5m',
               },
+              record: true,
             },
             slo_count_on_target_30m: {
               count_over_time: {
                 range: '30m',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_30m: {
               count_over_time: {
                 range: '30m',
               },
+              record: true,
             },
             slo_count_on_target_1h: {
               count_over_time: {
                 range: '1h',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_1h: {
               count_over_time: {
                 range: '1h',
               },
+              record: true,
             },
             slo_count_on_target_2h: {
               count_over_time: {
                 range: '2h',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_2h: {
               count_over_time: {
                 range: '2h',
               },
+              record: true,
             },
             slo_count_on_target_6h: {
               count_over_time: {
                 range: '6h',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_6h: {
               count_over_time: {
                 range: '6h',
               },
+              record: true,
             },
             slo_count_on_target_1d: {
               count_over_time: {
                 range: '1d',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_1d: {
               count_over_time: {
                 range: '1d',
               },
+              record: true,
             },
             slo_count_on_target_3d: {
               count_over_time: {
                 range: '3d',
                 filter: props.onTargetFilter,
               },
+              record: true,
             },
             slo_count_all_3d: {
               count_over_time: {
                 range: '3d',
               },
-            },
-            slo_target_5m: {
-              expression:
-                '1 - (slo_count_on_target_5m / (slo_count_all_5m + slo_count_on_target_5m))',
               record: true,
             },
-            slo_target_30m: {
-              expression:
-                '1 - (slo_count_on_target_30m / (slo_count_all_30m + slo_count_on_target_30m))',
+            slo_burn_rate_5m: {
+              expression: `(1 - (slo_count_on_target_5m / slo_count_all_5m)) / ${budget}`,
               record: true,
             },
-            slo_target_1h: {
-              expression:
-                '1- (slo_count_on_target_1h / (slo_count_all_1h + slo_count_on_target_1h))',
+            slo_burn_rate_30m: {
+              expression: `(1 - (slo_count_on_target_30m / slo_count_all_30m)) / ${budget}`,
               record: true,
             },
-            slo_target_2h: {
-              expression:
-                '1 - (slo_count_on_target_2h / (slo_count_all_2h + slo_count_on_target_2h))',
+            slo_burn_rate_1h: {
+              expression: `(1 - (slo_count_on_target_1h / slo_count_all_1h)) / ${budget}`,
               record: true,
             },
-            slo_target_6h: {
-              expression:
-                '1 - (slo_count_on_target_6h / (slo_count_all_6h + slo_count_on_target_6h))',
+            slo_burn_rate_2h: {
+              expression: `(1 - (slo_count_on_target_2h / slo_count_all_2h)) / ${budget}`,
               record: true,
             },
-            slo_target_1d: {
-              expression:
-                '1 - (slo_count_on_target_1d / (slo_count_all_1d + slo_count_on_target_1d))',
+            slo_burn_rate_6h: {
+              expression: `(1 - (slo_count_on_target_6h / slo_count_all_6h)) / ${budget}`,
               record: true,
             },
-            slo_target_3d: {
-              expression:
-                '1 - (slo_count_on_target_3d / (slo_count_all_3d + slo_count_on_target_3d))',
+            slo_burn_rate_1d: {
+              expression: `(1 - (slo_count_on_target_1d / slo_count_all_1d)) / ${budget}`,
+              record: true,
+            },
+            slo_burn_rate_3d: {
+              expression: `(1 - (slo_count_on_target_3d / slo_count_all_3d)) / ${budget}`,
               record: true,
             },
           },
         },
-        alerts: [],
+        alerts: [
+          {
+            actionGroupId: 'warning',
+            expression: `slo_burn_rate_5m > 14.4 and slo_burn_rate_1h > 14.4`,
+          },
+          {
+            actionGroupId: 'critical',
+            expression: `slo_burn_rate_30m > 6 and slo_burn_rate_6h > 6`,
+          },
+        ],
       };
     },
   }),

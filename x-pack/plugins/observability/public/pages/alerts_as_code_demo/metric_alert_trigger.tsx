@@ -6,8 +6,9 @@
  */
 import { EuiFormControlLayout } from '@elastic/eui';
 import { monaco } from '@kbn/monaco';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ValuesType } from 'utility-types';
+import { uniqueId } from 'lodash';
 import { CodeEditor } from '../../../../../../src/plugins/kibana_react/public';
 
 const js = monaco.languages.getLanguages().find((lang) => lang.id === 'javascript')! as ValuesType<
@@ -30,9 +31,6 @@ monaco.languages.setMonarchTokensProvider(
   })
 );
 
-const MODEL_URI = monaco.Uri.parse('elastic://metric-expression.math');
-
-const model = monaco.editor.createModel('', 'math', MODEL_URI);
 export function MetricAlertTrigger({
   value,
   fields,
@@ -42,6 +40,20 @@ export function MetricAlertTrigger({
   fields: string[];
   onChange: (value: string) => void;
 }) {
+  const model = useMemo(() => {
+    return monaco.editor.createModel(
+      '',
+      'math',
+      monaco.Uri.parse(`elastic://metric-expression.${uniqueId()}.math/`)
+    );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      model.dispose();
+    };
+  }, [model]);
+
   const [disposeCompletionProvider, setDisposeCompletionProvider] = useState<
     monaco.IDisposable | undefined
   >();
@@ -50,6 +62,9 @@ export function MetricAlertTrigger({
     <EuiFormControlLayout
       css=".editor-scrollable {
       left: 8px !important;
+    }
+    .monaco-editor:not(.focused) .cslr.selected-text {
+      background: none;
     }"
     >
       <div className="euiFieldText">
@@ -68,6 +83,11 @@ export function MetricAlertTrigger({
             setDisposeCompletionProvider(
               monaco.languages.registerCompletionItemProvider('math', {
                 provideCompletionItems: (_, position, context, token) => {
+                  if (!editor.hasTextFocus()) {
+                    return {
+                      suggestions: [],
+                    };
+                  }
                   const word = model.getWordAtPosition(position);
                   return {
                     suggestions: fields.map((field) => {
@@ -94,14 +114,17 @@ export function MetricAlertTrigger({
             minimap: {
               enabled: false,
             },
+            wordWrap: 'off',
+            wordWrapColumn: 0,
             scrollbar: {
               vertical: 'hidden',
               horizontal: 'hidden',
             },
+            scrollBeyondLastColumn: 0,
+            roundedSelection: false,
             hideCursorInOverviewRuler: true,
             overviewRulerLanes: 0,
             scrollBeyondLastLine: false,
-            wordWrap: 'on',
             wrappingIndent: 'indent',
             suggest: {
               snippetsPreventQuickSuggestions: false,

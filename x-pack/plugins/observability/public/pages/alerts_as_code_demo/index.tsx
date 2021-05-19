@@ -29,10 +29,14 @@ import {
 } from '@elastic/eui';
 import { isLeft } from 'fp-ts/lib/Either';
 import React, { useCallback, useEffect, useState } from 'react';
+import { getFieldsFromConfig } from '../../../common/rules/get_fields_from_config';
+// eslint-disable-next-line @kbn/eslint/no-restricted-paths
+import type { ObservabilityAPIClientRequestParamsOf } from '../../../server';
 import { ALERT_TYPES_CONFIG } from '../../../../apm/public';
 import { ActionForm, AlertAction } from '../../../../triggers_actions_ui/public';
 import { ExperimentalBadge } from '../../components/shared/experimental_badge';
 import { usePluginContext } from '../../hooks/use_plugin_context';
+import { callObservabilityApi } from '../../services/call_observability_api';
 import { PreviewComponent } from './preview_component';
 import { Template, templates } from './templates';
 
@@ -40,6 +44,7 @@ const metricRuleType = ALERT_TYPES_CONFIG['apm.metric'];
 
 export function AlertsAsCodeDemoPage() {
   const {
+    core: { notifications },
     plugins: { triggersActionsUi },
   } = usePluginContext();
 
@@ -48,6 +53,8 @@ export function AlertsAsCodeDemoPage() {
   >();
 
   const [previewVisible, setPreviewVisible] = useState(false);
+
+  const [isSaving, setIsSaving] = useState<boolean>();
 
   const [rule, setRule] = useState<{ actions: AlertAction[] }>({
     actions: [],
@@ -88,7 +95,24 @@ export function AlertsAsCodeDemoPage() {
     }));
   };
 
-  const createRule = () => {};
+  const createRule = async () => {
+    if (!config) {
+      throw new Error('Configuration is not valid');
+    }
+    const body: ObservabilityAPIClientRequestParamsOf<'PUT /api/observability/rules/create_rule'>['body'] = {
+      config,
+      actions: rule.actions,
+      name: selectedTemplate?.values.ruleName,
+    };
+
+    return callObservabilityApi({
+      endpoint: 'PUT /api/observability/rules/create_rule',
+      params: {
+        body: JSON.stringify(body) as any,
+      },
+      signal: null,
+    });
+  };
 
   function selectTemplate(template: Template) {
     setSelectedTemplate({
@@ -103,6 +127,8 @@ export function AlertsAsCodeDemoPage() {
   useEffect(() => {
     selectTemplate(templates[0]);
   }, []);
+
+  const fields = getFieldsFromConfig(config);
 
   return (
     <>
@@ -243,6 +269,19 @@ export function AlertsAsCodeDemoPage() {
                             actions={rule.actions}
                             actionTypeRegistry={triggersActionsUi.actionTypeRegistry}
                             defaultActionGroupId={metricRuleType.defaultActionGroupId}
+                            messageVariables={{
+                              state: [],
+                              params: [],
+                              ...metricRuleType.actionVariables,
+                              context: metricRuleType.actionVariables?.context?.concat(
+                                fields.map((field) => {
+                                  return {
+                                    name: field,
+                                    description: '',
+                                  };
+                                })
+                              ),
+                            }}
                             setActionIdByIndex={(id, index) => {
                               setRule((prev) => {
                                 return {
@@ -311,10 +350,27 @@ export function AlertsAsCodeDemoPage() {
                             <EuiFlexItem grow={false}>
                               <EuiButton
                                 fill={true}
-                                disabled={!config}
+                                disabled={!config || isSaving}
+                                isLoading={isSaving}
                                 type="button"
                                 iconType="checkInCircleFilled"
-                                onClick={() => createRule()}
+                                onClick={() => {
+                                  setIsSaving(true);
+                                  createRule()
+                                    .then(() => {
+                                      notifications.toasts.addSuccess(
+                                        'Rule was successfully created'
+                                      );
+                                    })
+                                    .catch((err) => {
+                                      notifications.toasts.addError(err, {
+                                        title: 'Failed to create rule',
+                                      });
+                                    })
+                                    .finally(() => {
+                                      setIsSaving(false);
+                                    });
+                                }}
                               >
                                 Create rule
                               </EuiButton>

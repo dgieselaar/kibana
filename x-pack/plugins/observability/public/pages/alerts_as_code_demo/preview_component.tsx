@@ -23,6 +23,7 @@ import { isNumber } from 'lodash';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertingConfig } from '../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { useFetcher } from '../../hooks/use_fetcher';
+import { usePluginContext } from '../../hooks/use_plugin_context';
 import { callObservabilityApi } from '../../services/call_observability_api';
 import { getBucketSize } from '../../utils/get_bucket_size';
 
@@ -62,6 +63,10 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
 
   const [selectedMetric, setSelectedMetric] = useState<string | undefined>();
 
+  const {
+    core: { notifications },
+  } = usePluginContext();
+
   const { data } = useFetcher(
     ({ signal }) => {
       if (!preview?.config) {
@@ -94,15 +99,22 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
           }) as any,
         },
         signal,
-      }).then((response) => {
-        const metricNames = [
-          ...new Set(response.preview.evaluations.map(({ metricName }) => metricName)),
-        ];
-        if (!selectedMetric || !metricNames.includes(selectedMetric)) {
-          setSelectedMetric(metricNames[0]);
-        }
-        return response;
-      });
+      })
+        .then((response) => {
+          const metricNames = [
+            ...new Set(response.preview.evaluations.map(({ metricName }) => metricName)),
+          ];
+          if (!selectedMetric || !metricNames.includes(selectedMetric)) {
+            setSelectedMetric(metricNames[0]);
+          }
+          return response;
+        })
+        .catch((err) => {
+          notifications.toasts.addError(err, {
+            title: 'Failed to preview rule',
+          });
+          throw err;
+        });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [preview],

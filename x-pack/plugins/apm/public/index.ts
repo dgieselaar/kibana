@@ -11,7 +11,7 @@ import {
 } from '../../../../src/core/public';
 import { ApmPlugin, ApmPluginSetup, ApmPluginStart } from './plugin';
 
-export { ALERT_TYPES_CONFIG } from '../common/alert_types';
+export { ALERT_TYPES_CONFIG, AlertSeverityLevel } from '../common/alert_types';
 
 export interface ConfigSchema {
   serviceMapEnabled: boolean;

@@ -72,10 +72,7 @@ export class RuleDataClient implements IRuleDataClient {
 
         return clusterClient.bulk(requestWithDefaultParameters).then((response) => {
           if (response.body.errors) {
-            if (
-              response.body.items.length === 1 &&
-              response.body.items[0]?.index?.error?.type === 'index_not_found_exception'
-            ) {
+            if (response.body.items[0]?.index?.error?.type === 'index_not_found_exception') {
               return this.createOrUpdateWriteTarget({ namespace }).then(() => {
                 return clusterClient.bulk(requestWithDefaultParameters);
               });

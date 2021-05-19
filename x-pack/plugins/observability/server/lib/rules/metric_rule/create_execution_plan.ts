@@ -7,9 +7,11 @@
 import { ValuesType, UnionToIntersection } from 'utility-types';
 import { isRight } from 'fp-ts/lib/Either';
 import { PathReporter } from 'io-ts/lib/PathReporter';
-import { mapValues, flatten, pickBy, isEmpty } from 'lodash';
+import { mapValues, flatten, pickBy, sortBy } from 'lodash';
 import { ESSearchClient } from 'typings/elasticsearch';
 import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
+import { getFieldsFromConfig } from '../../../../common/rules/get_fields_from_config';
+import { AlertSeverityLevel } from '../../../../../apm/common/alert_types';
 import { expressionMath } from '../../../../common/rules/alerting_dsl/expression_math';
 import { RuleDataClient } from '../../../../../../plugins/rule_registry/server';
 import { PromiseReturnType } from '../../../../../observability/typings/common';
@@ -175,6 +177,10 @@ export function createExecutionPlan({
     async evaluate({ time }: { time: number }) {
       const queries = 'query' in config ? [config.query] : config.queries;
 
+      const defaults = Object.fromEntries(
+        getFieldsFromConfig(config).map((field) => [field, null])
+      );
+
       const queryResults = await Promise.all(
         queries.map(async (queryConfig) => {
           const query =
@@ -329,13 +335,16 @@ export function createExecutionPlan({
 
           const searchEvaluations = mergeByLabels(flatten(measurements)).map((measurement) => {
             const scope = {
+              ...defaults,
               ...measurement.labels,
               ...measurement.metrics,
             };
 
             const evaluatedExpressionMetrics = mapValues(expressionResolvers, (resolver, key) => {
-              return resolver(scope);
+              const value = resolver(scope);
+              return isNaN(value) ? null : value;
             });
+
             return {
               time: measurement.time,
               labels: measurement.labels,
@@ -362,18 +371,26 @@ export function createExecutionPlan({
 
       const alerts: MeasurementAlert[] = [];
 
-      alertDefinitions.forEach((alertDefinition) => {
+      const sortedBySeverity = sortBy(alertDefinitions, (definition) => {
+        return ([AlertSeverityLevel.Critical, AlertSeverityLevel.Warning] as string[]).indexOf(
+          definition.actionGroupId ?? AlertSeverityLevel.Warning
+        );
+      });
+
+      sortedBySeverity.forEach((alertDefinition) => {
         const evaluate = expressionMath.compile(alertDefinition.expression).evaluate;
-        evaluations.forEach((evaluation) => {
+
+        for (const evaluation of evaluations) {
           const result = evaluate(evaluation.metrics);
           if (result) {
             alerts.push({
               labels: evaluation.labels,
               metrics: evaluation.metrics,
               time,
+              actionGroupId: alertDefinition.actionGroupId,
             });
           }
-        });
+        }
       });
 
       return {

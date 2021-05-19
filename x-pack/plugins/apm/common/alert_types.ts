@@ -7,10 +7,12 @@
 
 import { i18n } from '@kbn/i18n';
 import type { ValuesType } from 'utility-types';
+// eslint-disable-next-line @kbn/eslint/no-restricted-paths
+import type { ActionVariables } from '../../triggers_actions_ui/public';
 import type { ActionGroup } from '../../alerting/common';
 import { ANOMALY_SEVERITY, ANOMALY_THRESHOLD } from './ml_constants';
 
-enum AlertSeverityLevel {
+export enum AlertSeverityLevel {
   Unknown = 'unknown',
   Warning = 'warning',
   Critical = 'critical',
@@ -42,6 +44,7 @@ export const ALERT_TYPES_CONFIG: Record<
     defaultActionGroupId: string;
     minimumLicenseRequired: 'basic' | 'gold';
     producer: string;
+    actionVariables?: ActionVariables;
   }
 > = {
   [AlertType.ErrorCount]: {
@@ -84,6 +87,11 @@ export const ALERT_TYPES_CONFIG: Record<
     name: i18n.translate('xpack.apm.metricAlert.name', {
       defaultMessage: 'Metric alert',
     }),
+    actionVariables: {
+      params: [],
+      state: [],
+      context: [],
+    },
     actionGroups: [
       { id: AlertSeverityLevel.Unknown, name: AlertSeverityLevel.Unknown },
       { id: AlertSeverityLevel.Ok, name: AlertSeverityLevel.Ok },

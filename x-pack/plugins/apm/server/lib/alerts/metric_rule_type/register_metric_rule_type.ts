@@ -6,6 +6,8 @@
  */
 import { propsToSchema } from '@kbn/io-ts-utils/target/props_to_schema';
 import * as t from 'io-ts';
+import stableStringify from 'json-stable-stringify';
+import { set } from '@elastic/safer-lodash-set';
 import { configRt } from '../../../../../observability/common/rules/alerting_dsl/alerting_dsl_rt';
 import {
   createExecutionPlan,
@@ -19,6 +21,14 @@ import {
 import { AlertType, ALERT_TYPES_CONFIG } from '../../../../common/alert_types';
 import { isFiniteNumber } from '../../../../common/utils/is_finite_number';
 import { RegisterRuleDependencies } from '../register_apm_alerts';
+
+export const unflattenObject = <T extends object = { [key: string]: any }>(
+  object: object
+): T =>
+  Object.entries(object).reduce((acc, [key, value]) => {
+    set(acc, key, value);
+    return acc;
+  }, {} as T);
 
 const BULK_LIMIT = 1000;
 
@@ -51,7 +61,7 @@ export function registerMetricRuleType({
       },
       executor: async (options) => {
         const {
-          services: { scopedClusterClient, alertInstanceFactory },
+          services: { scopedClusterClient, alertWithLifecycle },
           state,
         } = options;
 
@@ -92,9 +102,12 @@ export function registerMetricRuleType({
 
         const ruleDataWriter = ruleDataClient.getWriter();
 
+        const scheduled = new Set<string>();
+
         try {
           for (const step of steps) {
             const results = await plan.evaluate({ time: step.time });
+
             await recordResults({
               defaults: getRuleExecutorData(type, options),
               results,
@@ -102,6 +115,34 @@ export function registerMetricRuleType({
             });
 
             processedUntil = step.time;
+
+            const alerts = results.alerts;
+
+            alerts.forEach((alert) => {
+              const context = unflattenObject({
+                ...alert.context,
+                ...alert.labels,
+                ...alert.metrics,
+              });
+
+              const id = stableStringify(alert.labels);
+
+              if (scheduled.has(id)) {
+                return;
+              }
+
+              scheduled.add(id);
+
+              const alertInstance = alertWithLifecycle({
+                id,
+                fields: context,
+              });
+
+              alertInstance.scheduleActions(
+                alert.actionGroupId ?? ruleTypeConfig.defaultActionGroupId,
+                context
+              );
+            });
           }
         } catch (err) {
           logger.error(err);

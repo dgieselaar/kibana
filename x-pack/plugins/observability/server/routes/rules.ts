@@ -6,6 +6,7 @@
  */
 import * as t from 'io-ts';
 import { isoToEpochRt, toNumberRt } from '@kbn/io-ts-utils';
+import { AlertType, ALERT_TYPES_CONFIG } from '../../../apm/common/alert_types';
 import { createObservabilityServerRoute } from './create_observability_server_route';
 import { createObservabilityServerRouteRepository } from './create_observability_server_route_repository';
 import { getTopAlerts } from '../lib/rules/get_top_alerts';
@@ -89,7 +90,52 @@ const ruleEvaluationPreviewRoute = createObservabilityServerRoute({
   },
 });
 
+const createRuleRoute = createObservabilityServerRoute({
+  endpoint: 'PUT /api/observability/rules/create_rule',
+  options: {
+    tags: [],
+  },
+  params: t.type({
+    body: t.type({
+      name: t.string,
+      actions: t.array(
+        t.type({
+          params: t.record(t.string, t.any),
+          group: t.string,
+          id: t.string,
+        })
+      ),
+      config: configRt,
+    }),
+  }),
+  handler: async ({ params, context }) => {
+    const { actions, config, name } = params.body;
+
+    const alertsClient = context.alerting.getAlertsClient();
+
+    return alertsClient.create<{ config: t.TypeOf<typeof configRt> }>({
+      data: {
+        actions,
+        params: {
+          config,
+        },
+        consumer: 'apm',
+        alertTypeId: AlertType.Metric,
+        enabled: true,
+        name,
+        schedule: {
+          interval: config.step ?? '1m',
+        },
+        notifyWhen: 'onActionGroupChange',
+        tags: [],
+        throttle: null,
+      },
+    });
+  },
+});
+
 export const rulesRouteRepository = createObservabilityServerRouteRepository()
   .add(alertsListRoute)
   .add(alertsDynamicIndexPatternRoute)
-  .add(ruleEvaluationPreviewRoute);
+  .add(ruleEvaluationPreviewRoute)
+  .add(createRuleRoute);

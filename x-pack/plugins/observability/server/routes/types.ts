@@ -10,6 +10,7 @@ import type {
   ReturnOf,
   ServerRoute,
   ServerRouteRepository,
+  ClientRequestParamsOf,
 } from '@kbn/server-route-repository';
 import { CoreSetup, CoreStart, KibanaRequest, Logger } from 'kibana/server';
 import { RuleDataClient } from '../../../rule_registry/server';
@@ -50,6 +51,12 @@ export type AbstractObservabilityServerRouteRepository = ServerRouteRepository<
     >
   >
 >;
+
+export type ObservabilityAPIClientRequestParamsOf<
+  TEndpoint extends EndpointOf<ObservabilityServerRouteRepository>
+> = ClientRequestParamsOf<ObservabilityServerRouteRepository, TEndpoint> extends { params: any }
+  ? ClientRequestParamsOf<ObservabilityServerRouteRepository, TEndpoint>['params']
+  : undefined;
 
 export type ObservabilityAPIReturnType<
   TEndpoint extends EndpointOf<ObservabilityServerRouteRepository>

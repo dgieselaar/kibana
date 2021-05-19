@@ -7,7 +7,10 @@
 import { mapValues, chunk } from 'lodash';
 import pLimit from 'p-limit';
 import { RuleDataWriter } from '../../../../../rule_registry/server';
-import { TIMESTAMP } from '../../../../../rule_registry/common/technical_rule_data_field_names';
+import {
+  EVENT_KIND,
+  TIMESTAMP,
+} from '../../../../../rule_registry/common/technical_rule_data_field_names';
 import type { QueryResults } from './create_execution_plan';
 
 const BULK_LIMIT = 1000;
@@ -34,6 +37,7 @@ export async function recordResults({
     return {
       ...defaults,
       [TIMESTAMP]: evaluation.time,
+      [EVENT_KIND]: 'metric',
       ...evaluation.labels,
       ...mapValues(results.record, (value, key) => {
         return evaluation.metrics[key] ?? null;
