@@ -6,12 +6,14 @@
  */
 
 import { isEqual } from 'lodash';
-import pLimit from 'p-limit';
+import uuid from 'uuid';
+import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
 import { RuleDataClient } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { createExecutionPlan } from './create_execution_plan';
-import { Measurement } from './types';
+import { Measurement, MeasurementAlert } from './types';
+import { recordResults } from './record_results';
 
 function toSeries(measurements: Measurement[]) {
   const allSeries: Array<{
@@ -70,23 +72,40 @@ export async function getRuleEvaluationPreview({
   clusterClient: ESSearchClient;
   ruleDataClient: RuleDataClient;
 }) {
+  const ruleUuid = uuid.v4();
+
   const plan = createExecutionPlan({
     config,
     clusterClient,
     ruleDataClient,
+    ruleUuid,
   });
 
-  const limiter = pLimit(5);
+  // const limiter = pLimit(5);
 
-  const allResults = await Promise.all(
-    steps.map((step) => {
-      return limiter(async () => {
-        return plan.evaluate({
-          time: step.time,
-        });
-      });
-    })
-  );
+  const allResults: Array<{
+    evaluations: Measurement[];
+    alerts: MeasurementAlert[];
+    record: Record<string, { type: string }>;
+  }> = [];
+
+  const defaults = {
+    [RULE_UUID]: ruleUuid,
+  };
+
+  const ruleDataWriter = ruleDataClient.getWriter();
+
+  for (const step of steps) {
+    const results = await plan.evaluate({ time: step.time });
+    await recordResults({
+      defaults,
+      results,
+      ruleDataWriter,
+      refresh: 'wait_for',
+    });
+
+    allResults.push(results);
+  }
 
   const allEvaluations = allResults.flatMap((result) => result.evaluations);
   const allAlerts = allResults.flatMap((result) => result.alerts);

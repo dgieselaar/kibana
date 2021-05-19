@@ -6,7 +6,7 @@
  */
 import * as t from 'io-ts';
 import { isoToEpochRt, toNumberRt } from '@kbn/io-ts-utils';
-import { AlertType, ALERT_TYPES_CONFIG } from '../../../apm/common/alert_types';
+import { AlertType } from '../../../apm/common/alert_types';
 import { createObservabilityServerRoute } from './create_observability_server_route';
 import { createObservabilityServerRouteRepository } from './create_observability_server_route_repository';
 import { getTopAlerts } from '../lib/rules/get_top_alerts';

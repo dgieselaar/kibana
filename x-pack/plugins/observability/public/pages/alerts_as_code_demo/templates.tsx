@@ -202,7 +202,7 @@ export const templates: Array<Template<any>> = [
           index: props.index,
           filter:
             '(transaction.type:page-load or transaction.type:request)' +
-            (props.filter ? `and (${props.filter})` : ''),
+            (props.filter ? ` and (${props.filter})` : ''),
           ...toBy(props.groupBy),
           metrics: {
             [satisfied]: {
@@ -500,9 +500,9 @@ export const templates: Array<Template<any>> = [
     }),
     defaults: () => {
       return {
-        index: [],
+        index: ['apm-*'],
         filter: '',
-        groupBy: [],
+        groupBy: ['service.name'],
         lookbackWindowDays: 30,
         evaluationWindowMinutes: 5,
       };
@@ -595,6 +595,7 @@ export const templates: Array<Template<any>> = [
                 count_over_time: {
                   range: `${props.evaluationWindowMinutes}m`,
                 },
+                record: true,
               },
             },
           },
@@ -607,17 +608,19 @@ export const templates: Array<Template<any>> = [
                   count_over_time: {
                     range: `${props.lookbackWindowDays}d`,
                   },
+                  record: true,
                 },
               },
             },
           },
         ],
-        metrics: {
-          missing_entity_data: {
-            expression: '!absent(group_document_count_lookback) && absent(group_document_count)',
+        alerts: [
+          {
+            actionGroupId: 'warning',
+            expression:
+              'not (absent(group_document_count_lookback)) and absent(group_document_count)',
           },
-        },
-        alerts: [],
+        ],
       };
     },
   }),
@@ -740,13 +743,15 @@ export const templates: Array<Template<any>> = [
                   count_over_time: {
                     range: `${props.lookbackWindowDays}d`,
                   },
+                  record: true,
                 },
               },
             },
           },
         ],
         alert: {
-          expression: 'absent(group_document_count_lookback) && !absent(group_document_count)',
+          expression:
+            'absent(group_document_count_lookback) and (not (absent(group_document_count)))',
         },
       };
     },

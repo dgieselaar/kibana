@@ -6,6 +6,7 @@
  */
 import { TypeMapping } from '@elastic/elasticsearch/api/types';
 import { ResponseError } from '@elastic/elasticsearch/lib/errors';
+import { isEmpty } from 'lodash';
 import { IndexPatternsFetcher } from '../../../../../src/plugins/data/server';
 import {
   IRuleDataClient,
@@ -121,6 +122,12 @@ export class RuleDataClient implements IRuleDataClient {
       method: 'POST',
       path: `/_index_template/_simulate_index/${concreteIndexName}`,
     });
+
+    if (isEmpty(simulateResponse)) {
+      throw new Error(
+        'Index template simulation resulted in empty object, possibly due to missing index template.'
+      );
+    }
 
     const mappings: TypeMapping = simulateResponse.template.mappings;
 

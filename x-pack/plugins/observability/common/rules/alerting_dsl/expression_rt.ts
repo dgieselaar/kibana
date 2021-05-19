@@ -17,6 +17,7 @@ export const expressionRt = new t.Type(
         expressionMath.compile(inputAsString);
         return t.success(inputAsString);
       } catch (err) {
+        console.log(err);
         return t.failure(inputAsString, context, err.toString());
       }
     });

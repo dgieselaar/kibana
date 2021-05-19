@@ -6,8 +6,19 @@
  */
 
 import * as math from 'mathjs';
+import { isFiniteNumber } from '../../utils/is_finite_number';
 
 const expressionMath: typeof math = math.create(math.all) as any;
+
+expressionMath.import(
+  {
+    absent: (a: number | null | undefined) => {
+      const isAbsent = !isFiniteNumber(a) || a === 0;
+      return isAbsent;
+    },
+  },
+  {}
+);
 
 (expressionMath.typed as any).conversions.unshift({
   from: 'null',

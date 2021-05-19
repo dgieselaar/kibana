@@ -22,13 +22,18 @@ export async function recordResults({
   ruleDataWriter,
   bulkLimit = BULK_LIMIT,
   workerLimit = WORKER_LIMIT,
+  refresh = false,
 }: {
   results: QueryResults;
   defaults: Record<string, any>;
   ruleDataWriter: RuleDataWriter;
   bulkLimit?: number;
   workerLimit?: number;
+  refresh: 'wait_for' | boolean;
 }) {
+  if (!Object.keys(results.record).length) {
+    return undefined;
+  }
   const dynamicTemplates = mapValues(results.record, (value) => {
     return value.type;
   });
@@ -58,6 +63,7 @@ export async function recordResults({
 
         return ruleDataWriter.bulk({
           body,
+          refresh,
         });
       });
     })

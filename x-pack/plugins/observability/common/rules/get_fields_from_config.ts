@@ -7,7 +7,10 @@
 
 import { AlertingConfig } from './alerting_dsl/alerting_dsl_rt';
 
-export function getFieldsFromConfig(config?: AlertingConfig) {
+export function getFieldsFromConfig(
+  config?: AlertingConfig,
+  { includeLabels = true }: { includeLabels?: boolean } = {}
+) {
   if (!config) {
     return [];
   }
@@ -19,7 +22,9 @@ export function getFieldsFromConfig(config?: AlertingConfig) {
   queries.forEach((query) => {
     const { by, metrics } = 'alerts' in query ? query.alerts : query;
     fields.push(...Object.keys(metrics));
-    fields.push(...Object.keys(by ?? {}));
+    if (includeLabels) {
+      fields.push(...Object.keys(by ?? {}));
+    }
   });
 
   return [...new Set(fields)];

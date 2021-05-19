@@ -36,14 +36,8 @@ function alertsQuery({ ruleUuid, query }: { ruleUuid?: string; query: AlertsData
     ...(ruleUuid
       ? [
           {
-            bool: {
-              must_not: [
-                {
-                  term: {
-                    [RULE_UUID]: ruleUuid,
-                  },
-                },
-              ],
+            term: {
+              [RULE_UUID]: ruleUuid,
             },
           },
         ]
@@ -168,17 +162,19 @@ export function createExecutionPlan({
   config,
   clusterClient,
   ruleDataClient,
+  ruleUuid,
 }: {
   config: AlertingConfig;
   clusterClient: ESSearchClient;
   ruleDataClient: RuleDataClient;
+  ruleUuid?: string;
 }) {
   return {
     async evaluate({ time }: { time: number }) {
       const queries = 'query' in config ? [config.query] : config.queries;
 
       const defaults = Object.fromEntries(
-        getFieldsFromConfig(config).map((field) => [field, null])
+        getFieldsFromConfig(config, { includeLabels: false }).map((field) => [field, null])
       );
 
       const queryResults = await Promise.all(
@@ -256,7 +252,9 @@ export function createExecutionPlan({
                     filter: [
                       ...rangeQuery(search.range.start, search.range.end),
                       ...kqlQuery(query.filter),
-                      ...('alerts' in queryConfig ? alertsQuery({ query: queryConfig }) : []),
+                      ...('alerts' in queryConfig
+                        ? alertsQuery({ query: queryConfig, ruleUuid })
+                        : []),
                     ],
                   },
                 },
@@ -268,7 +266,7 @@ export function createExecutionPlan({
                           ? {
                               terms: {
                                 ...sources[0].source,
-                                size: groupConfig!.limit,
+                                size: groupConfig!.limit ?? 10000,
                               },
                             }
                           : {
@@ -342,13 +340,14 @@ export function createExecutionPlan({
 
             const evaluatedExpressionMetrics = mapValues(expressionResolvers, (resolver, key) => {
               const value = resolver(scope);
-              return isNaN(value) ? null : value;
+              return Number.isNaN(value) ? null : value;
             });
 
             return {
               time: measurement.time,
               labels: measurement.labels,
               metrics: {
+                ...defaults,
                 ...measurement.metrics,
                 ...evaluatedExpressionMetrics,
               },
@@ -381,7 +380,11 @@ export function createExecutionPlan({
         const evaluate = expressionMath.compile(alertDefinition.expression).evaluate;
 
         for (const evaluation of evaluations) {
-          const result = evaluate(evaluation.metrics);
+          const result = evaluate({
+            ...defaults,
+            ...evaluation.metrics,
+          });
+
           if (result) {
             alerts.push({
               labels: evaluation.labels,
@@ -389,6 +392,7 @@ export function createExecutionPlan({
               time,
               actionGroupId: alertDefinition.actionGroupId,
             });
+            return;
           }
         }
       });

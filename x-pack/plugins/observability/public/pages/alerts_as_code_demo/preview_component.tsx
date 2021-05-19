@@ -90,6 +90,8 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
         });
       }
 
+      steps.reverse();
+
       return callObservabilityApi({
         endpoint: 'POST /api/observability/rules/rule_evaluation_preview',
         params: {
@@ -265,6 +267,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
               start={time.start}
               end={time.end}
               onTimeChange={({ start, end }) => {
+                console.log('updating time', { start, end });
                 setTime({ start, end });
               }}
             />

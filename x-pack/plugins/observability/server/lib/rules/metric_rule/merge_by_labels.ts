@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import { isEqual } from 'lodash';
+import { isEqual, pickBy } from 'lodash';
 import { Measurement } from './types';
 
 export function mergeByLabels(measurements: Measurement[]) {
@@ -13,9 +13,12 @@ export function mergeByLabels(measurements: Measurement[]) {
     const entryForLabels = prev.find((item) => isEqual(item.labels, entry.labels));
 
     if (!entryForLabels) {
-      prev.push(entry);
+      prev.push({ ...entry });
     } else {
-      Object.assign(entryForLabels.metrics, entry.metrics);
+      Object.assign(
+        entryForLabels.metrics,
+        pickBy(entry.metrics, (val) => val !== null)
+      );
     }
 
     return prev;

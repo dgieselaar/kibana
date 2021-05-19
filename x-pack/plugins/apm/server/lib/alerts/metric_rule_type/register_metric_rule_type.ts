@@ -8,6 +8,7 @@ import { propsToSchema } from '@kbn/io-ts-utils/target/props_to_schema';
 import * as t from 'io-ts';
 import stableStringify from 'json-stable-stringify';
 import { set } from '@elastic/safer-lodash-set';
+import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
 import { configRt } from '../../../../../observability/common/rules/alerting_dsl/alerting_dsl_rt';
 import {
   createExecutionPlan,
@@ -67,6 +68,8 @@ export function registerMetricRuleType({
 
         const { config } = options.params;
 
+        const ruleData = getRuleExecutorData(type, options);
+
         const plan = createExecutionPlan({
           config,
           ruleDataClient,
@@ -78,6 +81,7 @@ export function registerMetricRuleType({
               return body as any;
             },
           },
+          ruleUuid: ruleData[RULE_UUID],
         });
 
         let processedUntil = isFiniteNumber(state.processedUntil)
@@ -109,9 +113,10 @@ export function registerMetricRuleType({
             const results = await plan.evaluate({ time: step.time });
 
             await recordResults({
-              defaults: getRuleExecutorData(type, options),
+              defaults: ruleData,
               results,
               ruleDataWriter,
+              refresh: steps.length > 1 ? 'wait_for' : false,
             });
 
             processedUntil = step.time;
