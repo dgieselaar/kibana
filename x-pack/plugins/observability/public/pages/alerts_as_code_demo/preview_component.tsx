@@ -124,7 +124,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
   );
 
   const allCoordinates =
-    data?.preview.evaluations.flatMap(({ coordinates }) => {
+    data?.preview.evaluations.flatMap(({ data: coordinates }) => {
       return coordinates;
     }) ?? [];
 
@@ -158,7 +158,7 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
     return (
       data.preview.evaluations
         .filter((series) => series.metricName === selectedMetric)
-        .map(({ labels, coordinates, metricName }) => {
+        .map(({ labels, data: coordinates, metricName }) => {
           const id = uniqueLabels.length
             ? uniqueLabels.map((name) => labels[name]).join('-')
             : metricName;
@@ -267,7 +267,6 @@ export function PreviewComponent({ config }: { config?: AlertingConfig }) {
               start={time.start}
               end={time.end}
               onTimeChange={({ start, end }) => {
-                console.log('updating time', { start, end });
                 setTime({ start, end });
               }}
             />

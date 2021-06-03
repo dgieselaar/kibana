@@ -1161,6 +1161,13 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
+"@babel/runtime@^7.14.0":
+  version "7.14.0"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.14.0.tgz#46794bc20b612c5f75e62dd071e24dfd95f1cbe6"
+  integrity sha512-JELkvo/DlpNdJ7dlyw/eY7E0suy5i5GQH+Vlxaq1nsNJ+H7f4Vtv3jMeCEgRhZZQFXTjldYfQgv2qmM6M1v5wA==
+  dependencies:
+    regenerator-runtime "^0.13.4"
+
 "@babel/template@^7.10.4", "@babel/template@^7.12.13", "@babel/template@^7.12.7", "@babel/template@^7.3.3", "@babel/template@^7.4.4":
   version "7.12.13"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.12.13.tgz#530265be8a2589dbb37523844c5bcb55947fb327"
@@ -2707,6 +2714,9 @@
   uid ""
 
 "@kbn/securitysolution-es-utils@link:bazel-bin/packages/kbn-securitysolution-es-utils/npm_module":
+  version "0.0.0"
+  uid ""
+
 "@kbn/securitysolution-io-ts-alerting-types@link:bazel-bin/packages/kbn-securitysolution-io-ts-alerting-types/npm_module":
   version "0.0.0"
   uid ""
@@ -9820,10 +9830,10 @@ compare-versions@3.5.1:
   resolved "https://registry.yarnpkg.com/compare-versions/-/compare-versions-3.5.1.tgz#26e1f5cf0d48a77eced5046b9f67b6b61075a393"
   integrity sha512-9fGPIB7C6AyM18CJJBHt5EnCZDG3oiTJYy0NjfIAGjKpzv0tkxWko7TNQHF5ymqm7IH03tqmeuBxtvD+Izh6mg==
 
-complex.js@^2.0.11:
-  version "2.0.12"
-  resolved "https://registry.yarnpkg.com/complex.js/-/complex.js-2.0.12.tgz#fa4df97d8928e5f7b6a86b35bdeecc3a3eda8a22"
-  integrity sha512-oQX99fwL6LrTVg82gDY1dIWXy6qZRnRL35N+YhIX0N7tSwsa0KFy6IEMHTNuCW4mP7FS7MEqZ/2I/afzYwPldw==
+complex.js@^2.0.13:
+  version "2.0.13"
+  resolved "https://registry.yarnpkg.com/complex.js/-/complex.js-2.0.13.tgz#00cf7ba082565e164813b7bbbb0ced5d2aba172a"
+  integrity sha512-UEWd3G3/kd3lJmsdLsDh9qfinJlujL4hIFn3Vo4/G5eqehPsgCHf2CLhFs77tVkOp2stt/jbNit7Q1XFANFltA==
 
 component-emitter@^1.2.0, component-emitter@^1.2.1:
   version "1.2.1"
@@ -14035,10 +14045,10 @@ fp-ts@^2.3.1:
   resolved "https://registry.yarnpkg.com/fp-ts/-/fp-ts-2.8.6.tgz#1a0e6c3f29f5b0fbfa3120f034ea266aa73c811b"
   integrity sha512-fGGpKf/Jy3UT4s16oM+hr/8F5QXFcZ+20NAvaZXH5Y5jsiLPMDCaNqffXq0z1Kr6ZUJj0346cH9tq+cI2SoJ4w==
 
-fraction.js@^4.0.13:
-  version "4.0.13"
-  resolved "https://registry.yarnpkg.com/fraction.js/-/fraction.js-4.0.13.tgz#3c1c315fa16b35c85fffa95725a36fa729c69dfe"
-  integrity sha512-E1fz2Xs9ltlUp+qbiyx9wmt2n9dRzPsS11Jtdb8D2o+cC7wr9xkkKsVKJuBX0ST+LVS+LhLO+SbLJNtfWcJvXA==
+fraction.js@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/fraction.js/-/fraction.js-4.1.0.tgz#229ec1cedc8c3c7e5d2d20688ba64f0a43af5830"
+  integrity sha512-o9lSKpK0TDqDwTL24Hxqi6I99s942l6TYkfl6WvGWgLOIFz/YonSGKfiSeMadoiNvTfqnfOa9mjb5SGVbBK9/w==
 
 fragment-cache@^0.2.1:
   version "0.2.1"
@@ -18960,15 +18970,16 @@ material-colors@^1.2.1:
   resolved "https://registry.yarnpkg.com/material-colors/-/material-colors-1.2.5.tgz#5292593e6754cb1bcc2b98030e4e0d6a3afc9ea1"
   integrity sha1-UpJZPmdUyxvMK5gDDk4Najr8nqE=
 
-mathjs@^9.3.2:
-  version "9.3.2"
-  resolved "https://registry.yarnpkg.com/mathjs/-/mathjs-9.3.2.tgz#6523dd5c963d200ff1cea0ff7963b10521b82185"
-  integrity sha512-0YKSKAeN9OkbIQrxfxnBT4kk/KlH71piWOsvVvAasyRIj/Xd/zlpc5VP/aFxwr+llOq2F3f6booPEu2fWv3yjQ==
+mathjs@^9.4.0:
+  version "9.4.0"
+  resolved "https://registry.yarnpkg.com/mathjs/-/mathjs-9.4.0.tgz#b944fddf323113879fffa9731dc869192b8c0bfb"
+  integrity sha512-76kvZgxtcLfBejFPM21xpJsHWCP57qlCOmz9qH92qnl+wrKf3fyNxKlLkzLLD+MOiF+q7jW9YvmuoX6M2zHMlQ==
   dependencies:
-    complex.js "^2.0.11"
+    "@babel/runtime" "^7.14.0"
+    complex.js "^2.0.13"
     decimal.js "^10.2.1"
     escape-latex "^1.2.0"
-    fraction.js "^4.0.13"
+    fraction.js "^4.1.0"
     javascript-natural-sort "^0.7.1"
     seedrandom "^3.0.5"
     tiny-emitter "^2.1.0"

@@ -6,7 +6,7 @@
  */
 import { either } from 'fp-ts/lib/Either';
 import * as t from 'io-ts';
-import { expressionMath } from './expression_math';
+import { parse } from '../../expressions/parser';
 
 export const expressionRt = new t.Type(
   'expression',
@@ -14,10 +14,9 @@ export const expressionRt = new t.Type(
   (input, context) => {
     return either.chain(t.string.validate(input, context), (inputAsString) => {
       try {
-        expressionMath.compile(inputAsString);
+        parse(inputAsString);
         return t.success(inputAsString);
       } catch (err) {
-        console.log(err);
         return t.failure(inputAsString, context, err.toString());
       }
     });
@@ -25,5 +24,6 @@ export const expressionRt = new t.Type(
   t.string.encode
 );
 
+// _tag is used by the io-ts to json schema converter
 // @ts-ignore
 expressionRt._tag = 'StringType';

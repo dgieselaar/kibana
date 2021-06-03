@@ -5,11 +5,8 @@
  * 2.0.
  */
 
-import { LabelSet } from '../../../../common/expressions/label_set';
-
-export interface MeasurementAlert {
-  labels: LabelSet;
-  context?: Record<string, string | number | null>;
-  actionGroupId?: string;
-  time: number;
+export enum VectorCardinality {
+  OneToOne = 'OneToOne',
+  OneToMany = 'OneToMany',
+  ManyToOne = 'ManyToOne',
 }

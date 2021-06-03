@@ -5,60 +5,23 @@
  * 2.0.
  */
 
-import { isEqual } from 'lodash';
 import uuid from 'uuid';
 import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
+import pLimit from 'p-limit';
+import { shouldWaitOnRecord } from '../../../../common/rules/alerting_dsl/utils';
+import { isInstantVector } from '../../../../common/expressions/utils';
 import { RuleDataClient } from '../../../../../rule_registry/server';
 import { ESSearchClient } from '../../../../../../../typings/elasticsearch';
 import { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { createExecutionPlan } from './create_execution_plan';
-import { Measurement, MeasurementAlert } from './types';
 import { recordResults } from './record_results';
+import { MeasurementAlert } from './types';
 
-function toSeries(measurements: Measurement[]) {
-  const allSeries: Array<{
-    labels: Record<string, string>;
-    metricName: string;
-    coordinates: Array<{ x: number; y?: unknown }>;
-  }> = [];
-
-  const times = [...new Set(measurements.map((measurement) => measurement.time))];
-
-  function getOrCreateSeries({
-    labels,
-    metricName,
-  }: {
-    labels: Record<string, string>;
-    metricName: string;
-  }) {
-    let series = allSeries.find((s) => isEqual(s.labels, labels) && s.metricName === metricName);
-
-    if (!series) {
-      series = {
-        labels,
-        metricName,
-        coordinates: times.map((time) => {
-          return {
-            x: time,
-            y: null,
-          };
-        }),
-      };
-      allSeries.push(series);
-    }
-    return series;
-  }
-
-  measurements.forEach((measurement) => {
-    const labels = measurement.labels;
-    const metrics = measurement.metrics;
-    Object.keys(measurement.metrics).forEach((metricName) => {
-      const series = getOrCreateSeries({ labels, metricName });
-      series.coordinates.find((coord) => coord.x === measurement.time)!.y = metrics[metricName];
-    });
-  });
-
-  return allSeries;
+interface Timeseries {
+  labels: Record<string, any>;
+  id: string;
+  metricName: string;
+  data: Array<{ x: number; y: number | null }>;
 }
 
 export async function getRuleEvaluationPreview({
@@ -81,37 +44,65 @@ export async function getRuleEvaluationPreview({
     ruleUuid,
   });
 
-  // const limiter = pLimit(5);
-
-  const allResults: Array<{
-    evaluations: Measurement[];
-    alerts: MeasurementAlert[];
-    record: Record<string, { type: string }>;
-  }> = [];
-
   const defaults = {
     [RULE_UUID]: ruleUuid,
   };
 
   const ruleDataWriter = ruleDataClient.getWriter();
 
-  for (const step of steps) {
-    const results = await plan.evaluate({ time: step.time });
-    await recordResults({
-      defaults,
-      results,
-      ruleDataWriter,
-      refresh: 'wait_for',
-    });
+  const timeseries: Record<string, Record<string, Timeseries>> = {};
+  const alerts: MeasurementAlert[] = [];
 
-    allResults.push(results);
+  const wait = shouldWaitOnRecord(config);
+
+  const operations = steps.map((step) => {
+    return async () => {
+      const results = await plan.evaluate({ time: step.time });
+      await recordResults({
+        defaults,
+        results,
+        ruleDataWriter,
+        refresh: wait ? 'wait_for' : false,
+      });
+
+      alerts.push(...results.alerts);
+      // eslint-disable-next-line guard-for-in
+      for (const key in results.evaluations) {
+        const result = results.evaluations[key];
+        if (isInstantVector(result)) {
+          result.samples.forEach((sample) => {
+            const id = sample.labels.sig();
+            let series = timeseries[id]?.[key];
+            if (!series) {
+              series = { data: [], metricName: key, id, labels: sample.labels.record };
+              if (!timeseries[id]) {
+                timeseries[id] = {};
+              }
+              timeseries[id][key] = series;
+            }
+            series.data.push({ x: result.time, y: sample.value });
+          });
+        }
+      }
+    };
+  });
+
+  if (wait) {
+    await operations.reduce(async (prev, op) => {
+      await prev;
+      return op();
+    }, Promise.resolve());
+  } else {
+    const limiter = pLimit(5);
+    await Promise.all(operations.map((op) => limiter(op)));
   }
 
-  const allEvaluations = allResults.flatMap((result) => result.evaluations);
-  const allAlerts = allResults.flatMap((result) => result.alerts);
+  const evaluations: Timeseries[] = [
+    ...Object.values(timeseries).flatMap((map) => Object.values(map)),
+  ];
 
   return {
-    evaluations: toSeries(allEvaluations),
-    alerts: allAlerts,
+    evaluations,
+    alerts,
   };
 }

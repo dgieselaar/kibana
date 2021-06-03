@@ -6,6 +6,7 @@
  */
 import { mapValues, chunk } from 'lodash';
 import pLimit from 'p-limit';
+import { isInstantVector } from '../../../../common/expressions/utils';
 import { RuleDataWriter } from '../../../../../rule_registry/server';
 import {
   EVENT_KIND,
@@ -35,22 +36,35 @@ export async function recordResults({
     return undefined;
   }
   const dynamicTemplates = mapValues(results.record, (value) => {
-    return value.type;
+    return value.record!.type;
   });
 
-  const docs = results.evaluations.map((evaluation) => {
-    return {
-      ...defaults,
-      [TIMESTAMP]: evaluation.time,
-      [EVENT_KIND]: 'metric',
-      ...evaluation.labels,
-      ...mapValues(results.record, (value, key) => {
-        return evaluation.metrics[key] ?? null;
-      }),
-    };
-  });
+  defaults = {
+    ...defaults,
+    [EVENT_KIND]: 'metric',
+  };
 
-  const chunks = chunk(docs, BULK_LIMIT);
+  const docs: Record<string, Record<string, number | string | null>> = {};
+
+  // eslint-disable-next-line guard-for-in
+  for (const key in results.evaluations) {
+    const result = results.evaluations[key];
+    if (isInstantVector(result)) {
+      result.samples.forEach((sample) => {
+        const id = sample.labels.id() + '-' + result.time.toString();
+        if (!docs[id]) {
+          docs[id] = {};
+        }
+        Object.assign(docs[id], {
+          ...defaults,
+          [TIMESTAMP]: result.time,
+          [key]: sample.value,
+        });
+      });
+    }
+  }
+
+  const chunks = chunk(Object.values(docs), BULK_LIMIT);
   const limiter = pLimit(workerLimit);
 
   return await Promise.all(

@@ -125,7 +125,9 @@ const configRt = t.intersection(
 export { configRt, metricQueryRt };
 
 export type AlertingConfig = t.TypeOf<typeof configRt>;
+export type MetricContainer = t.TypeOf<typeof metricContainerRt>;
 export type MetricQueryContainer = t.TypeOf<typeof metricQueryRt>;
+export type MetricExpression = t.TypeOf<typeof metricExpressionRt>;
 
 export type AlertingEsQuery = t.TypeOf<typeof esQueryRt>;
 export type AlertsDataQuery = t.TypeOf<typeof alertsQueryRt>;

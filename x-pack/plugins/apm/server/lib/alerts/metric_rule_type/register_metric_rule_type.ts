@@ -127,7 +127,6 @@ export function registerMetricRuleType({
               const context = unflattenObject({
                 ...alert.context,
                 ...alert.labels,
-                ...alert.metrics,
               });
 
               const id = stableStringify(alert.labels);

@@ -7,12 +7,14 @@
 import { ValuesType, UnionToIntersection } from 'utility-types';
 import { isRight } from 'fp-ts/lib/Either';
 import { PathReporter } from 'io-ts/lib/PathReporter';
-import { mapValues, flatten, pickBy, sortBy } from 'lodash';
+import { mapValues, pickBy, sortBy, compact } from 'lodash';
 import { ESSearchClient } from 'typings/elasticsearch';
 import { RULE_UUID } from '@kbn/rule-data-utils/target/technical_field_names';
-import { getFieldsFromConfig } from '../../../../common/rules/get_fields_from_config';
+import { isInstantVector } from '../../../../common/expressions/utils';
+import { parse } from '../../../../common/expressions/parser';
+import { InstantVector } from '../../../../common/expressions/instant_vector';
+import { LabelSet } from '../../../../common/expressions/label_set';
 import { AlertSeverityLevel } from '../../../../../apm/common/alert_types';
-import { expressionMath } from '../../../../common/rules/alerting_dsl/expression_math';
 import { RuleDataClient } from '../../../../../../plugins/rule_registry/server';
 import { PromiseReturnType } from '../../../../../observability/typings/common';
 import { arrayUnionToCallable } from '../../../../common/utils/array_union_to_callable';
@@ -28,10 +30,10 @@ import {
 import { parseInterval } from '../../../../../../../src/plugins/data/common';
 import type { AlertingConfig } from '../../../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { kqlQuery, rangeQuery } from '../../../utils/queries';
-import { mergeByLabels } from './merge_by_labels';
 import { MeasurementAlert } from './types';
+import { Sample } from '../../../../common/expressions/sample';
 
-function alertsQuery({ ruleUuid, query }: { ruleUuid?: string; query: AlertsDataQuery }) {
+function alertsQuery({ ruleUuid }: { ruleUuid?: string; query: AlertsDataQuery }) {
   return [
     ...(ruleUuid
       ? [
@@ -57,7 +59,7 @@ interface BaseParsedMetric<TType extends string, TMeta extends Record<string, an
 type ParsedExpressionMetric = BaseParsedMetric<
   'expression',
   {
-    evaluate: (scope: Record<string, any>) => any;
+    expression: string;
   }
 >;
 
@@ -96,13 +98,12 @@ function parseMetrics({
         : undefined;
 
       if ('expression' in metricConfig) {
-        const evalFn = expressionMath.compile(metricConfig.expression);
         return {
           name,
           type: 'expression',
           record,
           meta: {
-            evaluate: evalFn.evaluate,
+            expression: metricConfig.expression,
           },
         };
       }
@@ -122,7 +123,7 @@ function parseMetrics({
 
       end = round ? Math.floor(end / round) * round : end;
 
-      const start = end - parseInterval(range)!.asMilliseconds();
+      let start = end - parseInterval(range)!.asMilliseconds();
 
       const resolver = getMetricQueryResolver(meta);
 
@@ -132,6 +133,7 @@ function parseMetrics({
       const timeOfMeasurement = end;
 
       end = end - offsetInMs;
+      start = start - offsetInMs;
 
       if (!isRight(decoded)) {
         throw new Error(PathReporter.report(decoded).join('\n'));
@@ -173,11 +175,26 @@ export function createExecutionPlan({
     async evaluate({ time }: { time: number }) {
       const queries = 'query' in config ? [config.query] : config.queries;
 
-      const defaults = Object.fromEntries(
-        getFieldsFromConfig(config, { includeLabels: false }).map((field) => [field, null])
+      const allMetrics: Record<string, ParsedMetric> = Object.assign(
+        {},
+        ...queries.map((query) =>
+          'alerts' in query
+            ? parseMetrics({ time, query: query.alerts, step: config.step })
+            : parseMetrics({ time, query, step: config.step })
+        )
       );
 
-      const queryResults = await Promise.all(
+      const expressionMetrics = pickBy(
+        allMetrics,
+        (metric): metric is ParsedExpressionMetric => metric.type === 'expression'
+      );
+
+      const fetchedMetricVectors: Record<string, InstantVector> = mapValues(
+        allMetrics,
+        () => new InstantVector(time, [])
+      );
+
+      await Promise.all(
         queries.map(async (queryConfig) => {
           const query =
             'alerts' in queryConfig
@@ -186,22 +203,11 @@ export function createExecutionPlan({
                 }
               : queryConfig;
 
-          const metrics = parseMetrics({ query, time, step: config.step });
-
-          const expressionMetrics = pickBy(
-            metrics,
-            (metric): metric is ParsedExpressionMetric => metric.type === 'expression'
-          );
-
           const queryMetrics = pickBy(
-            metrics,
+            allMetrics,
             (metric): metric is ParsedQueryMetric => metric.type === 'query_over_time'
           );
 
-          const expressionResolvers = mapValues(
-            expressionMetrics,
-            (metric) => metric.meta.evaluate
-          );
           const queryMetricResolvers = mapValues(queryMetrics, (metric) => metric.meta.evaluate);
 
           const searches = Object.values(queryMetrics).reduce(
@@ -229,7 +235,7 @@ export function createExecutionPlan({
             }>
           );
 
-          const measurements = await Promise.all(
+          await Promise.all(
             searches.map(async (search) => {
               const aggs = mapValues(search.metrics, (metric) => {
                 return metric.meta.aggregation;
@@ -309,7 +315,7 @@ export function createExecutionPlan({
                       },
                     ];
 
-              return arrayUnionToCallable(buckets).map((bucket) => {
+              arrayUnionToCallable(buckets).forEach((bucket) => {
                 const keys = Array.isArray(bucket.key) ? bucket.key : [bucket.key as string];
                 const labels = Object.fromEntries(
                   keys.map((key, index) => {
@@ -317,58 +323,21 @@ export function createExecutionPlan({
                   })
                 );
 
-                const aggregatedMetrics = mapValues(search.metrics, (_, key) => {
-                  const fn = queryMetricResolvers[key];
-                  return fn(bucket[key as keyof typeof bucket]);
-                });
+                const labelSet = new LabelSet(labels);
 
-                return {
-                  time: search.range.time,
-                  labels,
-                  metrics: aggregatedMetrics,
-                };
+                // eslint-disable-next-line guard-for-in
+                for (const key in search.metrics) {
+                  const fn = queryMetricResolvers[key];
+                  const sample = new Sample(labelSet, fn(bucket[key as keyof typeof bucket]));
+                  fetchedMetricVectors[key].push(sample);
+                }
               });
             })
           );
-
-          const searchEvaluations = mergeByLabels(flatten(measurements)).map((measurement) => {
-            const scope = {
-              ...defaults,
-              ...measurement.labels,
-              ...measurement.metrics,
-            };
-
-            const evaluatedExpressionMetrics = mapValues(expressionResolvers, (resolver, key) => {
-              const value = resolver(scope);
-              return Number.isNaN(value) ? null : value;
-            });
-
-            return {
-              time: measurement.time,
-              labels: measurement.labels,
-              metrics: {
-                ...defaults,
-                ...measurement.metrics,
-                ...evaluatedExpressionMetrics,
-              },
-            };
-          });
-
-          return {
-            evaluations: searchEvaluations,
-            record: pickBy(
-              mapValues(metrics, (metric) => metric.record),
-              Boolean
-            ),
-          };
         })
       );
 
-      const evaluations = mergeByLabels(flatten(queryResults.map((result) => result.evaluations)));
-
       const alertDefinitions = 'alert' in config ? [config.alert] : config.alerts;
-
-      const alerts: MeasurementAlert[] = [];
 
       const sortedBySeverity = sortBy(alertDefinitions, (definition) => {
         return ([AlertSeverityLevel.Critical, AlertSeverityLevel.Warning] as string[]).indexOf(
@@ -376,34 +345,63 @@ export function createExecutionPlan({
         );
       });
 
-      sortedBySeverity.forEach((alertDefinition) => {
-        const evaluate = expressionMath.compile(alertDefinition.expression).evaluate;
+      const scope: Record<string, InstantVector | number | null> = { ...fetchedMetricVectors };
 
-        for (const evaluation of evaluations) {
-          const result = evaluate({
-            ...defaults,
-            ...evaluation.metrics,
+      // eslint-disable-next-line guard-for-in
+      for (const key in expressionMetrics) {
+        const parser = parse(expressionMetrics[key].meta.expression);
+        scope[key] = parser.evaluate(scope) as InstantVector | number | null;
+      }
+
+      const alerts: MeasurementAlert[] = [];
+
+      const metricsByLabelId: Record<string, Record<string, number | null>> = {};
+
+      // eslint-disable-next-line guard-for-in
+      for (const key in scope) {
+        const result = scope[key];
+        if (isInstantVector(result)) {
+          result.samples.forEach((sample) => {
+            const id = sample.sig();
+            let metricsForLabelId = metricsByLabelId[id];
+            if (!metricsForLabelId) {
+              metricsForLabelId = {};
+              Object.assign(metricsByLabelId, { [id]: metricsForLabelId });
+            }
+            metricsForLabelId[key] = sample.value;
           });
+        }
+      }
 
-          if (result) {
-            alerts.push({
-              labels: evaluation.labels,
-              metrics: evaluation.metrics,
-              time,
-              actionGroupId: alertDefinition.actionGroupId,
-            });
-            return;
-          }
+      sortedBySeverity.forEach((alertDefinition) => {
+        const parser = parse(alertDefinition.expression);
+        const result = parser.evaluate(scope) as InstantVector | number | null;
+        const actionGroupId = alertDefinition.actionGroupId;
+
+        if (isInstantVector(result)) {
+          alerts.push(
+            ...result.samples.map((sample) => {
+              return {
+                time: result.time,
+                labels: sample.labels,
+                context: metricsByLabelId[sample.labels.sig()],
+                actionGroupId,
+              };
+            })
+          );
+        } else if (result) {
+          alerts.push({
+            time,
+            actionGroupId,
+            labels: new LabelSet({}),
+          });
         }
       });
 
       return {
-        evaluations,
+        evaluations: scope,
         alerts,
-        record: Object.assign({}, ...queryResults.map((result) => result.record)) as Record<
-          string,
-          Required<BaseParsedMetric<any, any>>['record']
-        >,
+        record: pickBy(allMetrics, (value) => value.record),
       };
     },
   };
