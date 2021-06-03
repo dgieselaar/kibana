@@ -51,9 +51,11 @@ export async function recordResults({
     const result = results.evaluations[key];
     if (isInstantVector(result)) {
       result.samples.forEach((sample) => {
-        const id = sample.labels.id() + '-' + result.time.toString();
+        const id = sample.sig() + '-' + result.time.toString();
         if (!docs[id]) {
-          docs[id] = {};
+          docs[id] = {
+            ...sample.labels.record,
+          };
         }
         Object.assign(docs[id], {
           ...defaults,

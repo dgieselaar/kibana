@@ -11,15 +11,15 @@ import { PainlessLang } from './painless';
 import { EsqlLang } from './esql';
 import { monaco } from './monaco_imports';
 // @ts-ignore
-import tsWorkerSrc from '!!raw-loader!../target/public/typescript.editor.worker.js';
+import jsonWorkerSrc from '!!raw-loader!../../target_web/json.editor.worker.js';
 // @ts-ignore
-import jsonWorkerSrc from '!!raw-loader!../target/public/json.editor.worker.js';
+import tsWorkerSrc from '!!raw-loader!../../target_web/typescript.editor.worker.js';
 // @ts-ignore
-import xJsonWorkerSrc from '!!raw-loader!../target/public/xjson.editor.worker.js';
+import xJsonWorkerSrc from '!!raw-loader!../../target_web/xjson.editor.worker.js';
 // @ts-ignore
-import defaultWorkerSrc from '!!raw-loader!../target/public/default.editor.worker.js';
+import defaultWorkerSrc from '!!raw-loader!../../target_web/default.editor.worker.js';
 // @ts-ignore
-import painlessWorkerSrc from '!!raw-loader!../target/public/painless.editor.worker.js';
+import painlessWorkerSrc from '!!raw-loader!../../target_web/painless.editor.worker.js';
 
 /**
  * Register languages and lexer rules

@@ -57,7 +57,7 @@ export class ObservabilityPlugin implements Plugin<ObservabilityPluginSetup> {
         return coreStart.elasticsearch.client.asInternalUser;
       },
       ready: () => Promise.resolve(),
-      alias: plugins.ruleRegistry.getFullAssetName('observability-apm'),
+      alias: plugins.ruleRegistry.ruleDataService.getFullAssetName('observability-apm'),
     });
 
     registerRoutes({

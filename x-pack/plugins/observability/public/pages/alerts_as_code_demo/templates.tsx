@@ -750,8 +750,7 @@ export const templates: Array<Template<any>> = [
           },
         ],
         alert: {
-          expression:
-            'absent(group_document_count_lookback) and (not (absent(group_document_count)))',
+          expression: 'absent(group_document_count_lookback) not absent(group_document_count))',
         },
       };
     },
