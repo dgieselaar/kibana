@@ -120,7 +120,7 @@ expressionMath.import(
       }
       return new InstantVector(left.time, Array.from(map.values()));
     }),
-    not: vectorOperator((left, right) => {
+    unless: vectorOperator((left, right) => {
       const rightSamples = new Map<string, Sample>();
       for (const sample of right.samples) {
         rightSamples.set(sample.sig(), sample);

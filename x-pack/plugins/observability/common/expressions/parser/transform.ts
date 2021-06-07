@@ -7,6 +7,7 @@
 
 import type { FunctionNode, ConstantNode, MathJsStatic } from 'mathjs/lib/esm/number';
 import type { MathNode } from 'mathjs/lib/esm/number';
+import { sortBy } from 'lodash';
 
 const getImplicitGroups = (node: MathNode): MathNode[] => {
   if (node.fn === 'multiply' && node.implicit) {
@@ -15,12 +16,23 @@ const getImplicitGroups = (node: MathNode): MathNode[] => {
   return [node];
 };
 
+const SET_OPERATORS = ['and', 'unless', 'or'];
+
 export function transform(
   node: MathNode,
   math: MathJsStatic & { FunctionNode: FunctionNode; ConstantNode: ConstantNode }
 ): MathNode {
   if (node.fn === 'multiply' && node.implicit) {
     const groups: MathNode[] = getImplicitGroups(node).map((n) => transform(n, math));
+
+    const indexOfSetOperator = groups.findIndex((group) => SET_OPERATORS.includes(group.name!));
+
+    if (indexOfSetOperator !== -1) {
+      const operator = groups[indexOfSetOperator];
+      groups.splice(indexOfSetOperator, 1);
+
+      return new math.FunctionNode(operator, groups);
+    }
 
     const wrapped = groups.reverse().reduce((prev, current) => {
       return prev

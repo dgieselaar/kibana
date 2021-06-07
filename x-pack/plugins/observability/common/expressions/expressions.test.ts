@@ -234,6 +234,61 @@ describe('expressions', () => {
     });
   });
 
+  describe('set operators', () => {
+    const lhs = new InstantVector(Date.now(), [
+      sample(
+        {
+          'service.name': 'opbeans-java',
+        },
+        1
+      ),
+      sample(
+        {
+          'service.name': 'opbeans-node',
+        },
+        1
+      ),
+    ]);
+
+    const rhs = new InstantVector(Date.now(), [
+      sample(
+        {
+          'service.name': 'opbeans-node',
+        },
+        1
+      ),
+      sample(
+        {
+          'service.name': 'opbeans-python',
+        },
+        1
+      ),
+    ]);
+
+    it('and', () => {
+      const result = evaluate('lhs and rhs', { lhs, rhs }) as InstantVector;
+      expect(result.samples.map((s) => s.labels.record)).toEqual([
+        { 'service.name': 'opbeans-node' },
+      ]);
+    });
+
+    it('unless', () => {
+      const result = evaluate('lhs unless rhs', { lhs, rhs }) as InstantVector;
+      expect(result.samples.map((s) => s.labels.record)).toEqual([
+        { 'service.name': 'opbeans-java' },
+      ]);
+    });
+
+    it('or', () => {
+      const result = evaluate('lhs or rhs', { lhs, rhs }) as InstantVector;
+      expect(result.samples.map((s) => s.labels.record)).toEqual([
+        { 'service.name': 'opbeans-java' },
+        { 'service.name': 'opbeans-node' },
+        { 'service.name': 'opbeans-python' },
+      ]);
+    });
+  });
+
   describe('aggregations', () => {
     let cpu: InstantVector;
 
