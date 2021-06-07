@@ -34,7 +34,6 @@ const createLangWorkerConfig = (lang) => {
       filename: `${lang}.editor.worker.js`,
     },
     resolve: {
-      modules: ['node_modules'],
       extensions: ['.js', '.ts', '.tsx'],
     },
     stats: 'errors-only',
