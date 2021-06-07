@@ -617,8 +617,7 @@ export const templates: Array<Template<any>> = [
         alerts: [
           {
             actionGroupId: 'warning',
-            expression:
-              'not (absent(group_document_count_lookback)) and absent(group_document_count)',
+            expression: 'group_document_count_lookback unless group_document_count',
           },
         ],
       };
@@ -750,7 +749,7 @@ export const templates: Array<Template<any>> = [
           },
         ],
         alert: {
-          expression: 'absent(group_document_count_lookback) not absent(group_document_count))',
+          expression: 'group_document_count unless group_document_count_lookback',
         },
       };
     },

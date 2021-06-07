@@ -7,7 +7,6 @@
 
 import type { FunctionNode, ConstantNode, MathJsStatic } from 'mathjs/lib/esm/number';
 import type { MathNode } from 'mathjs/lib/esm/number';
-import { sortBy } from 'lodash';
 
 const getImplicitGroups = (node: MathNode): MathNode[] => {
   if (node.fn === 'multiply' && node.implicit) {

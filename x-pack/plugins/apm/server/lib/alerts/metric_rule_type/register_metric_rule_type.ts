@@ -126,10 +126,10 @@ export function registerMetricRuleType({
             alerts.forEach((alert) => {
               const context = unflattenObject({
                 ...alert.context,
-                ...alert.labels,
+                ...alert.labels.record,
               });
 
-              const id = stableStringify(alert.labels);
+              const id = alert.labels.sig();
 
               if (scheduled.has(id)) {
                 return;

@@ -65,8 +65,6 @@ export async function getRuleEvaluationPreview({
         refresh: wait ? 'wait_for' : false,
       });
 
-      console.log(JSON.stringify(results, null, 2));
-
       alerts.push(...results.alerts);
       // eslint-disable-next-line guard-for-in
       for (const key in results.evaluations) {

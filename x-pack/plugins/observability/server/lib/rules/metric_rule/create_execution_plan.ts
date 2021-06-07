@@ -204,7 +204,7 @@ export function createExecutionPlan({
               : queryConfig;
 
           const queryMetrics = pickBy(
-            allMetrics,
+            mapValues(query.metrics, (metric, name) => allMetrics[name]),
             (metric): metric is ParsedQueryMetric => metric.type === 'query_over_time'
           );
 
@@ -325,11 +325,12 @@ export function createExecutionPlan({
 
                 const labelSet = new LabelSet(labels);
 
-                // eslint-disable-next-line guard-for-in
                 for (const key in search.metrics) {
-                  const fn = queryMetricResolvers[key];
-                  const sample = new Sample(labelSet, fn(bucket[key as keyof typeof bucket]));
-                  fetchedMetricVectors[key].push(sample);
+                  if (key in bucket) {
+                    const fn = queryMetricResolvers[key];
+                    const sample = new Sample(labelSet, fn(bucket[key as keyof typeof bucket]));
+                    fetchedMetricVectors[key].push(sample);
+                  }
                 }
               });
             })

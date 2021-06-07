@@ -36,7 +36,19 @@ export class InstantVector {
     },
   };
 
-  constructor(public readonly time: number, public readonly samples: Sample[]) {}
+  private readonly signatures: Map<string, Sample> = new Map();
+
+  constructor(public readonly time: number, public readonly samples: Sample[]) {
+    for (const sample of samples) {
+      const sig = sample.sig();
+      if (this.signatures.has(sig)) {
+        throw new Error(
+          `Duplicated samples found, have to be unique: ${JSON.stringify(sample.labels.record)}`
+        );
+      }
+      this.signatures.set(sig, sample);
+    }
+  }
 
   binop(left: InstantVector, operator: BinaryOperator): InstantVector {
     let right: InstantVector = this;
@@ -182,6 +194,13 @@ export class InstantVector {
   }
 
   push(sample: Sample) {
+    const sig = sample.sig();
+    if (this.signatures.has(sig)) {
+      throw new Error(
+        `Duplicated samples found, have to be unique: ${JSON.stringify(sample.labels.record)}`
+      );
+    }
+    this.signatures.set(sig, sample);
     this.samples.push(sample);
   }
 
