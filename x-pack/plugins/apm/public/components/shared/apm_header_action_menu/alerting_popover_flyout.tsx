@@ -77,7 +77,8 @@ export function AlertingPopoverAndFlyout({
 
   const button = (
     <EuiHeaderLink
-      color="primary"
+      size="xs"
+      color="text"
       iconType="arrowDown"
       iconSide="right"
       onClick={() => setPopoverOpen((prevState) => !prevState)}

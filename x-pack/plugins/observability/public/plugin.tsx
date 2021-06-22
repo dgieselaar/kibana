@@ -32,11 +32,13 @@ import {
   Setup as InspectorPluginSetup,
   Start as InspectorPluginStart,
 } from '../../../../src/plugins/inspector/public';
+import { CasesUiStart } from '../../cases/public';
 import type { LensPublicStart } from '../../lens/public';
 import {
   TriggersAndActionsUIPublicPluginSetup,
   TriggersAndActionsUIPublicPluginStart,
 } from '../../triggers_actions_ui/public';
+import { CASES_APP_ID } from './components/app/cases/constants';
 import { createLazyObservabilityPageTemplate } from './components/shared';
 import { registerDataHandler } from './data_handler';
 import type { AlertsAsCodeInspectorAdapters } from './pages/alerts_as_code_demo/alerts_as_code_inspector_view';
@@ -59,6 +61,7 @@ export interface ObservabilityPublicPluginsSetup {
 }
 
 export interface ObservabilityPublicPluginsStart {
+  cases: CasesUiStart;
   home?: HomePublicPluginStart;
   triggersActionsUi: TriggersAndActionsUIPublicPluginStart;
   data: DataPublicPluginStart;
@@ -77,6 +80,7 @@ export class Plugin
       ObservabilityPublicPluginsStart
     > {
   private readonly appUpdater$ = new BehaviorSubject<AppUpdater>(() => ({}));
+  private readonly casesAppUpdater$ = new BehaviorSubject<AppUpdater>(() => ({}));
   private readonly navigationRegistry = createNavigationRegistry();
 
   constructor(private readonly initializerContext: PluginInitializerContext<ConfigSchema>) {
@@ -125,7 +129,6 @@ export class Plugin
       mount,
       updater$,
     });
-
     if (config.unsafe.alertingExperience.enabled) {
       coreSetup.application.register({
         id: 'observability-alerts',
@@ -141,14 +144,14 @@ export class Plugin
 
     if (config.unsafe.cases.enabled) {
       coreSetup.application.register({
-        id: 'observability-cases',
+        id: CASES_APP_ID,
         title: 'Cases',
         appRoute: '/app/observability/cases',
         order: 8050,
         category,
         euiIconType,
         mount,
-        updater$,
+        updater$: this.casesAppUpdater$,
       });
     }
 
@@ -211,7 +214,7 @@ export class Plugin
     };
   }
   public start({ application }: CoreStart) {
-    toggleOverviewLinkInNav(this.appUpdater$, application);
+    toggleOverviewLinkInNav(this.appUpdater$, this.casesAppUpdater$, application);
 
     const PageTemplate = createLazyObservabilityPageTemplate({
       currentAppId$: application.currentAppId$,
