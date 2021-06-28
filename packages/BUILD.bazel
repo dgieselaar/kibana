@@ -64,5 +64,6 @@ filegroup(
       "//packages/kbn-ui-shared-deps:build",
       "//packages/kbn-utility-types:build",
       "//packages/kbn-utils:build",
+      "//packages/kbn-vector-math:build",
   ],
 )

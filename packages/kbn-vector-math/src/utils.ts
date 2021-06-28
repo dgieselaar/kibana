@@ -5,25 +5,28 @@
  * in compliance with, at your election, the Elastic License 2.0 or the Server
  * Side Public License, v 1.
  */
-
 import { omit, pick } from 'lodash';
 import { InstantVector } from './instant_vector';
-import { VectorMatching } from './types';
+import { MatchLabels } from './types';
 
-export const getLabelsToMatch = (
-  labels: Record<string, string>,
-  match: Pick<VectorMatching, 'matchingLabels' | 'on'>
-) => {
+export function getLabelsToMatch<
+  TLabels extends Record<string, string>,
+  TOn extends boolean,
+  TMatchingLabels extends Array<keyof TLabels & string>
+>(
+  labels: TLabels,
+  match: { matchingLabels: TMatchingLabels; on: TOn }
+): MatchLabels<TLabels, TOn, TMatchingLabels> {
   if (!match) {
-    return labels;
+    return labels as any;
   }
 
   if (!match.on) {
-    return omit(labels, match.matchingLabels);
+    return omit(labels, match.matchingLabels) as any;
   }
 
-  return pick(labels, match.matchingLabels);
-};
+  return pick(labels, match.matchingLabels) as any;
+}
 
 export const isInstantVector = (input: unknown): input is InstantVector => {
   return input instanceof InstantVector;

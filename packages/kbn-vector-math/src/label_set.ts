@@ -7,13 +7,13 @@
  */
 
 import hash from 'object-hash';
-import { VectorMatching } from './types';
+import { MatchLabels } from './types';
 import { getLabelsToMatch } from './utils';
 
-export class LabelSet {
-  constructor(public readonly record: Record<string, string>) {}
+export class LabelSet<TLabels extends Record<string, string>> {
+  constructor(public readonly record: TLabels) {}
 
-  sig(match?: Pick<VectorMatching, 'matchingLabels' | 'on'>) {
+  sig(match?: { matchingLabels: string[]; on: boolean }) {
     if (!match) {
       return hash(this.record);
     }
@@ -22,9 +22,12 @@ export class LabelSet {
     return hash(labels);
   }
 
-  drop(match: Pick<VectorMatching, 'matchingLabels' | 'on'>) {
+  drop<TOn extends boolean, TMatchingLabels extends Array<keyof TLabels & string>>(match: {
+    matchingLabels: TMatchingLabels;
+    on: TOn;
+  }): LabelSet<MatchLabels<TLabels, TOn, TMatchingLabels>> {
     return !match.on && match.matchingLabels.length === 0
-      ? this
+      ? ((this as unknown) as LabelSet<MatchLabels<TLabels, TOn, TMatchingLabels>>)
       : new LabelSet(getLabelsToMatch(this.record, match));
   }
 }

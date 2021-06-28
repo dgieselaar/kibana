@@ -7,18 +7,24 @@
  */
 
 import { LabelSet } from './label_set';
-import { VectorMatching } from './types';
+import { MatchLabels } from './types';
 
-export class Sample {
-  constructor(public readonly labels: LabelSet, public readonly value: number) {}
+export class Sample<TLabels extends Record<string, string> = Record<string, string>> {
+  constructor(public readonly labels: LabelSet<TLabels>, public readonly value: number) {}
 
-  sig(match?: Pick<VectorMatching, 'matchingLabels' | 'on'>) {
+  sig<TOn extends boolean, TMatchingLabels extends Array<keyof TLabels & string>>(match?: {
+    matchingLabels: TMatchingLabels;
+    on: TOn;
+  }) {
     return this.labels.sig(match);
   }
 
-  drop(match: Pick<VectorMatching, 'matchingLabels' | 'on'>) {
+  drop<TOn extends boolean, TMatchingLabels extends Array<keyof TLabels & string>>(match: {
+    matchingLabels: TMatchingLabels;
+    on: TOn;
+  }): Sample<MatchLabels<TLabels, TOn, TMatchingLabels>> {
     return !match.on && match.matchingLabels.length
-      ? this
+      ? (this as any)
       : new Sample(this.labels.drop(match), this.value);
   }
 }

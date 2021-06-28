@@ -3,7 +3,7 @@
   "compilerOptions": {
     "incremental": true,
     "outDir": "./target",
-    "stripInternal": false,
+    "stripInternal": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
