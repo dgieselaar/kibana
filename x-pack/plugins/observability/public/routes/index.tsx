@@ -10,6 +10,7 @@ import React from 'react';
 import { alertStatusRt } from '../../common/typings';
 import { ExploratoryViewPage } from '../components/shared/exploratory_view';
 import { AlertsPage } from '../pages/alerts';
+import { AlertsAsCodeDemoPage } from '../pages/alerts_as_code_demo';
 import { AllCasesPage } from '../pages/cases/all_cases';
 import { CaseDetailsPage } from '../pages/cases/case_details';
 import { ConfigureCasesPage } from '../pages/cases/configure_cases';
@@ -98,6 +99,17 @@ export const routes = {
         refreshInterval: jsonRt.pipe(t.number),
       }),
     },
+  },
+  '/aac': {
+    handler: () => {
+      return <AlertsAsCodeDemoPage />;
+    },
+    params: {},
+    breadcrumb: [
+      {
+        text: 'Alerts as code demo',
+      },
+    ],
   },
   '/exploratory-view': {
     handler: () => {

@@ -15,6 +15,7 @@ export type {
   AbstractObservabilityServerRouteRepository,
   ObservabilityServerRouteRepository,
   ObservabilityAPIReturnType,
+  ObservabilityAPIClientRequestParamsOf,
 } from './routes/types';
 
 /**

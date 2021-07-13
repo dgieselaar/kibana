@@ -36,10 +36,9 @@ describe('toJsonSchema', () => {
       type: 'object',
       properties: {
         foo: {
-          anyOf: [{ type: 'boolean' }, { type: 'string' }],
+          oneOf: [{ type: 'boolean' }, { type: 'string' }],
         },
       },
-      required: ['foo'],
     });
   });
 

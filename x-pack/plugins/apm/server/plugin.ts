@@ -15,7 +15,7 @@ import {
   Plugin,
   PluginInitializerContext,
 } from 'src/core/server';
-import { mapValues, once } from 'lodash';
+import { isEmpty, mapValues, once, merge } from 'lodash';
 import { TECHNICAL_COMPONENT_TEMPLATE_NAME } from '../../rule_registry/common/assets';
 import { mappingFromFieldMap } from '../../rule_registry/common/mapping_from_field_map';
 import { APMConfig, APMXPackConfig, APM_SERVER_FEATURE_ID } from '.';
@@ -104,21 +104,6 @@ export class APMPlugin
       });
     }
 
-    plugins.home?.tutorials.registerTutorial(
-      tutorialProvider({
-        isEnabled: this.currentConfig['xpack.apm.ui.enabled'],
-        indexPatternTitle: this.currentConfig['apm_oss.indexPattern'],
-        cloud: plugins.cloud,
-        indices: {
-          errorIndices: this.currentConfig['apm_oss.errorIndices'],
-          metricsIndices: this.currentConfig['apm_oss.metricsIndices'],
-          onboardingIndices: this.currentConfig['apm_oss.onboardingIndices'],
-          sourcemapIndices: this.currentConfig['apm_oss.sourcemapIndices'],
-          transactionIndices: this.currentConfig['apm_oss.transactionIndices'],
-        },
-      })
-    );
-
     plugins.features.registerKibanaFeature(APM_FEATURE);
 
     registerFeaturesUsage({ licensingPlugin: plugins.licensing });
@@ -147,20 +132,49 @@ export class APMPlugin
             settings: {
               number_of_shards: 1,
             },
-            mappings: mappingFromFieldMap({
-              [SERVICE_NAME]: {
-                type: 'keyword',
-              },
-              [SERVICE_ENVIRONMENT]: {
-                type: 'keyword',
-              },
-              [TRANSACTION_TYPE]: {
-                type: 'keyword',
-              },
-              [PROCESSOR_EVENT]: {
-                type: 'keyword',
-              },
-            }),
+            mappings: merge(
+              {},
+              mappingFromFieldMap({
+                [SERVICE_NAME]: {
+                  type: 'keyword',
+                },
+                [SERVICE_ENVIRONMENT]: {
+                  type: 'keyword',
+                },
+                [TRANSACTION_TYPE]: {
+                  type: 'keyword',
+                },
+                [PROCESSOR_EVENT]: {
+                  type: 'keyword',
+                },
+              }),
+              {
+                dynamic: 'runtime',
+                dynamic_templates: [
+                  {
+                    double: {
+                      mapping: {
+                        type: 'double',
+                      },
+                    },
+                  },
+                  {
+                    byte: {
+                      mapping: {
+                        type: 'byte',
+                      },
+                    },
+                  },
+                  {
+                    keyword: {
+                      mapping: {
+                        type: 'keyword',
+                      },
+                    },
+                  },
+                ],
+              }
+            ),
           },
         },
       });
@@ -205,6 +219,22 @@ export class APMPlugin
           }),
       };
     }) as APMRouteHandlerResources['plugins'];
+
+    plugins.home?.tutorials.registerTutorial(
+      tutorialProvider({
+        isEnabled: this.currentConfig['xpack.apm.ui.enabled'],
+        indexPatternTitle: this.currentConfig['apm_oss.indexPattern'],
+        cloud: plugins.cloud,
+        isFleetPluginEnabled: !isEmpty(resourcePlugins.fleet),
+        indices: {
+          errorIndices: this.currentConfig['apm_oss.errorIndices'],
+          metricsIndices: this.currentConfig['apm_oss.metricsIndices'],
+          onboardingIndices: this.currentConfig['apm_oss.onboardingIndices'],
+          sourcemapIndices: this.currentConfig['apm_oss.sourcemapIndices'],
+          transactionIndices: this.currentConfig['apm_oss.transactionIndices'],
+        },
+      })
+    );
 
     const telemetryUsageCounter = resourcePlugins.usageCollection?.setup.createUsageCounter(
       APM_SERVER_FEATURE_ID

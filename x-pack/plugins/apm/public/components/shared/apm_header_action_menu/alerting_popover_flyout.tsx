@@ -40,6 +40,17 @@ const createAnomalyAlertAlertLabel = i18n.translate(
   { defaultMessage: 'Create anomaly rule' }
 );
 
+const metricLabel = i18n.translate('xpack.apm.home.alertsMenu.metric', {
+  defaultMessage: 'Metric',
+});
+
+const createMetricAlertLabel = i18n.translate(
+  'xpack.apm.home.alertsMenu.createMetricAlert',
+  { defaultMessage: 'Create metric alert' }
+);
+
+const CREATE_METRIC_ALERT_PANEL_ID = 'create_metric_panel';
+
 const CREATE_TRANSACTION_DURATION_ALERT_PANEL_ID =
   'create_transaction_duration_panel';
 const CREATE_TRANSACTION_ERROR_RATE_ALERT_PANEL_ID =
@@ -66,7 +77,6 @@ export function AlertingPopoverAndFlyout({
 
   const button = (
     <EuiHeaderLink
-      size="xs"
       color="text"
       iconType="arrowDown"
       iconSide="right"
@@ -83,6 +93,10 @@ export function AlertingPopoverAndFlyout({
       items: [
         ...(canSaveAlerts
           ? [
+              {
+                name: metricLabel,
+                panel: CREATE_METRIC_ALERT_PANEL_ID,
+              },
               {
                 name: transactionDurationLabel,
                 panel: CREATE_TRANSACTION_DURATION_ALERT_PANEL_ID,
@@ -111,6 +125,19 @@ export function AlertingPopoverAndFlyout({
               },
             ]
           : []),
+      ],
+    },
+    {
+      id: CREATE_METRIC_ALERT_PANEL_ID,
+      title: metricLabel,
+      items: [
+        {
+          name: createMetricAlertLabel,
+          onClick: () => {
+            setAlertType(AlertType.Metric);
+            setPopoverOpen(false);
+          },
+        },
       ],
     },
 

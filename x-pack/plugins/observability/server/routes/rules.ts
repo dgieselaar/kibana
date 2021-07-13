@@ -6,9 +6,14 @@
  */
 import { isoToEpochRt, toNumberRt } from '@kbn/io-ts-utils';
 import * as t from 'io-ts';
+// @ts-ignore
+import { AlertType } from '../../../apm/common/alert_types';
 import { observabilityFeatureId } from '../../common';
+import { configRt } from '../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { alertStatusRt } from '../../common/typings';
 import { getTopAlerts } from '../lib/rules/get_top_alerts';
+import { getRuleEvaluationPreview } from '../lib/rules/metric_rule/get_rule_evaluation_preview';
+import { unwrapEsResponse } from '../utils/unwrap_es_response';
 import { createObservabilityServerRoute } from './create_observability_server_route';
 import { createObservabilityServerRouteRepository } from './create_observability_server_route_repository';
 
@@ -58,6 +63,84 @@ const alertsDynamicIndexPatternRoute = createObservabilityServerRoute({
   },
 });
 
+const ruleEvaluationPreviewRoute = createObservabilityServerRoute({
+  endpoint: 'POST /api/observability/rules/rule_evaluation_preview',
+  params: t.type({
+    body: t.type({
+      config: configRt,
+      steps: t.array(t.type({ time: t.number })),
+    }),
+  }),
+  options: {
+    tags: [],
+  },
+  handler: async ({ params, context, ruleDataClient }) => {
+    const preview = await getRuleEvaluationPreview({
+      config: params.body.config,
+      steps: params.body.steps,
+      ruleDataClient,
+      clusterClient: {
+        search: async (request) => {
+          const body = await unwrapEsResponse(
+            context.core.elasticsearch.client.asCurrentUser.search(request)
+          );
+          return body as any;
+        },
+      },
+    });
+
+    return {
+      preview,
+    };
+  },
+});
+
+const createRuleRoute = createObservabilityServerRoute({
+  endpoint: 'PUT /api/observability/rules/create_rule',
+  options: {
+    tags: [],
+  },
+  params: t.type({
+    body: t.type({
+      name: t.string,
+      actions: t.array(
+        t.type({
+          params: t.record(t.string, t.any),
+          group: t.string,
+          id: t.string,
+        })
+      ),
+      config: configRt,
+    }),
+  }),
+  handler: async ({ params, context }) => {
+    const { actions, config, name } = params.body;
+
+    const alertsClient = context.alerting.getAlertsClient();
+
+    return alertsClient.create<{ config: t.TypeOf<typeof configRt> }>({
+      data: {
+        actions,
+        params: {
+          config,
+        },
+        consumer: 'apm',
+        alertTypeId: AlertType.Metric,
+        enabled: true,
+        name,
+        schedule: {
+          interval: config.step ?? '1m',
+        },
+        notifyWhen: 'onActionGroupChange',
+        tags: [],
+        throttle: null,
+      },
+    });
+  },
+});
+
 export const rulesRouteRepository = createObservabilityServerRouteRepository()
   .add(alertsListRoute)
-  .add(alertsDynamicIndexPatternRoute);
+  .add(alertsDynamicIndexPatternRoute)
+  .add(ruleEvaluationPreviewRoute)
+  .add(createRuleRoute);

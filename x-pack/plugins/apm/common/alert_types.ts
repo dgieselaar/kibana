@@ -7,9 +7,17 @@
 
 import { i18n } from '@kbn/i18n';
 import type { ValuesType } from 'utility-types';
+// eslint-disable-next-line @kbn/eslint/no-restricted-paths
+import type { ActionVariables } from '../../triggers_actions_ui/public';
 import type { ActionGroup } from '../../alerting/common';
 import { ANOMALY_SEVERITY, ANOMALY_THRESHOLD } from './ml_constants';
 
+export enum AlertSeverityLevel {
+  Unknown = 'unknown',
+  Warning = 'warning',
+  Critical = 'critical',
+  Ok = 'ok',
+}
 export const APM_SERVER_FEATURE_ID = 'apm';
 
 export enum AlertType {
@@ -17,6 +25,7 @@ export enum AlertType {
   TransactionErrorRate = 'apm.transaction_error_rate',
   TransactionDuration = 'apm.transaction_duration',
   TransactionDurationAnomaly = 'apm.transaction_duration_anomaly',
+  Metric = 'apm.metric',
 }
 
 export const THRESHOLD_MET_GROUP_ID = 'threshold_met';
@@ -32,11 +41,12 @@ export const ALERT_TYPES_CONFIG: Record<
   AlertType,
   {
     name: string;
-    actionGroups: Array<ActionGroup<ThresholdMetActionGroupId>>;
-    defaultActionGroupId: ThresholdMetActionGroupId;
-    minimumLicenseRequired: string;
+    actionGroups: Array<ActionGroup<string>>;
+    defaultActionGroupId: string;
+    minimumLicenseRequired: 'basic' | 'gold';
     isExportable: boolean;
     producer: string;
+    actionVariables?: ActionVariables;
   }
 > = {
   [AlertType.ErrorCount]: {
@@ -77,6 +87,26 @@ export const ALERT_TYPES_CONFIG: Record<
     defaultActionGroupId: THRESHOLD_MET_GROUP_ID,
     minimumLicenseRequired: 'basic',
     producer: APM_SERVER_FEATURE_ID,
+    isExportable: true,
+  },
+  [AlertType.Metric]: {
+    name: i18n.translate('xpack.apm.metricAlert.name', {
+      defaultMessage: 'Metric alert',
+    }),
+    actionVariables: {
+      params: [],
+      state: [],
+      context: [],
+    },
+    actionGroups: [
+      { id: AlertSeverityLevel.Unknown, name: AlertSeverityLevel.Unknown },
+      { id: AlertSeverityLevel.Ok, name: AlertSeverityLevel.Ok },
+      { id: AlertSeverityLevel.Warning, name: AlertSeverityLevel.Warning },
+      { id: AlertSeverityLevel.Critical, name: AlertSeverityLevel.Critical },
+    ],
+    defaultActionGroupId: AlertSeverityLevel.Warning,
+    minimumLicenseRequired: 'basic',
+    producer: 'apm',
     isExportable: true,
   },
 };

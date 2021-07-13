@@ -5,7 +5,9 @@
  * 2.0.
  */
 
+import { estypes } from '@elastic/elasticsearch';
 import { ResponseError } from '@elastic/elasticsearch/lib/errors';
+import { isEmpty } from 'lodash';
 import { IndexPatternsFetcher } from '../../../../../src/plugins/data/server';
 import { RuleDataWriteDisabledError } from '../rule_data_plugin_service/errors';
 import {
@@ -94,10 +96,7 @@ export class RuleDataClient implements IRuleDataClient {
 
         return clusterClient.bulk(requestWithDefaultParameters).then((response) => {
           if (response.body.errors) {
-            if (
-              response.body.items.length > 0 &&
-              response.body.items?.[0]?.index?.error?.type === 'index_not_found_exception'
-            ) {
+            if (response.body.items?.[0]?.index?.error?.type === 'index_not_found_exception') {
               return this.createWriteTargetIfNeeded({ namespace }).then(() => {
                 return clusterClient.bulk(requestWithDefaultParameters);
               });
