@@ -77,7 +77,6 @@ export function AlertingPopoverAndFlyout({
 
   const button = (
     <EuiHeaderLink
-      size="xs"
       color="text"
       iconType="arrowDown"
       iconSide="right"

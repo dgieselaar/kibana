@@ -23,6 +23,7 @@ describe('toJsonSchema', () => {
           type: 'string',
         },
       },
+      required: ['foo'],
     });
 
     expect(
@@ -53,8 +54,8 @@ describe('toJsonSchema', () => {
       type: 'object',
       additionalProperties: {
         allOf: [
-          { type: 'object', properties: { foo: { type: 'string' } } },
-          { type: 'object', properties: { bar: { type: 'array', item: { type: 'boolean' } } } },
+          { type: 'object', properties: { foo: { type: 'string' } }, required: ['foo'] },
+          { type: 'object', properties: { bar: { type: 'array', items: { type: 'boolean' } } } },
         ],
       },
     });

@@ -67,9 +67,6 @@ function getHandlingTypes(type: t.Mixed, key: string, value: object): t.Mixed[] 
   }
 }
 
-// eslint-disable-next-line
-console.log('--LATEST--');
-
 function getHandledKeys<T extends Record<string, unknown>>(
   type: t.Mixed,
   object: T,

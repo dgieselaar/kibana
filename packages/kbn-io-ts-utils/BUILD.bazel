@@ -25,7 +25,7 @@ NPM_MODULE_EXTRA_FILES = [
 ]
 
 SRC_DEPS = [
-  "//packages/kbn-i18n",
+  "//packages/kbn-config-schema",
   "@npm//fp-ts",
   "@npm//io-ts",
   "@npm//lodash",

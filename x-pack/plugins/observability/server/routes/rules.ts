@@ -8,6 +8,7 @@ import { isoToEpochRt, toNumberRt } from '@kbn/io-ts-utils';
 import * as t from 'io-ts';
 // @ts-ignore
 import { AlertType } from '../../../apm/common/alert_types';
+import { observabilityFeatureId } from '../../common';
 import { configRt } from '../../common/rules/alerting_dsl/alerting_dsl_rt';
 import { alertStatusRt } from '../../common/typings';
 import { getTopAlerts } from '../lib/rules/get_top_alerts';
@@ -56,7 +57,7 @@ const alertsDynamicIndexPatternRoute = createObservabilityServerRoute({
     tags: [],
   },
   handler: async ({ ruleDataClient }) => {
-    const reader = ruleDataClient.getReader({ namespace: 'observability' });
+    const reader = ruleDataClient.getReader({ namespace: observabilityFeatureId });
 
     return reader.getDynamicIndexPattern();
   },

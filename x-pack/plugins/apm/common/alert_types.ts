@@ -18,6 +18,7 @@ export enum AlertSeverityLevel {
   Critical = 'critical',
   Ok = 'ok',
 }
+export const APM_SERVER_FEATURE_ID = 'apm';
 
 export enum AlertType {
   ErrorCount = 'apm.error_rate', // ErrorRate was renamed to ErrorCount but the key is kept as `error_rate` for backwards-compat.
@@ -43,6 +44,7 @@ export const ALERT_TYPES_CONFIG: Record<
     actionGroups: Array<ActionGroup<string>>;
     defaultActionGroupId: string;
     minimumLicenseRequired: 'basic' | 'gold';
+    isExportable: boolean;
     producer: string;
     actionVariables?: ActionVariables;
   }
@@ -54,7 +56,8 @@ export const ALERT_TYPES_CONFIG: Record<
     actionGroups: [THRESHOLD_MET_GROUP],
     defaultActionGroupId: THRESHOLD_MET_GROUP_ID,
     minimumLicenseRequired: 'basic',
-    producer: 'apm',
+    producer: APM_SERVER_FEATURE_ID,
+    isExportable: true,
   },
   [AlertType.TransactionDuration]: {
     name: i18n.translate('xpack.apm.transactionDurationAlert.name', {
@@ -63,7 +66,8 @@ export const ALERT_TYPES_CONFIG: Record<
     actionGroups: [THRESHOLD_MET_GROUP],
     defaultActionGroupId: THRESHOLD_MET_GROUP_ID,
     minimumLicenseRequired: 'basic',
-    producer: 'apm',
+    producer: APM_SERVER_FEATURE_ID,
+    isExportable: true,
   },
   [AlertType.TransactionDurationAnomaly]: {
     name: i18n.translate('xpack.apm.transactionDurationAnomalyAlert.name', {
@@ -72,7 +76,8 @@ export const ALERT_TYPES_CONFIG: Record<
     actionGroups: [THRESHOLD_MET_GROUP],
     defaultActionGroupId: THRESHOLD_MET_GROUP_ID,
     minimumLicenseRequired: 'basic',
-    producer: 'apm',
+    producer: APM_SERVER_FEATURE_ID,
+    isExportable: true,
   },
   [AlertType.TransactionErrorRate]: {
     name: i18n.translate('xpack.apm.transactionErrorRateAlert.name', {
@@ -81,7 +86,8 @@ export const ALERT_TYPES_CONFIG: Record<
     actionGroups: [THRESHOLD_MET_GROUP],
     defaultActionGroupId: THRESHOLD_MET_GROUP_ID,
     minimumLicenseRequired: 'basic',
-    producer: 'apm',
+    producer: APM_SERVER_FEATURE_ID,
+    isExportable: true,
   },
   [AlertType.Metric]: {
     name: i18n.translate('xpack.apm.metricAlert.name', {
@@ -101,6 +107,7 @@ export const ALERT_TYPES_CONFIG: Record<
     defaultActionGroupId: AlertSeverityLevel.Warning,
     minimumLicenseRequired: 'basic',
     producer: 'apm',
+    isExportable: true,
   },
 };
 
