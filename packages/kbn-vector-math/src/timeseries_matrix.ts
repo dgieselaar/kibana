@@ -5,7 +5,6 @@
  * in compliance with, at your election, the Elastic License 2.0 or the Server
  * Side Public License, v 1.
  */
-import { add, mean } from 'lodash';
 import { ValuesType } from 'utility-types';
 import { VectorCardinality } from './constants';
 import { InstantVector } from './instant_vector';
@@ -14,6 +13,7 @@ import { Sample } from './sample';
 
 enum MetricType {
   Scalar = 'scalar',
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   InstantVector = 'instant_vector',
 }
 
@@ -83,45 +83,25 @@ export class TimeseriesMatrix<TMetrics extends Metrics> {
     });
   }
 
-  transform<TReturn>(
-    cb: (
-      metrics: {
-        [key in keyof TMetrics & string]: TMetrics[key] extends InstantVectorDescriptor
-          ? InstantVector<
-              Record<ValuesType<TMetrics[key]['labels']> & string, string>,
-              false,
-              [],
-              [],
-              VectorCardinality.OneToOne,
-              false,
-              [],
-              false
-            >
-          : number;
-      }
-    ) => TReturn
-  ): Array<[number, TReturn]> {
+  transform<
+    TMetricMap extends {
+      [key in keyof TMetrics & string]: TMetrics[key] extends InstantVectorDescriptor
+        ? InstantVector<
+            Record<ValuesType<TMetrics[key]['labels']> & string, string>,
+            false,
+            [],
+            [],
+            VectorCardinality.OneToOne,
+            false,
+            [],
+            false
+          >
+        : number;
+    },
+    TReturn
+  >(cb: (metrics: TMetricMap) => TReturn): Array<[number, TReturn]> {
     return this.getMapByTime().map((metricMap, time) => {
-      return [time, cb(metricMap)];
+      return [time, cb((metricMap as unknown) as TMetricMap)];
     });
   }
 }
-
-const matrix = new TimeseriesMatrix({
-  foo: {
-    type: MetricType.InstantVector,
-    labels: ['service.name' as const, 'service.environment' as const, 'transaction.type' as const],
-  },
-  baz: {
-    type: MetricType.InstantVector,
-    labels: ['service.name' as const, 'service.environment' as const],
-  },
-  bar: { type: MetricType.Scalar },
-});
-
-const result = matrix.transform(({ foo, baz }) => {
-  const right = baz.on('service.name').groupLeft('transaction.type');
-  const next = vector.by('service.name').aggregate(mean);
-
-  return next.aggregate(mean);
-});

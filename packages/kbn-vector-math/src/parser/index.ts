@@ -42,19 +42,19 @@ const modifier = (cb: (vector: InstantVector, args: string[]) => InstantVector) 
 };
 
 const ignoring = modifier((vector, args) => {
-  return vector.ignore(args);
+  return vector.ignore(...args);
 });
 
 const on = modifier((vector, args) => {
-  return vector.on(args);
+  return vector.on(...args);
 });
 
 const without = modifier((vector, args) => {
-  return vector.without(args);
+  return vector.without(...args);
 });
 
 const by = modifier((vector, args) => {
-  return vector.by(args);
+  return vector.by(...args);
 });
 
 const bool = modifier((vector) => {
@@ -62,11 +62,11 @@ const bool = modifier((vector) => {
 });
 
 const groupLeft = modifier((vector, args) => {
-  return vector.groupLeft(args);
+  return vector.groupLeft(...args);
 });
 
 const groupRight = modifier((vector, args) => {
-  return vector.groupRight(args);
+  return vector.groupRight(...args);
 });
 
 expressionMath.import(
