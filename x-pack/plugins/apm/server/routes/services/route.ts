@@ -52,55 +52,28 @@ import { ML_ERRORS } from '../../../common/anomaly_detection';
 import { ScopedAnnotationsClient } from '../../../../observability/server';
 import { Annotation } from './../../../../observability/common/annotations';
 import { ConnectionStatsItemWithImpact } from './../../../common/connections';
+import { getServicesWithoutStats } from './get_services_without_stats';
+import { getServicesHealthStatuses } from './get_services/get_services_health_statuses';
+import { ServiceHealthStatus } from './../../../common/service_health_status';
+import { TopService } from './get_services/get_service_transaction_stats';
 
 const servicesRoute = createApmServerRoute({
   endpoint: 'GET /internal/apm/services',
   params: t.type({
-    query: t.intersection([environmentRt, kueryRt, rangeRt]),
+    query: t.intersection([
+      environmentRt,
+      kueryRt,
+      rangeRt,
+      t.type({ pageSize: toNumberRt }),
+    ]),
   }),
   options: { tags: ['access:apm'] },
-  async handler(resources): Promise<{
-    items: import('./../../../common/utils/join_by_key/index').JoinedReturnType<
-      | {
-          serviceName: string;
-          transactionType: string;
-          environments: string[];
-          agentName: import('./../../../typings/es_schemas/ui/fields/agent').AgentName;
-          latency: number | null;
-          transactionErrorRate: number;
-          throughput: number;
-        }
-      | {
-          serviceName: string;
-          environments: string[];
-          agentName: import('./../../../typings/es_schemas/ui/fields/agent').AgentName;
-        }
-      | {
-          serviceName: string;
-          healthStatus: import('./../../../common/service_health_status').ServiceHealthStatus;
-        },
-      {
-        serviceName: string;
-        transactionType: string;
-        environments: string[];
-        agentName: import('./../../../typings/es_schemas/ui/fields/agent').AgentName;
-        latency: number | null;
-        transactionErrorRate: number;
-        throughput: number;
-      } & {
-        serviceName: string;
-        environments: string[];
-        agentName: import('./../../../typings/es_schemas/ui/fields/agent').AgentName;
-      } & {
-        serviceName: string;
-        healthStatus: import('./../../../common/service_health_status').ServiceHealthStatus;
-      }
-    >;
-    hasLegacyData: boolean;
-  }> {
+  async handler(
+    resources
+  ): Promise<{ items: TopService[]; hasLegacyData: boolean }> {
     const setup = await setupRequest(resources);
-    const { params, logger } = resources;
-    const { environment, kuery, start, end } = params.query;
+    const { params } = resources;
+    const { environment, kuery, start, end, pageSize } = params.query;
     const searchAggregatedTransactions = await getSearchAggregatedTransactions({
       ...setup,
       kuery,
@@ -113,7 +86,7 @@ const servicesRoute = createApmServerRoute({
       kuery,
       setup,
       searchAggregatedTransactions,
-      logger,
+      pageSize,
       start,
       end,
     });
@@ -1135,6 +1108,62 @@ const serviceAlertsRoute = createApmServerRoute({
   },
 });
 
+const servicesWithoutStatsRoute = createApmServerRoute({
+  endpoint: 'GET /internal/apm/services_without_stats',
+  params: t.type({
+    query: t.intersection([t.type({ pageSize: toNumberRt }), rangeRt]),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (resources): Promise<{ services: string[] }> => {
+    const setup = await setupRequest(resources);
+
+    const {
+      query: { start, end, pageSize },
+    } = resources.params;
+
+    return {
+      services: await getServicesWithoutStats({
+        start,
+        end,
+        pageSize,
+        setup,
+      }),
+    };
+  },
+});
+
+const servicesHealthStatusesRoute = createApmServerRoute({
+  endpoint: 'GET /internal/apm/services_health_statuses',
+  params: t.type({
+    query: t.intersection([rangeRt, environmentRt]),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (
+    resources
+  ): Promise<{
+    services: Array<{ serviceName: string; healthStatus: ServiceHealthStatus }>;
+  }> => {
+    const setup = await setupRequest(resources);
+
+    const {
+      query: { start, end, environment },
+    } = resources.params;
+
+    return {
+      services: await getServicesHealthStatuses({
+        setup,
+        start,
+        end,
+        environment,
+      }),
+    };
+  },
+});
+
 const serviceInfrastructureRoute = createApmServerRoute({
   endpoint: 'GET /internal/apm/services/{serviceName}/infrastructure',
   params: t.type({
@@ -1246,4 +1275,6 @@ export const serviceRouteRepository = {
   ...serviceAlertsRoute,
   ...serviceInfrastructureRoute,
   ...serviceAnomalyChartsRoute,
+  ...servicesWithoutStatsRoute,
+  ...servicesHealthStatusesRoute,
 };

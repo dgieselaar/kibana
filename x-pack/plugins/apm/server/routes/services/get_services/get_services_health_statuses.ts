@@ -13,12 +13,11 @@ import { ServicesItemsSetup } from './get_services_items';
 interface AggregationParams {
   environment: string;
   setup: ServicesItemsSetup;
-  searchAggregatedTransactions: boolean;
   start: number;
   end: number;
 }
 
-export const getHealthStatuses = async ({
+export const getServicesHealthStatuses = async ({
   environment,
   setup,
   start,

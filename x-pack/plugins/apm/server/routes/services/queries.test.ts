@@ -55,11 +55,11 @@ describe('services queries', () => {
       getServicesItems({
         setup,
         searchAggregatedTransactions: false,
-        logger: {} as any,
         environment: ENVIRONMENT_ALL.value,
         kuery: '',
         start: 0,
         end: 50000,
+        pageSize: 50,
       })
     );
 

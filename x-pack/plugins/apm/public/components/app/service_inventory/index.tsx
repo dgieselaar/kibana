@@ -25,8 +25,10 @@ import { useTimeRange } from '../../../hooks/use_time_range';
 import { useUpgradeAssistantHref } from '../../shared/links/kibana';
 import { SearchBar } from '../../shared/search_bar';
 import { getTimeRangeComparison } from '../../shared/time_comparison/get_time_range_comparison';
-import { ServiceList } from './service_list';
+import { ServiceInventoryListItem, ServiceList } from './service_list';
 import { MLCallout, shouldDisplayMlCallout } from '../../shared/ml_callout';
+import { joinByKey } from '../../../../common/utils/join_by_key';
+import { ENVIRONMENT_ALL } from '../../../../common/environment_filter_values';
 
 const initialData = {
   requestId: '',
@@ -70,6 +72,7 @@ function useServicesFetcher() {
               kuery,
               start,
               end,
+              pageSize: 50,
             },
           },
         }).then((mainStatisticsData) => {
@@ -81,6 +84,41 @@ function useServicesFetcher() {
       }
     },
     [environment, kuery, start, end]
+  );
+
+  const { data: servicesWithoutStatsData, status: servicesWithoutStatsStatus } =
+    useFetcher(
+      (callApmApi) => {
+        if (start && end) {
+          return callApmApi('GET /internal/apm/services_without_stats', {
+            params: {
+              query: {
+                start,
+                end,
+                pageSize: 50,
+              },
+            },
+          });
+        }
+      },
+      [start, end]
+    );
+
+  const { data: servicesHealthStatusesData } = useFetcher(
+    (callApmApi) => {
+      if (start && end) {
+        return callApmApi('GET /internal/apm/services_health_statuses', {
+          params: {
+            query: {
+              start,
+              end,
+              environment,
+            },
+          },
+        });
+      }
+    },
+    [start, end, environment]
   );
 
   const { mainStatisticsData, requestId } = data;
@@ -147,15 +185,50 @@ function useServicesFetcher() {
     core.notifications.toasts,
   ]);
 
+  const useTermsEnumData = !kuery && environment === ENVIRONMENT_ALL.value;
+
+  const isLoading = useTermsEnumData
+    ? servicesWithoutStatsStatus === FETCH_STATUS.LOADING
+    : mainStatisticsStatus === FETCH_STATUS.LOADING;
+
+  const isFailure =
+    servicesWithoutStatsStatus === FETCH_STATUS.FAILURE ||
+    mainStatisticsStatus === FETCH_STATUS.FAILURE;
+
+  let services: ServiceInventoryListItem[] = mainStatisticsData.items ?? [];
+
+  const visibleServicesWithHealthStatuses =
+    servicesHealthStatusesData?.services.filter((service) =>
+      services.find((s) => service.serviceName === s.serviceName)
+    );
+
+  if (useTermsEnumData) {
+    services = joinByKey(
+      [
+        ...(servicesWithoutStatsData?.services ?? []).map((serviceName) => ({
+          serviceName,
+        })),
+        ...services,
+      ],
+      'serviceName'
+    );
+  }
+
+  services = joinByKey(
+    [...services, ...(visibleServicesWithHealthStatuses ?? [])],
+    'serviceName'
+  );
+
   return {
-    mainStatisticsData,
-    mainStatisticsStatus,
+    services,
+    isLoading,
+    isFailure,
     comparisonData,
   };
 }
 
 export function ServiceInventory() {
-  const { mainStatisticsData, mainStatisticsStatus, comparisonData } =
+  const { services, isLoading, isFailure, comparisonData } =
     useServicesFetcher();
 
   const { anomalyDetectionSetupState } = useAnomalyDetectionJobsContext();
@@ -169,8 +242,6 @@ export function ServiceInventory() {
     !userHasDismissedCallout &&
     shouldDisplayMlCallout(anomalyDetectionSetupState);
 
-  const isLoading = mainStatisticsStatus === FETCH_STATUS.LOADING;
-  const isFailure = mainStatisticsStatus === FETCH_STATUS.FAILURE;
   const noItemsMessage = (
     <EuiEmptyPrompt
       title={
@@ -201,7 +272,7 @@ export function ServiceInventory() {
           <ServiceList
             isLoading={isLoading}
             isFailure={isFailure}
-            items={mainStatisticsData.items}
+            items={services}
             comparisonData={comparisonData}
             noItemsMessage={noItemsMessage}
           />

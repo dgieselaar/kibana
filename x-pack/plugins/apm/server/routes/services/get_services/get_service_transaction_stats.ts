@@ -5,9 +5,14 @@
  * 2.0.
  */
 
-import { kqlQuery, rangeQuery } from '../../../../../observability/server';
+import {
+  kqlQuery,
+  rangeQuery,
+  termQuery,
+} from '../../../../../observability/server';
 import {
   AGENT_NAME,
+  PROCESSOR_EVENT,
   SERVICE_ENVIRONMENT,
   SERVICE_NAME,
   TRANSACTION_TYPE,
@@ -29,6 +34,9 @@ import {
   getOutcomeAggregation,
 } from '../../../lib/helpers/transaction_error_rate';
 import { ServicesItemsSetup } from './get_services_items';
+import { ProcessorEvent } from '../../../../common/processor_event';
+import { maybe } from '../../../../common/utils/maybe';
+import { Environment } from '../../../../common/environment_rt';
 
 interface AggregationParams {
   environment: string;
@@ -40,6 +48,16 @@ interface AggregationParams {
   end: number;
 }
 
+export interface TopService {
+  serviceName: string;
+  transactionType: string | undefined;
+  environments: string[];
+  agentName: AgentName;
+  latency: number | null;
+  throughput: number;
+  transactionErrorRate: number | null;
+}
+
 export async function getServiceTransactionStats({
   environment,
   kuery,
@@ -48,7 +66,7 @@ export async function getServiceTransactionStats({
   maxNumServices,
   start,
   end,
-}: AggregationParams) {
+}: AggregationParams): Promise<TopService[]> {
   const { apmEventClient } = setup;
 
   const outcomes = getOutcomeAggregation();
@@ -67,6 +85,8 @@ export async function getServiceTransactionStats({
     {
       apm: {
         events: [
+          ProcessorEvent.error,
+          ProcessorEvent.metric,
           getProcessorEventForTransactions(searchAggregatedTransactions),
         ],
       },
@@ -75,9 +95,6 @@ export async function getServiceTransactionStats({
         query: {
           bool: {
             filter: [
-              ...getDocumentTypeFilterForTransactions(
-                searchAggregatedTransactions
-              ),
               ...rangeQuery(start, end),
               ...environmentQuery(environment),
               ...kqlQuery(kuery),
@@ -91,22 +108,35 @@ export async function getServiceTransactionStats({
               size: maxNumServices,
             },
             aggs: {
-              transactionType: {
-                terms: {
-                  field: TRANSACTION_TYPE,
+              sample: {
+                top_metrics: {
+                  metrics: [{ field: AGENT_NAME } as const],
+                  sort: {
+                    '@timestamp': 'desc' as const,
+                  },
+                },
+              },
+              txMetrics: {
+                filter: {
+                  bool: {
+                    filter: searchAggregatedTransactions
+                      ? getDocumentTypeFilterForTransactions(
+                          searchAggregatedTransactions
+                        )
+                      : termQuery(PROCESSOR_EVENT, ProcessorEvent.transaction),
+                  },
                 },
                 aggs: {
-                  ...metrics,
-                  environments: {
+                  transactionType: {
                     terms: {
-                      field: SERVICE_ENVIRONMENT,
+                      field: TRANSACTION_TYPE,
                     },
-                  },
-                  sample: {
-                    top_metrics: {
-                      metrics: [{ field: AGENT_NAME } as const],
-                      sort: {
-                        '@timestamp': 'desc' as const,
+                    aggs: {
+                      ...metrics,
+                      environments: {
+                        terms: {
+                          field: SERVICE_ENVIRONMENT,
+                        },
                       },
                     },
                   },
@@ -122,29 +152,30 @@ export async function getServiceTransactionStats({
   return (
     response.aggregations?.services.buckets.map((bucket) => {
       const topTransactionTypeBucket =
-        bucket.transactionType.buckets.find(
+        bucket.txMetrics.transactionType.buckets.find(
           ({ key }) =>
             key === TRANSACTION_REQUEST || key === TRANSACTION_PAGE_LOAD
-        ) ?? bucket.transactionType.buckets[0];
+        ) ?? maybe(bucket.txMetrics.transactionType.buckets[0]);
 
       return {
         serviceName: bucket.key as string,
-        transactionType: topTransactionTypeBucket.key as string,
-        environments: topTransactionTypeBucket.environments.buckets.map(
-          (environmentBucket) => environmentBucket.key as string
-        ),
-        agentName: topTransactionTypeBucket.sample.top[0].metrics[
-          AGENT_NAME
-        ] as AgentName,
-        latency: topTransactionTypeBucket.avg_duration.value,
-        transactionErrorRate: calculateFailedTransactionRate(
-          topTransactionTypeBucket.outcomes
-        ),
-        throughput: calculateThroughput({
-          start,
-          end,
-          value: topTransactionTypeBucket.doc_count,
-        }),
+        transactionType: topTransactionTypeBucket?.key as string | undefined,
+        environments:
+          topTransactionTypeBucket?.environments.buckets.map(
+            (environmentBucket) => environmentBucket.key as Environment
+          ) ?? [],
+        agentName: bucket.sample.top[0].metrics[AGENT_NAME] as AgentName,
+        latency: topTransactionTypeBucket?.avg_duration.value ?? null,
+        transactionErrorRate: topTransactionTypeBucket
+          ? calculateFailedTransactionRate(topTransactionTypeBucket.outcomes)
+          : null,
+        throughput: topTransactionTypeBucket
+          ? calculateThroughput({
+              start,
+              end,
+              value: topTransactionTypeBucket.doc_count,
+            })
+          : 0,
       };
     }) ?? []
   );

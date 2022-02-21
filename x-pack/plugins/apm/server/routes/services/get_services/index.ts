@@ -5,7 +5,6 @@
  * 2.0.
  */
 
-import { Logger } from '@kbn/logging';
 import { withApmSpan } from '../../../utils/with_apm_span';
 import { Setup } from '../../../lib/helpers/setup_request';
 import { getLegacyDataStatus } from './get_legacy_data_status';
@@ -16,7 +15,7 @@ export async function getServices({
   kuery,
   setup,
   searchAggregatedTransactions,
-  logger,
+  pageSize,
   start,
   end,
 }: {
@@ -24,7 +23,7 @@ export async function getServices({
   kuery: string;
   setup: Setup;
   searchAggregatedTransactions: boolean;
-  logger: Logger;
+  pageSize: number;
   start: number;
   end: number;
 }) {
@@ -35,9 +34,9 @@ export async function getServices({
         kuery,
         setup,
         searchAggregatedTransactions,
-        logger,
         start,
         end,
+        pageSize,
       }),
       getLegacyDataStatus(setup, start, end),
     ]);

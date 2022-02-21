@@ -48,11 +48,14 @@ import {
 import { HealthBadge } from './health_badge';
 
 type ServiceListAPIResponse = APIReturnType<'GET /internal/apm/services'>;
-type Items = ServiceListAPIResponse['items'];
+type TopService = ValuesType<ServiceListAPIResponse['items']>;
 type ServicesDetailedStatisticsAPIResponse =
   APIReturnType<'GET /internal/apm/services/detailed_statistics'>;
 
-type ServiceListItem = ValuesType<Items>;
+export type ServiceInventoryListItem = {
+  serviceName: string;
+  healthStatus?: ServiceHealthStatus;
+} & Partial<Omit<TopService, 'serviceName'>>;
 
 function formatString(value?: string | null) {
   return value || NOT_AVAILABLE_LABEL;
@@ -77,7 +80,7 @@ export function getServiceColumns({
   showHealthStatusColumn: boolean;
   breakpoints: Breakpoints;
   comparisonData?: ServicesDetailedStatisticsAPIResponse;
-}): Array<ITableColumn<ServiceListItem>> {
+}): Array<ITableColumn<ServiceInventoryListItem>> {
   const { isSmall, isLarge, isXl } = breakpoints;
   const showWhenSmallOrGreaterThanLarge = isSmall || !isLarge;
   const showWhenSmallOrGreaterThanXL = isSmall || !isXl;
@@ -99,7 +102,7 @@ export function getServiceColumns({
                 />
               );
             },
-          } as ITableColumn<ServiceListItem>,
+          } as ITableColumn<ServiceInventoryListItem>,
         ]
       : []),
     {
@@ -137,7 +140,7 @@ export function getServiceColumns({
             render: (_, { environments }) => (
               <EnvironmentBadge environments={environments ?? []} />
             ),
-          } as ITableColumn<ServiceListItem>,
+          } as ITableColumn<ServiceInventoryListItem>,
         ]
       : []),
     ...(showTransactionTypeColumn && showWhenSmallOrGreaterThanXL
@@ -239,7 +242,7 @@ export function getServiceColumns({
 }
 
 interface Props {
-  items: Items;
+  items: ServiceInventoryListItem[];
   comparisonData?: ServicesDetailedStatisticsAPIResponse;
   noItemsMessage?: React.ReactNode;
   isLoading: boolean;
@@ -287,9 +290,8 @@ export function ServiceList({
     ]
   );
 
-  const initialSortField = displayHealthStatus
-    ? 'healthStatus'
-    : 'transactionsPerMinute';
+  const initialSortField = 'serviceName';
+  const initialSortDirection = 'asc' as const;
 
   return (
     <EuiFlexGroup gutterSize="xs" direction="column" responsive={false}>
@@ -336,7 +338,7 @@ export function ServiceList({
           items={items}
           noItemsMessage={noItemsMessage}
           initialSortField={initialSortField}
-          initialSortDirection="desc"
+          initialSortDirection={initialSortDirection}
           sortFn={(itemsToSort, sortField, sortDirection) => {
             // For healthStatus, sort items by healthStatus first, then by TPM
             return sortField === 'healthStatus'

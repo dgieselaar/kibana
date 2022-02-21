@@ -6,7 +6,6 @@
  */
 
 import { getSearchAggregatedTransactions } from '.';
-import { SearchAggregatedTransactionSetting } from '../../../../common/aggregated_transactions';
 import { Setup } from '../setup_request';
 import { kqlQuery, rangeQuery } from '../../../../../observability/server';
 import { ProcessorEvent } from '../../../../common/processor_event';
@@ -23,20 +22,6 @@ export async function getIsUsingTransactionEvents({
   start?: number;
   end?: number;
 }): Promise<boolean> {
-  const searchAggregatedTransactions = config.searchAggregatedTransactions;
-
-  if (
-    searchAggregatedTransactions === SearchAggregatedTransactionSetting.never
-  ) {
-    return false;
-  }
-  if (
-    !kuery &&
-    searchAggregatedTransactions === SearchAggregatedTransactionSetting.always
-  ) {
-    return false;
-  }
-
   const searchesAggregatedTransactions = await getSearchAggregatedTransactions({
     config,
     start,
