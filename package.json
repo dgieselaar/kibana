@@ -323,6 +323,7 @@
     "pluralize": "3.1.0",
     "pngjs": "^3.4.0",
     "polished": "^3.7.2",
+    "pprof": "^3.2.0",
     "pretty-ms": "6.0.0",
     "prop-types": "^15.7.2",
     "proxy-from-env": "1.0.0",
