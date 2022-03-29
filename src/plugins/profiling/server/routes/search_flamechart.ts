@@ -352,7 +352,7 @@ async function queryFlameGraph(
     );
   }
 
-  logger.info(
+  /*  logger.info(
     '* unique stacktraces without leaf frame: ' +
       getNumberOfUniqueStacktracesWithoutLeafNode(stackTraces, 1)
   );
@@ -361,6 +361,7 @@ async function queryFlameGraph(
     '* unique stacktraces without 2 leaf frames: ' +
       getNumberOfUniqueStacktracesWithoutLeafNode(stackTraces, 2)
   );
+*/
 
   // Create the set of unique FrameIDs.
   const stackFrameDocIDs = new Set<string>();
