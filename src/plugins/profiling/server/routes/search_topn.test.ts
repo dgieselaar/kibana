@@ -90,7 +90,6 @@ describe('TopN data from Elasticsearch', () => {
         '123',
         '456',
         '789',
-        200,
         'field',
         kibanaResponseFactory
       );
@@ -113,7 +112,6 @@ describe('TopN data from Elasticsearch', () => {
         '123',
         '456',
         '789',
-        200,
         'StackTraceID',
         kibanaResponseFactory
       );
