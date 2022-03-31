@@ -8,6 +8,7 @@
 import { schema } from '@kbn/config-schema';
 import type { ElasticsearchClient, IRouter, Logger } from 'kibana/server';
 import seedrandom from 'seedrandom';
+import { chunk } from 'lodash';
 import type { DataRequestHandlerContext } from '../../../data/server';
 import { getRemoteRoutePaths } from '../../common';
 import { FlameGraph } from '../../common/flamegraph';
@@ -178,7 +179,7 @@ async function queryFlameGraph(
   // Start with counting the results in the index down-sampled by 5^6.
   // That is in the middle of our down-sampled indexes.
   const initialExp = 6;
-  const testing = index === 'profiling-events2';
+  const testing = index === 'profiling-events';
   const downsampledIndexPrefix =
     (index.endsWith('-all') ? index.replaceAll('-all', '') : index) + '-5pow';
   const initialDownsampledIndex = downsampledIndexPrefix + initialExp.toString().padStart(2, '0');
@@ -223,7 +224,7 @@ async function queryFlameGraph(
         aggs: {
           group_by: {
             composite: {
-              size: 100000, // This is the upper limit of entries per event index.
+              size: 10000, // This is the upper limit of entries per event index.
               sources: [
                 {
                   traceid: {
@@ -271,84 +272,43 @@ async function queryFlameGraph(
     logger.info('unique downsampled stacktraces: ' + stackTraceEvents.size);
   }
 
-  const nQueries = 4;
-  const results = new Array(nQueries);
+  const chunkSize = 2000;
+  const stackTraceIDs = [...stackTraceEvents.keys()];
+  const chunks = chunk(stackTraceIDs, chunkSize);
 
-  await logExecutionLatency(
+  const stackResponses = await logExecutionLatency(
     logger,
     'mget query for ' + stackTraceEvents.size + ' stacktraces',
     async () => {
-      const promises = new Array(nQueries);
-      const chunkSize = Math.floor(stackTraceEvents.size / nQueries);
-      const stackTraceIDs = [...stackTraceEvents.keys()];
-
-      logger.info('A');
-
-      for (let i = 0; i < nQueries; i++) {
-        const func = async () => {
-          const chunk = stackTraceIDs.slice(chunkSize * i, chunkSize * (i + 1));
+      return await Promise.all(
+        chunks.map((ids) => {
           return client.mget({
             index: 'profiling-stacktraces',
-            ids: [...chunk],
-            _source_includes: ['FrameID', 'Type'],
+            ids,
+            _source: ['FrameID', 'Type'],
+            // filter_path: 'docs._source',
           });
-        };
-
-        // Build and send the queries asynchronously.
-        promises[i] = func();
-      }
-
-      logger.info('B');
-
-      /*      for (let i = 0; i < nQueries; i++) {
-        await Promise.any(promises).then((res) => {
-          results[i] = res;
-          logger.info('Got result ' + res.body.docs.length);
-        });
-      }*/
-
-      /*      await Promise.all(promises).then((res) => {
-        results.push(res);
-        logger.info('Got result');
-        logger.info(`Results: ` + res);
-      });
-*/
-      for (let i = 0; i < nQueries; i++) {
-        results[i] = await promises[i];
-      }
+        })
+      );
     }
   );
 
-  logger.info('results len ' + results.length);
+  const traces = stackResponses.flatMap((response) => response.body.docs);
 
   // Create a lookup map StackTraceID -> StackTrace.
   const stackTraces = new Map<StackTraceID, StackTrace>();
-  for (let i = 0; i < nQueries; i++) {
-    if (testing) {
-      for (const trace of results[i].body.hits.hits) {
-        const frameIDs = trace.fields.FrameID as string[];
-        const fileIDs = extractFileIDArrayFromFrameIDArray(frameIDs);
-        stackTraces.set(trace._id, {
-          FileID: fileIDs,
-          FrameID: frameIDs,
-          Type: trace.fields.Type,
-        });
-      }
-    } else {
-      for (const trace of results[i].body.docs) {
-        // Sometimes we don't find the trace.
-        // This is due to ES delays writing (data is not immediately seen after write).
-        // Also, ES doesn't know about transactions.
-        if (trace.found) {
-          const frameIDs = trace._source.FrameID as string[];
-          const fileIDs = extractFileIDArrayFromFrameIDArray(frameIDs);
-          stackTraces.set(trace._id, {
-            FileID: fileIDs,
-            FrameID: frameIDs,
-            Type: trace._source.Type,
-          });
-        }
-      }
+  for (const trace of traces) {
+    // Sometimes we don't find the trace.
+    // This is due to ES delays writing (data is not immediately seen after write).
+    // Also, ES doesn't know about transactions.
+    if (trace.found) {
+      const frameIDs = trace._source.FrameID as string[];
+      const fileIDs = extractFileIDArrayFromFrameIDArray(frameIDs);
+      stackTraces.set(trace._id, {
+        FileID: fileIDs,
+        FrameID: frameIDs,
+        Type: trace._source.Type,
+      });
     }
   }
 
@@ -441,19 +401,15 @@ async function queryFlameGraph(
     }
   }
 
-  return new Promise<FlameGraph>((resolve, _) => {
-    return resolve(
-      new FlameGraph(
-        eventsIndex.sampleRate,
-        totalCount,
-        stackTraceEvents,
-        stackTraces,
-        stackFrames,
-        executables,
-        logger
-      )
-    );
-  });
+  return new FlameGraph(
+    eventsIndex.sampleRate,
+    totalCount,
+    stackTraceEvents,
+    stackTraces,
+    stackFrames,
+    executables,
+    logger
+  );
 }
 
 export function registerFlameChartElasticSearchRoute(
