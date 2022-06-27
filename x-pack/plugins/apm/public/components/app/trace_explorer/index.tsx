@@ -71,6 +71,35 @@ export function TraceExplorer() {
     [start, end, environment, queryFromUrlParams, typeFromUrlParams]
   );
 
+  const {} = useFetcher(
+    (callApmApi) => {
+      const traceIds = traceSamplesData?.samples.map(
+        (sample) => sample.traceId
+      );
+
+      if (traceIds === undefined) {
+        return;
+      }
+
+      if (!traceIds.length) {
+        return {
+          criticalPath: [],
+        };
+      }
+
+      return callApmApi('POST /internal/apm/traces/critical_path', {
+        params: {
+          body: {
+            traceIds,
+            start,
+            end,
+          },
+        },
+      });
+    },
+    [start, end, traceSamplesData]
+  );
+
   useEffect(() => {
     const nextSample = traceSamplesData?.samples[0];
     const nextWaterfallItemId = '';

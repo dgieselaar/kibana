@@ -22,6 +22,9 @@ import { getTopTracesPrimaryStats } from './get_top_traces_primary_stats';
 import { getTraceItems } from './get_trace_items';
 import { getTraceSamplesByQuery } from './get_trace_samples_by_query';
 import { getRandomSampler } from '../../lib/helpers/get_random_sampler';
+import { getCriticalPath } from './get_critical_path';
+import { Span } from '../../../typings/es_schemas/ui/span';
+import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 
 const tracesRoute = createApmServerRoute({
   endpoint: 'GET /internal/apm/traces',
@@ -188,10 +191,44 @@ const findTracesRoute = createApmServerRoute({
   },
 });
 
+const criticalPathRoute = createApmServerRoute({
+  endpoint: 'POST /internal/apm/traces/critical_path',
+  params: t.type({
+    body: t.intersection([
+      rangeRt,
+      t.type({
+        traceIds: t.array(t.string),
+      }),
+    ]),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (
+    resources
+  ): Promise<{
+    criticalPath: Array<Transaction | Span>;
+  }> => {
+    const { start, end, traceIds } = resources.params.body;
+
+    const setup = await setupRequest(resources);
+
+    return {
+      criticalPath: await getCriticalPath({
+        setup,
+        start,
+        end,
+        traceIds,
+      }),
+    };
+  },
+});
+
 export const traceRouteRepository = {
   ...tracesByIdRoute,
   ...tracesRoute,
   ...rootTransactionByTraceIdRoute,
   ...transactionByIdRoute,
   ...findTracesRoute,
+  ...criticalPathRoute,
 };

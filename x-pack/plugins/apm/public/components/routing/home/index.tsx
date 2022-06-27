@@ -196,11 +196,7 @@ export const home = {
         element: <ServiceMapHome />,
         serviceGroupContextTab: 'service-map',
       }),
-      ...page({
-        path: '/traces',
-        title: i18n.translate('xpack.apm.views.traceOverview.title', {
-          defaultMessage: 'Traces',
-        }),
+      '/traces': {
         element: (
           <TraceOverview>
             <Outlet />
@@ -241,7 +237,7 @@ export const home = {
             element: <TopTracesOverview />,
           },
         },
-      }),
+      },
       ...page({
         path: '/backends/inventory',
         title: DependenciesInventoryTitle,

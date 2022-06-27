@@ -5,7 +5,6 @@
  * 2.0.
  */
 import React from 'react';
-import { EuiFlexGroup, EuiFlexItem, EuiTab, EuiTabs } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import { useApmRouter } from '../../../hooks/use_apm_router';
 import { useApmParams } from '../../../hooks/use_apm_params';
@@ -13,6 +12,15 @@ import { useApmRoutePath } from '../../../hooks/use_apm_route_path';
 import { TraceSearchType } from '../../../../common/trace_explorer';
 import { TransactionTab } from '../transaction_details/waterfall_with_summary/transaction_tabs';
 import { useTraceExplorerEnabledSetting } from '../../../hooks/use_trace_explorer_enabled_setting';
+import { Breadcrumb } from '../breadcrumb';
+import { ApmMainTemplate } from '../../routing/templates/apm_main_template';
+
+const TracesOverviewTitle = i18n.translate(
+  'xpack.apm.views.traceOverview.title',
+  {
+    defaultMessage: 'Traces',
+  }
+);
 
 export function TraceOverview({ children }: { children: React.ReactElement }) {
   const isTraceExplorerEnabled = useTraceExplorerEnabledSetting();
@@ -22,10 +30,6 @@ export function TraceOverview({ children }: { children: React.ReactElement }) {
   const { query } = useApmParams('/traces');
 
   const routePath = useApmRoutePath();
-
-  if (!isTraceExplorerEnabled) {
-    return children;
-  }
 
   const explorerLink = router.link('/traces/explorer', {
     query: {
@@ -59,26 +63,35 @@ export function TraceOverview({ children }: { children: React.ReactElement }) {
     },
   });
 
+  const tabs = isTraceExplorerEnabled
+    ? [
+        {
+          label: i18n.translate('xpack.apm.traceOverview.topTracesTab', {
+            defaultMessage: 'Top traces',
+          }),
+          href: topTracesLink,
+          isSelected: routePath === '/traces',
+        },
+        {
+          label: i18n.translate('xpack.apm.traceOverview.traceExplorerTab', {
+            defaultMessage: 'Explorer',
+          }),
+          href: explorerLink,
+          isSelected: routePath === '/traces/explorer',
+        },
+      ]
+    : [];
+
   return (
-    <EuiFlexGroup direction="column">
-      <EuiFlexItem>
-        <EuiTabs>
-          <EuiTab href={topTracesLink} isSelected={routePath === '/traces'}>
-            {i18n.translate('xpack.apm.traceOverview.topTracesTab', {
-              defaultMessage: 'Top traces',
-            })}
-          </EuiTab>
-          <EuiTab
-            href={explorerLink}
-            isSelected={routePath === '/traces/explorer'}
-          >
-            {i18n.translate('xpack.apm.traceOverview.traceExplorerTab', {
-              defaultMessage: 'Explorer',
-            })}
-          </EuiTab>
-        </EuiTabs>
-      </EuiFlexItem>
-      <EuiFlexItem>{children}</EuiFlexItem>
-    </EuiFlexGroup>
+    <Breadcrumb title={TracesOverviewTitle} href="/traces">
+      <ApmMainTemplate
+        pageTitle={TracesOverviewTitle}
+        pageHeader={{
+          tabs,
+        }}
+      >
+        {children}
+      </ApmMainTemplate>
+    </Breadcrumb>
   );
 }
