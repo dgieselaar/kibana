@@ -1,19 +1,19 @@
 import { Transaction } from "../../../../typings/es_schemas/ui/transaction";
 import { Span } from "../../../../typings/es_schemas/ui/span";
-import {  groupBy, sortBy } from 'lodash';
+import { groupBy } from 'lodash';
 import hash from 'object-hash'
 
 const ROOT_ID = 'root';
 
 interface ITraceItem {
-    name: string;
-    id: string;
-    parentId?: string;
-    start: number;
-    end: number;
-    span?: Span;
-    transaction?: Transaction;
-  }
+  name: string;
+  id: string;
+  parentId?: string;
+  start: number;
+  end: number;
+  span?: Span;
+  transaction?: Transaction;
+}
 
 interface ITrace {
   root: ITraceItem;
@@ -25,6 +25,8 @@ interface TraceSegment {
   intervalStart: number;
   intervalEnd: number;
   parentHash: string;
+  depth: number;
+  layers: Record<string, string>;
 }
 
 export interface ICriticalPathItem {
@@ -33,15 +35,11 @@ export interface ICriticalPathItem {
   selfDuration: number;
   duration: number;
   parentHash: string;
-  isRoot: boolean;
+  depth: number;
+  layers: Record<string, string>;
 }
 
-export interface ICriticalPath {
-  elemetnsByHash: Record<string, ICriticalPathItem>;
-  roots: ICriticalPathItem[];
-}
-
-export const calculateCriticalPath = (criticalPathData: Array<Transaction | Span>) : ICriticalPath => {
+export const calculateCriticalPath = (criticalPathData: Array<Transaction | Span>): ICriticalPathItem[] => {
   const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
   const criticalPaths = Object.entries(tracesMap).map((entry) => getTrace(entry[1])).filter(t => t !== undefined)
     .map(trace => calculateCriticalPathForTrace(trace))
@@ -51,7 +49,7 @@ export const calculateCriticalPath = (criticalPathData: Array<Transaction | Span
   criticalPaths.forEach(cp => {
     cp?.forEach(cpi => {
       var obj = criticalPath[cpi.hash];
-      if(!obj){
+      if (!obj) {
         criticalPath[cpi.hash] = cpi;
         obj = cpi;
         obj.selfDuration = obj.selfDuration / numOfcriticalPaths
@@ -62,48 +60,44 @@ export const calculateCriticalPath = (criticalPathData: Array<Transaction | Span
       }
     });
   });
-  
-  return {
-    elemetnsByHash: criticalPath,
-    roots: Object.entries(criticalPath).map((entry) => entry[1]).filter(cpi => cpi.isRoot)
-  };
+
+  return Object.entries(criticalPath).map((entry) => entry[1]);
 };
 
 
-const getTrace = (criticalPathData: Array<Transaction | Span>) : ITrace | undefined => {
+const getTrace = (criticalPathData: Array<Transaction | Span>): ITrace | undefined => {
   const traceItems = criticalPathData.map(item => {
     const docType: 'span' | 'transaction' = item.processor.event;
-      switch (docType) {
-        case 'span': {
-          const span = item as Span;
-          return {
-            name: span.span.name,
-            span: span,
-            transaction: undefined,
-            id: span.span.id,
-            parentId: span.parent?.id,
-            start: span.timestamp.us,
-            end: span.timestamp.us + span.span.duration.us
-          };
-        }
-        case 'transaction':
-          const transaction = item as Transaction;
-          return {
-            name: transaction.transaction.name,
-            span: undefined,
-            transaction: transaction,
-            id: transaction.transaction.id,
-            parentId: transaction.parent?.id,
-            start: transaction.timestamp.us,
-            end: transaction.timestamp.us + transaction.transaction.duration.us
-          };
+    switch (docType) {
+      case 'span': {
+        const span = item as Span;
+        return {
+          name: span.span.name,
+          span: span,
+          transaction: undefined,
+          id: span.span.id,
+          parentId: span.parent?.id,
+          start: span.timestamp.us,
+          end: span.timestamp.us + span.span.duration.us
+        };
       }
-    });
-
+      case 'transaction':
+        const transaction = item as Transaction;
+        return {
+          name: transaction.transaction.name,
+          span: undefined,
+          transaction: transaction,
+          id: transaction.transaction.id,
+          parentId: transaction.parent?.id,
+          start: transaction.timestamp.us,
+          end: transaction.timestamp.us + transaction.transaction.duration.us
+        };
+    }
+  });
 
   const itemsByParent = groupBy(traceItems, (item) => (item.parentId ? item.parentId : ROOT_ID));
   const rootItem = itemsByParent[ROOT_ID];
-  if(rootItem){
+  if (rootItem) {
     return {
       root: rootItem[0],
       childrenByParentId: itemsByParent
@@ -111,25 +105,24 @@ const getTrace = (criticalPathData: Array<Transaction | Span>) : ITrace | undefi
   } else {
     return undefined;
   }
-
-
-
-} 
+}
 
 const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
-  if(trace){
-    const calculateCriticalPathForChildren : Array<TraceSegment> = [{
+  if (trace) {
+    const calculateCriticalPathForChildren: Array<TraceSegment> = [{
       item: trace.root,
       intervalStart: trace.root.start,
       intervalEnd: trace.root.end,
-      parentHash: ROOT_ID
+      parentHash: ROOT_ID,
+      depth: 0,
+      layers: {}
     }];
 
-    const criticalPathSegments : ICriticalPathItem[] = [];
+    const criticalPathSegments: ICriticalPathItem[] = [];
 
-    while( calculateCriticalPathForChildren.length > 0){
+    while (calculateCriticalPathForChildren.length > 0) {
       const nextSegment = calculateCriticalPathForChildren.pop();
-      if(nextSegment){
+      if (nextSegment) {
         const result = criticalPathForItem(trace, nextSegment)
         calculateCriticalPathForChildren.push(...result.childrenOnCriticalPath);
         criticalPathSegments.push(result.criticalPathItem);
@@ -141,41 +134,44 @@ const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
 }
 
 
-const criticalPathForItem = ( trace: ITrace, segment: TraceSegment ) => {
+const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
   var criticalPathDurationSum = 0;
   const item = segment.item;
   const directChildren = trace.childrenByParentId[item.id];
 
-  var childrenOnCriticalPath : TraceSegment[] = [];
-  const thisHash = hash({'name': item.name, 'parent': segment.parentHash});
-  if(directChildren && directChildren.length > 0){
-    const orderedChildren = [...directChildren].sort((a,b) => (b.end - a.end));
+  var childrenOnCriticalPath: TraceSegment[] = [];
+  const thisHash = hash({ 'name': item.name, 'parent': segment.parentHash });
+  const thisLayers = { ...segment.layers, ...{ [segment.depth]: thisHash } };
+  if (directChildren && directChildren.length > 0) {
+    const orderedChildren = [...directChildren].sort((a, b) => (b.end - a.end));
     var scanTimestamp = segment.intervalEnd;
     orderedChildren.forEach(child => {
       const childStart = Math.max(child.start, segment.intervalStart);
       const childEnd = Math.min(child.end, scanTimestamp);
-      if(childStart >= scanTimestamp) {
+      if (childStart >= scanTimestamp) {
         // ignore this child as it is not on the critical path
       } else {
-        if(childEnd < scanTimestamp){
+        if (childEnd < scanTimestamp) {
           criticalPathDurationSum += scanTimestamp - childEnd;
         }
         childrenOnCriticalPath.push({
           item: child,
           intervalStart: childStart,
           intervalEnd: childEnd,
-          parentHash: thisHash
+          parentHash: thisHash,
+          depth: segment.depth + 1,
+          layers: thisLayers
         });
         scanTimestamp = childStart;
       }
     });
-    if(scanTimestamp > segment.intervalStart){
+    if (scanTimestamp > segment.intervalStart) {
       criticalPathDurationSum += scanTimestamp - segment.intervalStart;
     }
   } else {
     criticalPathDurationSum += segment.intervalEnd - segment.intervalStart;
   }
-  
+
   return {
     criticalPathItem: {
       hash: thisHash,
@@ -183,7 +179,8 @@ const criticalPathForItem = ( trace: ITrace, segment: TraceSegment ) => {
       selfDuration: criticalPathDurationSum,
       duration: segment.intervalEnd - segment.intervalStart,
       parentHash: segment.parentHash,
-      isRoot: segment.parentHash === ROOT_ID
+      depth: segment.depth,
+      layers: thisLayers
     },
     childrenOnCriticalPath: childrenOnCriticalPath
   };

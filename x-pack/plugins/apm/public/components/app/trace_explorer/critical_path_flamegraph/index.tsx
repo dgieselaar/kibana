@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Chart,
   Datum,
@@ -13,12 +12,14 @@ import {
 
 import { useChartTheme } from '@kbn/observability-plugin/public';
 import { useTheme } from '../../../../hooks/use_theme';
-import { ICriticalPath } from '../cpa_helper';
+import { ICriticalPathItem } from '../cpa_helper';
 
-export const CriticalPathFlamegraph = ({criticalPath}:{
-  criticalPath: ICriticalPath;
+
+export const CriticalPathFlamegraph = ({
+  criticalPath,
+}: {
+  criticalPath: ICriticalPathItem[];
 }) => {
-
   const theme = useTheme();
 
   const chartSize = {
@@ -46,7 +47,8 @@ export const CriticalPathFlamegraph = ({criticalPath}:{
     <Chart size={chartSize}>
       <Settings
         theme={[themeOverrides, ...chartTheme]}
-         tooltip={{
+        
+        tooltip={{
           customTooltip: (info) => (
             <CustomTooltip
               {...info}
@@ -69,4 +71,4 @@ export const CriticalPathFlamegraph = ({criticalPath}:{
     </Chart>
     */
   );
-}
+};
