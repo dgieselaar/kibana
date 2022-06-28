@@ -6,6 +6,7 @@
  */
 
 import * as t from 'io-ts';
+import { toNumberRt } from '@kbn/io-ts-utils';
 import { TraceSearchType } from '../../../common/trace_explorer';
 import { setupRequest } from '../../lib/helpers/setup_request';
 import { getSearchAggregatedTransactions } from '../../lib/helpers/transactions';
@@ -25,6 +26,8 @@ import { getRandomSampler } from '../../lib/helpers/get_random_sampler';
 import { getCriticalPath } from './get_critical_path';
 import { Span } from '../../../typings/es_schemas/ui/span';
 import { Transaction } from '../../../typings/es_schemas/ui/transaction';
+import { OverallLatencyDistributionResponse } from '../latency_distribution/types';
+import { getTracesLatencyDistribution } from './get_traces_latency_distribution';
 
 const tracesRoute = createApmServerRoute({
   endpoint: 'GET /internal/apm/traces',
@@ -172,7 +175,11 @@ const findTracesRoute = createApmServerRoute({
   handler: async (
     resources
   ): Promise<{
-    samples: Array<{ traceId: string; transactionId: string }>;
+    samples: Array<{
+      traceId: string;
+      transactionId: string;
+      duration: number;
+    }>;
   }> => {
     const { start, end, environment, query, type } = resources.params.query;
 
@@ -224,6 +231,40 @@ const criticalPathRoute = createApmServerRoute({
   },
 });
 
+const tracesDistributionRoute = createApmServerRoute({
+  endpoint: 'POST /internal/apm/traces/distribution',
+  params: t.type({
+    body: t.intersection([
+      rangeRt,
+      t.type({
+        traceIds: t.array(t.string),
+        percentileThreshold: toNumberRt,
+      }),
+    ]),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (
+    resources
+  ): Promise<{
+    allTracesDistribution: OverallLatencyDistributionResponse;
+    failedTracesDistribution: OverallLatencyDistributionResponse;
+  }> => {
+    const { start, end, traceIds, percentileThreshold } = resources.params.body;
+
+    const setup = await setupRequest(resources);
+
+    return getTracesLatencyDistribution({
+      setup,
+      start,
+      end,
+      percentileThreshold,
+      traceIds,
+    });
+  },
+});
+
 export const traceRouteRepository = {
   ...tracesByIdRoute,
   ...tracesRoute,
@@ -231,4 +272,5 @@ export const traceRouteRepository = {
   ...transactionByIdRoute,
   ...findTracesRoute,
   ...criticalPathRoute,
+  ...tracesDistributionRoute,
 };

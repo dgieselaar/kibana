@@ -18,6 +18,7 @@ import {
   PARENT_ID,
   PROCESSOR_EVENT,
   TRACE_ID,
+  TRANSACTION_DURATION,
   TRANSACTION_ID,
   TRANSACTION_SAMPLED,
 } from '../../../common/elasticsearch_fieldnames';
@@ -145,7 +146,10 @@ export async function getTraceSamplesByQuery({
             aggs: {
               latest: {
                 top_metrics: {
-                  metrics: asMutableArray([{ field: TRACE_ID }] as const),
+                  metrics: asMutableArray([
+                    { field: TRACE_ID },
+                    { field: TRANSACTION_DURATION },
+                  ] as const),
                   size: 1,
                   sort: {
                     '@timestamp': 'desc' as const,
@@ -163,6 +167,8 @@ export async function getTraceSamplesByQuery({
     traceSamplesResponse.aggregations?.transactionId.buckets.map((bucket) => ({
       traceId: bucket.latest.top[0].metrics['trace.id'] as string,
       transactionId: bucket.key as string,
+      duration:
+        (bucket.latest.top[0].metrics[TRANSACTION_DURATION] as number) / 1000,
     })) ?? []
   );
 }

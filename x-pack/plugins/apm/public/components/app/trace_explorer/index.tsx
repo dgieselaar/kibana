@@ -29,6 +29,7 @@ import { useApmRouter } from '../../../hooks/use_apm_router';
 import { TraceExplorerSamplesFetchContextProvider } from '../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
 import { APIClientRequestParamsOf } from '../../../services/rest/create_call_apm_api';
 import { TransactionTab } from '../transaction_details/waterfall_with_summary/transaction_tabs';
+import { TraceExplorerDistributionChart } from './trace_explorer_distribution_chart';
 
 export function TraceExplorer({ children }: { children: React.ReactElement }) {
   const [query, setQuery] = useState<TraceSearchQuery>({
@@ -107,6 +108,9 @@ export function TraceExplorer({ children }: { children: React.ReactElement }) {
               <ApmDatePicker />
             </EuiFlexItem>
           </EuiFlexGroup>
+        </EuiFlexItem>
+        <EuiFlexItem>
+          <TraceExplorerDistributionChart />
         </EuiFlexItem>
         <EuiTabs>
           <EuiTab

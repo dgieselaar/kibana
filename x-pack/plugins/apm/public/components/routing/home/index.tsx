@@ -212,13 +212,19 @@ export const home = {
               </TraceExplorer>
             ),
             params: t.type({
-              query: t.type({
-                query: t.string,
-                type: t.union([
-                  t.literal(TraceSearchType.kql),
-                  t.literal(TraceSearchType.eql),
-                ]),
-              }),
+              query: t.intersection([
+                t.type({
+                  query: t.string,
+                  type: t.union([
+                    t.literal(TraceSearchType.kql),
+                    t.literal(TraceSearchType.eql),
+                  ]),
+                }),
+                t.partial({
+                  sampleRangeFrom: toNumberRt,
+                  sampleRangeTo: toNumberRt,
+                }),
+              ]),
             }),
             children: {
               '/traces/explorer/critical-path': {

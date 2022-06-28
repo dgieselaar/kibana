@@ -13,8 +13,8 @@ import {
   PrimitiveValue,
   Settings,
 } from '@elastic/charts';
-import { 
-  EuiFlexGroup, 
+import {
+  EuiFlexGroup,
   EuiFlexItem,
   euiPaletteForTemperature,
 } from '@elastic/eui';
@@ -66,30 +66,38 @@ export function TraceExplorerCriticalPath() {
     [start, end, traceSamplesData]
   );
 
-  let criticalPath: ICriticalPathItem[] | undefined;
-  if (criticalPathData) {
-    criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
-  }
+  const criticalPath = useMemo(() => {
+    if (criticalPathData) {
+      return calculateCriticalPath(criticalPathData.criticalPath);
+    }
+    return undefined;
+  }, [criticalPathData]);
 
-  const points =
-    criticalPath?.map((item) => {
-      return {
-        id: item.hash,
-        value: item.selfDuration,
-        depth: item.depth,
-        layers: item.layers,
-      };
-    }) ?? [];
+  const points = useMemo(() => {
+    return (
+      criticalPath?.map((item) => {
+        return {
+          id: item.hash,
+          value: item.selfDuration,
+          depth: item.depth,
+          layers: item.layers,
+        };
+      }) ?? []
+    );
+  }, [criticalPath]);
 
   const layers = useMemo(() => {
-    if (!criticalPath|| !points || !points.length) {
+    if (!criticalPath || !points || !points.length) {
       return [];
     }
 
-    const itemsById = criticalPath.reduce((mapping: Record<string, ICriticalPathItem>, item) => {
-        const entry = {[item.hash]: item};
-        return {...mapping,...entry};
-      }, {});
+    const itemsById = criticalPath.reduce(
+      (mapping: Record<string, ICriticalPathItem>, item) => {
+        const entry = { [item.hash]: item };
+        return { ...mapping, ...entry };
+      },
+      {}
+    );
 
     const maxDepth = Math.max(...points.map((point) => point.depth));
 
