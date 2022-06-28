@@ -35,7 +35,6 @@ export function TraceExplorer({ children }: { children: React.ReactElement }) {
     query: '',
     type: TraceSearchType.kql,
   });
-  const [showCriticalPath, setShowCriticalPath] = useState(false);
 
   const {
     query: urlQuery,

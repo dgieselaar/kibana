@@ -20,7 +20,7 @@ import { useApmParams } from '../../../../hooks/use_apm_params';
 import { useFetcher } from '../../../../hooks/use_fetcher';
 import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
-import { calculateCriticalPath, ICriticalPath } from './cpa_helper';
+import { calculateCriticalPath, ICriticalPathItem } from './cpa_helper';
 
 export function TraceExplorerCriticalPath() {
   const {
@@ -58,20 +58,18 @@ export function TraceExplorerCriticalPath() {
     [start, end, traceSamplesData]
   );
 
-  let criticalPath: ICriticalPath | undefined;
+  let criticalPath: ICriticalPathItem[] | undefined;
   if (criticalPathData) {
     criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
   }
 
   const nodes =
-    criticalPath?.roots.map((root, depth) => {
+    criticalPath?.map((item) => {
       return {
-        id: root.hash,
-        value: root.duration,
-        depth,
-        layers: {
-          [depth]: root.hash,
-        },
+        id: item.hash,
+        value: item.selfDuration,
+        depth: item.depth,
+        layers: item.layers,
       };
     }) ?? [];
 

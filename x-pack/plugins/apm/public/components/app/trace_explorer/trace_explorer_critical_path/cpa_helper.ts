@@ -32,6 +32,8 @@ interface TraceSegment {
   intervalStart: number;
   intervalEnd: number;
   parentHash: string;
+  depth: number;
+  layers: Record<string, string>;
 }
 
 export interface ICriticalPathItem {
@@ -40,17 +42,13 @@ export interface ICriticalPathItem {
   selfDuration: number;
   duration: number;
   parentHash: string;
-  isRoot: boolean;
-}
-
-export interface ICriticalPath {
-  elemetnsByHash: Record<string, ICriticalPathItem>;
-  roots: ICriticalPathItem[];
+  depth: number;
+  layers: Record<string, string>;
 }
 
 export const calculateCriticalPath = (
   criticalPathData: Array<Transaction | Span>
-): ICriticalPath => {
+): ICriticalPathItem[] => {
   const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
   const criticalPaths = Object.entries(tracesMap)
     .map((entry) => getTrace(entry[1]))
@@ -74,12 +72,7 @@ export const calculateCriticalPath = (
     });
   });
 
-  return {
-    elemetnsByHash: criticalPath,
-    roots: Object.entries(criticalPath)
-      .map((entry) => entry[1])
-      .filter((cpi) => cpi.isRoot),
-  };
+  return Object.entries(criticalPath).map((entry) => entry[1]);
 };
 
 const getTrace = (
@@ -136,6 +129,8 @@ const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
         intervalStart: trace.root.start,
         intervalEnd: trace.root.end,
         parentHash: ROOT_ID,
+        depth: 1,
+        layers: {}
       },
     ];
 
@@ -150,7 +145,17 @@ const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
       }
     }
 
-    return criticalPathSegments;
+    const root = {
+      hash: ROOT_ID,
+      name: ROOT_ID,
+      selfDuration: 0,
+      duration: trace.root.end - trace.root.start,
+      parentHash: '',
+      depth: 0,
+      layers: { [0]: ROOT_ID }
+    }
+
+    return [root, ...criticalPathSegments];
   }
 };
 
@@ -161,13 +166,14 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
 
   const childrenOnCriticalPath: TraceSegment[] = [];
   const thisHash = hash({ name: item.name, parent: segment.parentHash });
+  const thisLayers = { ...segment.layers, ...{ [segment.depth]: thisHash } };
   if (directChildren && directChildren.length > 0) {
     const orderedChildren = [...directChildren].sort((a, b) => b.end - a.end);
     let scanTimestamp = segment.intervalEnd;
     orderedChildren.forEach((child) => {
       const childStart = Math.max(child.start, segment.intervalStart);
       const childEnd = Math.min(child.end, scanTimestamp);
-      if (childStart >= scanTimestamp) {
+      if (childStart >= scanTimestamp || childEnd < segment.intervalStart) {
         // ignore this child as it is not on the critical path
       } else {
         if (childEnd < scanTimestamp) {
@@ -178,6 +184,8 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
           intervalStart: childStart,
           intervalEnd: childEnd,
           parentHash: thisHash,
+          depth: segment.depth + 1,
+          layers: thisLayers,
         });
         scanTimestamp = childStart;
       }
@@ -196,7 +204,8 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
       selfDuration: criticalPathDurationSum,
       duration: segment.intervalEnd - segment.intervalStart,
       parentHash: segment.parentHash,
-      isRoot: segment.parentHash === ROOT_ID,
+      depth: segment.depth,
+      layers: thisLayers,
     },
     childrenOnCriticalPath,
   };
