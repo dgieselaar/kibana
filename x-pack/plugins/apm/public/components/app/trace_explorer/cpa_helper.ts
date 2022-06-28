@@ -114,7 +114,7 @@ const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
       intervalStart: trace.root.start,
       intervalEnd: trace.root.end,
       parentHash: ROOT_ID,
-      depth: 0,
+      depth: 1,
       layers: {}
     }];
 
@@ -129,7 +129,17 @@ const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
       }
     }
 
-    return criticalPathSegments;
+    const root = {
+      hash: ROOT_ID,
+      name: ROOT_ID,
+      selfDuration: 0,
+      duration: trace.root.end - trace.root.start,
+      parentHash: '',
+      depth: 0,
+      layers: { [0]: ROOT_ID }
+    }
+
+    return [root, ...criticalPathSegments];
   }
 }
 
