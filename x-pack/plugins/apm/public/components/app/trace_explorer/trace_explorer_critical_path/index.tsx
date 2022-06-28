@@ -13,7 +13,7 @@ import {
   Settings,
 } from '@elastic/charts';
 import { EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useChartTheme } from '@kbn/observability-plugin/public';
 import { useTraceExplorerSamplesFetchContext } from '../../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
 import { useApmParams } from '../../../../hooks/use_apm_params';
@@ -63,11 +63,7 @@ export function TraceExplorerCriticalPath() {
     criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
   }
 
-  console.log({
-    criticalPath,
-  });
-
-  const layers =
+  const nodes =
     criticalPath?.roots.map((root, depth) => {
       return {
         id: root.hash,
@@ -78,6 +74,9 @@ export function TraceExplorerCriticalPath() {
         },
       };
     }) ?? [];
+
+  const points: any[] = [];
+  const layers: any[] = [];
 
   const chartSize = {
     height: layers.length * 20,
@@ -106,7 +105,7 @@ export function TraceExplorerCriticalPath() {
           <Settings theme={[themeOverrides, ...chartTheme]} />
           <Partition
             id="critical_path_flamegraph"
-            data={[]}
+            data={points}
             layers={layers}
             drilldown
             maxRowCount={1}
