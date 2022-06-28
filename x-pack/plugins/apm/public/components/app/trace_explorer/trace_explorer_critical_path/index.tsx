@@ -10,9 +10,15 @@ import {
   PartialTheme,
   Partition,
   PartitionLayout,
+  PrimitiveValue,
   Settings,
 } from '@elastic/charts';
-import { EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
+import { 
+  EuiFlexGroup, 
+  EuiFlexItem,
+  euiPaletteForTemperature,
+} from '@elastic/eui';
+import seedrandom from 'seedrandom';
 import React, { useMemo } from 'react';
 import { useChartTheme } from '@kbn/observability-plugin/public';
 import { useTraceExplorerSamplesFetchContext } from '../../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
@@ -21,6 +27,8 @@ import { useFetcher } from '../../../../hooks/use_fetcher';
 import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { calculateCriticalPath, ICriticalPathItem } from './cpa_helper';
+
+const colors = euiPaletteForTemperature(100).slice(50, 85);
 
 export function TraceExplorerCriticalPath() {
   const {
@@ -63,7 +71,7 @@ export function TraceExplorerCriticalPath() {
     criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
   }
 
-  const nodes =
+  const points =
     criticalPath?.map((item) => {
       return {
         id: item.hash,
@@ -73,11 +81,41 @@ export function TraceExplorerCriticalPath() {
       };
     }) ?? [];
 
-  const points: any[] = [];
-  const layers: any[] = [];
+  const layers = useMemo(() => {
+    if (!criticalPath|| !points || !points.length) {
+      return [];
+    }
+
+    const itemsById = criticalPath.reduce((mapping: Record<string, ICriticalPathItem>, item) => {
+        const entry = {[item.hash]: item};
+        return {...mapping,...entry};
+      }, {});
+
+    const maxDepth = Math.max(...points.map((point) => point.depth));
+
+    return [...new Array(maxDepth + 2)].map((_, depth) => {
+      return {
+        groupByRollup: (d: Datum) => d.layers[depth],
+        nodeLabel: (id: PrimitiveValue) => {
+          if (itemsById[id!]) {
+            return itemsById[id!].name;
+          }
+          return '';
+        },
+        showAccessor: (id: PrimitiveValue) => !!id,
+        shape: {
+          fillColor: (d: { dataName: string }) => {
+            const integer =
+              Math.abs(seedrandom(d.dataName).int32()) % colors.length;
+            return colors[integer];
+          },
+        },
+      };
+    });
+  }, [points, criticalPath]);
 
   const chartSize = {
-    height: layers.length * 20,
+    height: layers.length * 15,
     width: '100%',
   };
 
