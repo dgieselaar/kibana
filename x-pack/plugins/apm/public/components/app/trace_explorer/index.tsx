@@ -4,13 +4,14 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
+import { EuiFlexGroup, EuiFlexItem, EuiSwitch } from '@elastic/eui';
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
   TraceSearchQuery,
   TraceSearchType,
 } from '../../../../common/trace_explorer';
+
 import { useApmParams } from '../../../hooks/use_apm_params';
 import { useFetcher, FETCH_STATUS } from '../../../hooks/use_fetcher';
 import { useTimeRange } from '../../../hooks/use_time_range';
@@ -19,12 +20,14 @@ import { fromQuery, toQuery, push } from '../../shared/links/url_helpers';
 import { useWaterfallFetcher } from '../transaction_details/use_waterfall_fetcher';
 import { WaterfallWithSummary } from '../transaction_details/waterfall_with_summary';
 import { TraceSearchBox } from './trace_search_box';
-
+import { calculateCriticalPath, ICriticalPath } from './cpa_helper';
+import { CriticalPathFlamegraph } from './critical_path_flamegraph';
 export function TraceExplorer() {
   const [query, setQuery] = useState<TraceSearchQuery>({
     query: '',
     type: TraceSearchType.kql,
   });
+  const [ showCriticalPath, setShowCriticalPath] = useState(false);
 
   const {
     query: {
@@ -39,6 +42,7 @@ export function TraceExplorer() {
       detailTab,
     },
   } = useApmParams('/traces/explorer');
+
 
   const history = useHistory();
 
@@ -71,8 +75,14 @@ export function TraceExplorer() {
     [start, end, environment, queryFromUrlParams, typeFromUrlParams]
   );
 
-  const {} = useFetcher(
+  const {data: criticalPathData} = useFetcher(
     (callApmApi) => {
+      if(!showCriticalPath){
+        return {
+          criticalPath: [],
+        };
+      }
+
       const traceIds = traceSamplesData?.samples.map(
         (sample) => sample.traceId
       );
@@ -97,7 +107,7 @@ export function TraceExplorer() {
         },
       });
     },
-    [start, end, traceSamplesData]
+    [start, end, traceSamplesData, showCriticalPath]
   );
 
   useEffect(() => {
@@ -120,6 +130,11 @@ export function TraceExplorer() {
     start,
     end,
   });
+
+  var criticalPath : ICriticalPath | undefined;
+  if(showCriticalPath && criticalPathData){
+    criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
+  }
 
   const isLoading =
     traceSamplesStatus === FETCH_STATUS.LOADING ||
@@ -154,33 +169,49 @@ export function TraceExplorer() {
           </EuiFlexItem>
         </EuiFlexGroup>
       </EuiFlexItem>
-      <EuiFlexItem>
-        <WaterfallWithSummary
-          environment={environment}
-          isLoading={isLoading}
-          onSampleClick={(sample) => {
-            push(history, {
-              query: {
-                traceId: sample.traceId,
-                transactionId: sample.transactionId,
-                waterfallItemId: '',
-              },
-            });
-          }}
-          onTabClick={(nextDetailTab) => {
-            push(history, {
-              query: {
-                detailTab: nextDetailTab,
-              },
-            });
-          }}
-          traceSamples={traceSamplesData?.samples ?? []}
-          waterfall={waterfall}
-          detailTab={detailTab}
-          waterfallItemId={waterfallItemId}
-          serviceName={waterfall.entryWaterfallTransaction?.doc.service.name}
-        />
+      <EuiFlexItem grow={false} key={"critical path button"}>
+              <EuiSwitch
+                label="Show critical path"
+                checked={showCriticalPath}
+                onChange={() => setShowCriticalPath(!showCriticalPath)}
+              />
       </EuiFlexItem>
+      { showCriticalPath && criticalPath ? (
+          <EuiFlexItem grow>
+            <CriticalPathFlamegraph 
+              criticalPath={criticalPath}
+            />
+
+          </EuiFlexItem>
+      ) : (
+        <EuiFlexItem>
+          <WaterfallWithSummary
+            environment={environment}
+            isLoading={isLoading}
+            onSampleClick={(sample) => {
+              push(history, {
+                query: {
+                  traceId: sample.traceId,
+                  transactionId: sample.transactionId,
+                  waterfallItemId: '',
+                },
+              });
+            }}
+            onTabClick={(nextDetailTab) => {
+              push(history, {
+                query: {
+                  detailTab: nextDetailTab,
+                },
+              });
+            }}
+            traceSamples={traceSamplesData?.samples ?? []}
+            waterfall={waterfall}
+            detailTab={detailTab}
+            waterfallItemId={waterfallItemId}
+            serviceName={waterfall.entryWaterfallTransaction?.doc.service.name}
+          />
+        </EuiFlexItem>
+      )}
     </EuiFlexGroup>
   );
 }
