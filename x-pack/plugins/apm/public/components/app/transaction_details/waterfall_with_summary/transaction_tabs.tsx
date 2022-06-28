@@ -21,6 +21,7 @@ interface Props {
   serviceName?: string;
   waterfallItemId?: string;
   onTabClick: (tab: TransactionTab) => void;
+  hideTabs?: boolean;
 }
 
 export function TransactionTabs({
@@ -30,6 +31,7 @@ export function TransactionTabs({
   waterfallItemId,
   serviceName,
   onTabClick,
+  hideTabs,
 }: Props) {
   const tabs = [timelineTab, metadataTab, logsTab];
   const currentTab = tabs.find(({ key }) => key === detailTab) ?? timelineTab;
@@ -37,23 +39,27 @@ export function TransactionTabs({
 
   return (
     <React.Fragment>
-      <EuiTabs>
-        {tabs.map(({ key, label }) => {
-          return (
-            <EuiTab
-              onClick={() => {
-                onTabClick(key);
-              }}
-              isSelected={currentTab.key === key}
-              key={key}
-            >
-              {label}
-            </EuiTab>
-          );
-        })}
-      </EuiTabs>
+      {!hideTabs && (
+        <>
+          <EuiTabs>
+            {tabs.map(({ key, label }) => {
+              return (
+                <EuiTab
+                  onClick={() => {
+                    onTabClick(key);
+                  }}
+                  isSelected={currentTab.key === key}
+                  key={key}
+                >
+                  {label}
+                </EuiTab>
+              );
+            })}
+          </EuiTabs>
 
-      <EuiSpacer />
+          <EuiSpacer />
+        </>
+      )}
 
       <TabContent
         waterfallItemId={waterfallItemId}

@@ -23,7 +23,7 @@ export async function getCriticalPath({
   setup: Setup;
   start: number;
   end: number;
-  traceIds: string;
+  traceIds: string[];
 }) {
   const { apmEventClient } = setup;
 

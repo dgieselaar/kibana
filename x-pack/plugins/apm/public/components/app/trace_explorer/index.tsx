@@ -4,47 +4,56 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiFlexGroup, EuiFlexItem, EuiSwitch } from '@elastic/eui';
-import React, { useEffect, useState } from 'react';
+import {
+  EuiFlexGroup,
+  EuiFlexItem,
+  EuiSpacer,
+  EuiTab,
+  EuiTabs,
+} from '@elastic/eui';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import { i18n } from '@kbn/i18n';
 import {
   TraceSearchQuery,
   TraceSearchType,
 } from '../../../../common/trace_explorer';
 
 import { useApmParams } from '../../../hooks/use_apm_params';
-import { useFetcher, FETCH_STATUS } from '../../../hooks/use_fetcher';
 import { useTimeRange } from '../../../hooks/use_time_range';
 import { ApmDatePicker } from '../../shared/date_picker/apm_date_picker';
-import { fromQuery, toQuery, push } from '../../shared/links/url_helpers';
-import { useWaterfallFetcher } from '../transaction_details/use_waterfall_fetcher';
-import { WaterfallWithSummary } from '../transaction_details/waterfall_with_summary';
+import { fromQuery, toQuery } from '../../shared/links/url_helpers';
 import { TraceSearchBox } from './trace_search_box';
-import { calculateCriticalPath, ICriticalPath } from './cpa_helper';
-import { CriticalPathFlamegraph } from './critical_path_flamegraph';
-export function TraceExplorer() {
+import { useApmRoutePath } from '../../../hooks/use_apm_route_path';
+import { useApmRouter } from '../../../hooks/use_apm_router';
+import { TraceExplorerSamplesFetchContextProvider } from '../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
+import { APIClientRequestParamsOf } from '../../../services/rest/create_call_apm_api';
+import { TransactionTab } from '../transaction_details/waterfall_with_summary/transaction_tabs';
+
+export function TraceExplorer({ children }: { children: React.ReactElement }) {
   const [query, setQuery] = useState<TraceSearchQuery>({
     query: '',
     type: TraceSearchType.kql,
   });
-  const [ showCriticalPath, setShowCriticalPath] = useState(false);
+  const [showCriticalPath, setShowCriticalPath] = useState(false);
 
   const {
+    query: urlQuery,
     query: {
       rangeFrom,
       rangeTo,
       environment,
       query: queryFromUrlParams,
       type: typeFromUrlParams,
-      traceId,
-      transactionId,
-      waterfallItemId,
-      detailTab,
     },
   } = useApmParams('/traces/explorer');
 
-
   const history = useHistory();
+
+  const { start, end } = useTimeRange({
+    rangeFrom,
+    rangeTo,
+  });
 
   useEffect(() => {
     setQuery({
@@ -53,165 +62,84 @@ export function TraceExplorer() {
     });
   }, [queryFromUrlParams, typeFromUrlParams]);
 
-  const { start, end } = useTimeRange({
-    rangeFrom,
-    rangeTo,
-  });
+  const routePath = useApmRoutePath();
+  const router = useApmRouter();
 
-  const { data: traceSamplesData, status: traceSamplesStatus } = useFetcher(
-    (callApmApi) => {
-      return callApmApi('GET /internal/apm/traces/find', {
-        params: {
-          query: {
-            start,
-            end,
-            environment,
-            query: queryFromUrlParams,
-            type: typeFromUrlParams,
-          },
-        },
-      });
-    },
-    [start, end, environment, queryFromUrlParams, typeFromUrlParams]
-  );
-
-  const {data: criticalPathData} = useFetcher(
-    (callApmApi) => {
-      if(!showCriticalPath){
-        return {
-          criticalPath: [],
-        };
-      }
-
-      const traceIds = traceSamplesData?.samples.map(
-        (sample) => sample.traceId
-      );
-
-      if (traceIds === undefined) {
-        return;
-      }
-
-      if (!traceIds.length) {
-        return {
-          criticalPath: [],
-        };
-      }
-
-      return callApmApi('POST /internal/apm/traces/critical_path', {
-        params: {
-          body: {
-            traceIds,
-            start,
-            end,
-          },
-        },
-      });
-    },
-    [start, end, traceSamplesData, showCriticalPath]
-  );
-
-  useEffect(() => {
-    const nextSample = traceSamplesData?.samples[0];
-    const nextWaterfallItemId = '';
-    history.replace({
-      ...history.location,
-      search: fromQuery({
-        ...toQuery(history.location.search),
-        traceId: nextSample?.traceId ?? '',
-        transactionId: nextSample?.transactionId,
-        waterfallItemId: nextWaterfallItemId,
-      }),
-    });
-  }, [traceSamplesData, history]);
-
-  const { waterfall, status: waterfallStatus } = useWaterfallFetcher({
-    traceId,
-    transactionId,
-    start,
-    end,
-  });
-
-  var criticalPath : ICriticalPath | undefined;
-  if(showCriticalPath && criticalPathData){
-    criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
-  }
-
-  const isLoading =
-    traceSamplesStatus === FETCH_STATUS.LOADING ||
-    waterfallStatus === FETCH_STATUS.LOADING;
+  const params = useMemo<
+    APIClientRequestParamsOf<'GET /internal/apm/traces/find'>['params']
+  >(() => {
+    return {
+      query: {
+        start,
+        end,
+        environment,
+        query: queryFromUrlParams,
+        type: typeFromUrlParams,
+      },
+    };
+  }, [start, end, environment, queryFromUrlParams, typeFromUrlParams]);
 
   return (
-    <EuiFlexGroup direction="column" gutterSize="s">
-      <EuiFlexItem>
-        <EuiFlexGroup direction="row">
-          <EuiFlexItem grow>
-            <TraceSearchBox
-              query={query}
-              error={false}
-              loading={false}
-              onQueryCommit={() => {
-                history.push({
-                  ...history.location,
-                  search: fromQuery({
-                    ...toQuery(history.location.search),
-                    query: query.query,
-                    type: query.type,
-                  }),
-                });
-              }}
-              onQueryChange={(nextQuery) => {
-                setQuery(nextQuery);
-              }}
-            />
-          </EuiFlexItem>
-          <EuiFlexItem grow={false}>
-            <ApmDatePicker />
-          </EuiFlexItem>
-        </EuiFlexGroup>
-      </EuiFlexItem>
-      <EuiFlexItem grow={false} key={"critical path button"}>
-              <EuiSwitch
-                label="Show critical path"
-                checked={showCriticalPath}
-                onChange={() => setShowCriticalPath(!showCriticalPath)}
-              />
-      </EuiFlexItem>
-      { showCriticalPath && criticalPath ? (
-          <EuiFlexItem grow>
-            <CriticalPathFlamegraph 
-              criticalPath={criticalPath}
-            />
-
-          </EuiFlexItem>
-      ) : (
+    <TraceExplorerSamplesFetchContextProvider params={params}>
+      <EuiFlexGroup direction="column" gutterSize="none">
         <EuiFlexItem>
-          <WaterfallWithSummary
-            environment={environment}
-            isLoading={isLoading}
-            onSampleClick={(sample) => {
-              push(history, {
-                query: {
-                  traceId: sample.traceId,
-                  transactionId: sample.transactionId,
-                  waterfallItemId: '',
-                },
-              });
-            }}
-            onTabClick={(nextDetailTab) => {
-              push(history, {
-                query: {
-                  detailTab: nextDetailTab,
-                },
-              });
-            }}
-            traceSamples={traceSamplesData?.samples ?? []}
-            waterfall={waterfall}
-            detailTab={detailTab}
-            waterfallItemId={waterfallItemId}
-            serviceName={waterfall.entryWaterfallTransaction?.doc.service.name}
-          />
+          <EuiFlexGroup direction="row">
+            <EuiFlexItem grow>
+              <TraceSearchBox
+                query={query}
+                error={false}
+                loading={false}
+                onQueryCommit={() => {
+                  history.push({
+                    ...history.location,
+                    search: fromQuery({
+                      ...toQuery(history.location.search),
+                      query: query.query,
+                      type: query.type,
+                    }),
+                  });
+                }}
+                onQueryChange={(nextQuery) => {
+                  setQuery(nextQuery);
+                }}
+              />
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <ApmDatePicker />
+            </EuiFlexItem>
+          </EuiFlexGroup>
         </EuiFlexItem>
-      )}
-    </EuiFlexGroup>
+        <EuiTabs>
+          <EuiTab
+            isSelected={routePath === '/traces/explorer/waterfall'}
+            href={router.link('/traces/explorer/waterfall', {
+              query: {
+                ...urlQuery,
+                traceId: '',
+                transactionId: '',
+                detailTab: TransactionTab.timeline,
+                waterfallItemId: '',
+              },
+            })}
+          >
+            {i18n.translate('xpack.apm.traceExplorer.waterfallTab', {
+              defaultMessage: 'Waterfall',
+            })}
+          </EuiTab>
+          <EuiTab
+            isSelected={routePath === '/traces/explorer/critical-path'}
+            href={router.link('/traces/explorer/critical-path', {
+              query: urlQuery,
+            })}
+          >
+            {i18n.translate('xpack.apm.traceExplorer.criticalPathTab', {
+              defaultMessage: 'Critical path',
+            })}
+          </EuiTab>
+        </EuiTabs>
+        <EuiSpacer size="s" />
+        <EuiFlexItem>{children}</EuiFlexItem>
+      </EuiFlexGroup>
+    </TraceExplorerSamplesFetchContextProvider>
   );
 }

@@ -56,6 +56,8 @@ export type AbstractAPMClient = RouteRepositoryClient<
   APMClientOptions
 >;
 
+export { APIEndpoint };
+
 export let callApmApi: APMClient = () => {
   throw new Error(
     'callApmApi has to be initialized before used. Call createCallApmApi first.'

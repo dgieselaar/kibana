@@ -34,6 +34,7 @@ interface Props {
   serviceName?: string;
   waterfallItemId?: string;
   detailTab?: TransactionTab;
+  hideTabs?: boolean;
 }
 
 export function WaterfallWithSummary({
@@ -46,6 +47,7 @@ export function WaterfallWithSummary({
   serviceName,
   waterfallItemId,
   detailTab,
+  hideTabs,
 }: Props) {
   const [sampleActivePage, setSampleActivePage] = useState(0);
 
@@ -137,6 +139,7 @@ export function WaterfallWithSummary({
             waterfallItemId={waterfallItemId}
             onTabClick={onTabClick}
             waterfall={waterfall}
+            hideTabs={hideTabs}
           />
         </>
       )}

@@ -32,6 +32,8 @@ import { RedirectPathBackendDetailView } from './redirect_path_backend_detail_vi
 import { RedirectBackendsToBackendDetailOverview } from './redirect_backends_to_backend_detail_view';
 import { BackendOperationDetailView } from '../../app/backend_operation_detail_view';
 import { TimeRangeMetadataContextProvider } from '../../../context/time_range_metadata/time_range_metadata_context';
+import { TraceExplorerCriticalPath } from '../../app/trace_explorer/trace_explorer_critical_path';
+import { TraceExplorerWaterfall } from '../../app/trace_explorer/trace_explorer_waterfall';
 
 function page<
   TPath extends string,
@@ -204,7 +206,11 @@ export const home = {
         ),
         children: {
           '/traces/explorer': {
-            element: <TraceExplorer />,
+            element: (
+              <TraceExplorer>
+                <Outlet />
+              </TraceExplorer>
+            ),
             params: t.type({
               query: t.type({
                 query: t.string,
@@ -212,24 +218,43 @@ export const home = {
                   t.literal(TraceSearchType.kql),
                   t.literal(TraceSearchType.eql),
                 ]),
-                waterfallItemId: t.string,
-                traceId: t.string,
-                transactionId: t.string,
-                detailTab: t.union([
-                  t.literal(TransactionTab.timeline),
-                  t.literal(TransactionTab.metadata),
-                  t.literal(TransactionTab.logs),
-                ]),
               }),
             }),
+            children: {
+              '/traces/explorer/critical-path': {
+                element: <TraceExplorerCriticalPath />,
+              },
+              '/traces/explorer/waterfall': {
+                element: <TraceExplorerWaterfall />,
+                params: t.type({
+                  query: t.type({
+                    waterfallItemId: t.string,
+                    traceId: t.string,
+                    transactionId: t.string,
+                    detailTab: t.union([
+                      t.literal(TransactionTab.timeline),
+                      t.literal(TransactionTab.metadata),
+                      t.literal(TransactionTab.logs),
+                    ]),
+                  }),
+                }),
+                defaults: {
+                  query: {
+                    waterfallItemId: '',
+                    traceId: '',
+                    transactionId: '',
+                    detailTab: TransactionTab.timeline,
+                  },
+                },
+              },
+              '/traces/explorer': {
+                element: <RedirectTo pathname="/traces/explorer/waterfall" />,
+              },
+            },
             defaults: {
               query: {
                 query: '',
                 type: TraceSearchType.kql,
-                waterfallItemId: '',
-                traceId: '',
-                transactionId: '',
-                detailTab: TransactionTab.timeline,
               },
             },
           },
