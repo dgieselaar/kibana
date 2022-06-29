@@ -205,7 +205,7 @@ const criticalPathRoute = createApmServerRoute({
       rangeRt,
       t.type({
         traceIds: t.array(t.string),
-        maxNumTraces: t.number,
+        maxNumTraces: toNumberRt,
       }),
     ]),
   }),

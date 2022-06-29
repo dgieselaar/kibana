@@ -72,15 +72,18 @@ export function TraceExplorerCriticalPath() {
     criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
   }
 
-  const points =
-    criticalPath?.map((item) => {
-      return {
-        id: item.hash,
-        value: item.selfDuration,
-        depth: item.depth,
-        layers: item.layers,
-      };
-    }) ?? [];
+  const points = useMemo(() => {
+    return (
+      criticalPath?.map((item) => {
+        return {
+          id: item.hash,
+          value: item.selfDuration,
+          depth: item.depth,
+          layers: item.layers,
+        };
+      }) ?? []
+    );
+  }, [criticalPath]);
 
   const layers = useMemo(() => {
     if (!criticalPath || !points || !points.length) {
