@@ -28,9 +28,10 @@ import { useTimeRange } from '../../../../hooks/use_time_range';
 import { Transaction } from '../../../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../../../typings/es_schemas/ui/span';
 import { ICriticalPathItem } from '../../../../../typings/critical_path';
+import { SampleSizeBadge } from './sample_size_badge';
 
 const colors = euiPaletteForStatus(130).slice(30, 130);
-const maxNumTraces = 50;
+const maxNumTraces = 100;
 export function TraceExplorerCriticalPath() {
   const {
     query: { rangeFrom, rangeTo, sampleRangeFrom, sampleRangeTo },
@@ -150,7 +151,12 @@ export function TraceExplorerCriticalPath() {
   };
 
   return (
-    <EuiFlexGroup direction="row">
+    <EuiFlexGroup direction="column">
+      <EuiFlexItem>
+        <SampleSizeBadge 
+          sampleSize={criticalPath.sampleSize}
+        />
+      </EuiFlexItem>
       <EuiFlexItem grow>
         <Chart size={chartSize}>
           <Settings theme={[themeOverrides, ...chartTheme]} />
