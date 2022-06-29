@@ -5,14 +5,19 @@
  * 2.0.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { keyBy } from 'lodash';
+import { EuiFlexGroup } from '@elastic/eui';
+import { EuiFlexItem } from '@elastic/eui';
+import { EuiSwitch } from '@elastic/eui';
 import {
   IWaterfall,
   WaterfallLegendType,
 } from './waterfall/waterfall_helpers/waterfall_helpers';
 import { Waterfall } from './waterfall';
 import { WaterfallLegends } from './waterfall_legends';
+import { calculateCriticalPath } from './critical_path';
+
 
 interface Props {
   waterfallItemId?: string;
@@ -25,8 +30,14 @@ export function WaterfallContainer({
   waterfallItemId,
   waterfall,
 }: Props) {
+  const [ showInTabCriticalPath, setShowInTabCriticalPath] = useState(false);
+
   if (!waterfall) {
     return null;
+  }
+
+  if (showInTabCriticalPath  && waterfall.entryWaterfallTransaction && !waterfall.entryWaterfallTransaction.criticalPath){
+    calculateCriticalPath(waterfall)
   }
 
   const { legends, items } = waterfall;
@@ -75,8 +86,24 @@ export function WaterfallContainer({
 
   return (
     <div>
-      <WaterfallLegends legends={legendsWithFallbackLabel} type={colorBy} />
-      <Waterfall waterfallItemId={waterfallItemId} waterfall={waterfall} />
+      <EuiFlexGroup direction="row" gutterSize="s" justifyContent='spaceBetween'>
+            <EuiFlexItem grow={false} key={"legend"}>
+              <WaterfallLegends legends={legendsWithFallbackLabel} type={colorBy} />
+            </EuiFlexItem>
+            <EuiFlexItem grow={false} key={"critical path button"}>
+              <EuiSwitch
+                label="Show critical path"
+                checked={showInTabCriticalPath}
+                onChange={() => setShowInTabCriticalPath(!showInTabCriticalPath)}
+              />
+            </EuiFlexItem>
+      </EuiFlexGroup>
+      
+      <Waterfall
+        waterfallItemId={waterfallItemId}
+        waterfall={waterfall}
+        showCriticalPath={showInTabCriticalPath}
+      />
     </div>
   );
 }
