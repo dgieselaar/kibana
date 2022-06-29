@@ -19,11 +19,13 @@ export async function getCriticalPath({
   start,
   end,
   traceIds,
+  maxNumTraces,
 }: {
   setup: Setup;
   start: number;
   end: number;
   traceIds: string[];
+  maxNumTraces: number;
 }) {
   const { apmEventClient } = setup;
 
@@ -40,7 +42,7 @@ export async function getCriticalPath({
           bool: {
             filter: [
               ...rangeQuery(start, end),
-              ...termsQuery(TRACE_ID, ...traceIds),
+              ...termsQuery(TRACE_ID, ...traceIds.slice(0, Math.min(maxNumTraces, traceIds.length))),
             ],
           },
         },

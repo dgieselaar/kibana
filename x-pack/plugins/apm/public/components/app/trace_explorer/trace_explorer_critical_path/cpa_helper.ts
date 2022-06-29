@@ -173,7 +173,7 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
     orderedChildren.forEach((child) => {
       const childStart = Math.max(child.start, segment.intervalStart);
       const childEnd = Math.min(child.end, scanTimestamp);
-      if (childStart >= scanTimestamp || childEnd < segment.intervalStart) {
+      if (childStart >= scanTimestamp || childEnd < segment.intervalStart || childEnd > scanTimestamp) {
         // ignore this child as it is not on the critical path
       } else {
         if (childEnd < scanTimestamp) {

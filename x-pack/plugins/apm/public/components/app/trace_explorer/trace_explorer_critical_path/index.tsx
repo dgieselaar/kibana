@@ -29,7 +29,7 @@ import { useTimeRange } from '../../../../hooks/use_time_range';
 import { calculateCriticalPath, ICriticalPathItem } from './cpa_helper';
 
 const colors = euiPaletteForTemperature(100).slice(50, 85);
-
+const maxNumTraces = 50;
 export function TraceExplorerCriticalPath() {
   const {
     query: { rangeFrom, rangeTo },
@@ -59,6 +59,7 @@ export function TraceExplorerCriticalPath() {
             traceIds,
             start,
             end,
+            maxNumTraces,
           },
         },
       });
@@ -66,25 +67,20 @@ export function TraceExplorerCriticalPath() {
     [start, end, traceSamplesData]
   );
 
-  const criticalPath = useMemo(() => {
-    if (criticalPathData) {
-      return calculateCriticalPath(criticalPathData.criticalPath);
-    }
-    return undefined;
-  }, [criticalPathData]);
+  let criticalPath: ICriticalPathItem[] | undefined;
+  if (criticalPathData) {
+    criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
+  }
 
-  const points = useMemo(() => {
-    return (
-      criticalPath?.map((item) => {
-        return {
-          id: item.hash,
-          value: item.selfDuration,
-          depth: item.depth,
-          layers: item.layers,
-        };
-      }) ?? []
-    );
-  }, [criticalPath]);
+  const points =
+    criticalPath?.map((item) => {
+      return {
+        id: item.hash,
+        value: item.selfDuration,
+        depth: item.depth,
+        layers: item.layers,
+      };
+    }) ?? [];
 
   const layers = useMemo(() => {
     if (!criticalPath || !points || !points.length) {

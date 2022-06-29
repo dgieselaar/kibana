@@ -7,16 +7,16 @@
  */
 
 let seq = 0;
-
+let startDate = Date.now();
 function generateId(seed?: string, length: number = 32) {
   const str = seed ?? String(seq++);
   return str.padStart(length, '0');
 }
 
 export function generateShortId(seed?: string) {
-  return generateId(seed, 16);
+  return seed ? generateId(seed, 16) : generateId(String((startDate * 1000) + seq++), 16);
 }
 
 export function generateLongId(seed?: string) {
-  return generateId(seed, 32);
+  return seed ? generateId(seed, 32) : generateId(`a${String((startDate * 1000000) + seq++)}`, 32);
 }
