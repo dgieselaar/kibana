@@ -23,8 +23,9 @@ const criticalPathForItem = ( waterfall: IWaterfall,item: IWaterfallSpanOrTransa
     var scanTimestamp = end;
     orderedChildren.forEach(child => {
       const childStart = Math.max(child.offset + child.skew, start);
-      const childEnd = Math.min(child.offset + child.skew + child.duration, scanTimestamp);
-      if(childStart >= scanTimestamp) {
+      const childSpanEnd = child.offset + child.skew + child.duration;
+      const childEnd = Math.min(childSpanEnd, scanTimestamp);
+      if(childStart >= scanTimestamp || childEnd < start || childSpanEnd > scanTimestamp) {
         // ignore this child as it is not on the critical path
       } else {
         if(childEnd < scanTimestamp - 1000){

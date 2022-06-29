@@ -92,7 +92,13 @@ const CriticalPathItemSegment = euiStyled.div<ICriticalPathBarStyleProps>`
   left: ${(props) => props.left}%;
   width: ${(props) => props.width}%;
   min-width: 2px;
-  background-color: red;
+  background: repeating-linear-gradient(
+    45deg,
+    #de1d55,
+    #de1d55 5px,
+    #ed799b 5px,
+    #ed799b 10px
+  );
 `;
 
 const ItemText = euiStyled.span`

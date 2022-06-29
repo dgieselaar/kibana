@@ -136,7 +136,7 @@ export function TraceExplorer({ children }: { children: React.ReactElement }) {
             })}
           >
             {i18n.translate('xpack.apm.traceExplorer.criticalPathTab', {
-              defaultMessage: 'Critical path',
+              defaultMessage: 'Aggregated Critical path',
             })}
           </EuiTab>
         </EuiTabs>

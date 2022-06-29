@@ -16,7 +16,7 @@ import {
 import {
   EuiFlexGroup,
   EuiFlexItem,
-  colorPalette
+  euiPaletteForStatus,
 } from '@elastic/eui';
 import React, { useMemo } from 'react';
 import { useChartTheme } from '@kbn/observability-plugin/public';
@@ -27,7 +27,8 @@ import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { calculateCriticalPath, ICriticalPathItem } from './cpa_helper';
 
-const colors = colorPalette(['fbddd6','#c63219'],100);
+//const colors = colorPalette(['fbddd6','#c63219'],100);
+const colors = euiPaletteForStatus(130).slice(30, 130);
 const maxNumTraces = 50;
 export function TraceExplorerCriticalPath() {
   const {
@@ -46,7 +47,7 @@ export function TraceExplorerCriticalPath() {
 
       const traceIds = traceSamplesData?.samples
         .filter(
-          (sample) => sample.duration * 1000 >= from && sample.duration <= to
+          (sample) => sample.duration >= from && sample.duration <= to
         )
         .map((sample) => sample.traceId);
 
