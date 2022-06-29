@@ -9,7 +9,6 @@
 import { apm, timerange } from '..';
 import { ApmFields } from '../lib/apm/apm_fields';
 import { BaseSpan } from '../lib/apm/base_span';
-import { Span } from '../lib/apm/span';
 import { Scenario } from '../scripts/scenario';
 import { RunOptions } from '../scripts/utils/parse_run_cli_flags';
 

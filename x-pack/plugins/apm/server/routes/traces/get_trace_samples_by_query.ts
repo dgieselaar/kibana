@@ -167,8 +167,7 @@ export async function getTraceSamplesByQuery({
     traceSamplesResponse.aggregations?.transactionId.buckets.map((bucket) => ({
       traceId: bucket.latest.top[0].metrics['trace.id'] as string,
       transactionId: bucket.key as string,
-      duration:
-        (bucket.latest.top[0].metrics[TRANSACTION_DURATION] as number) / 1000,
+      duration: bucket.latest.top[0].metrics[TRANSACTION_DURATION] as number,
     })) ?? []
   );
 }

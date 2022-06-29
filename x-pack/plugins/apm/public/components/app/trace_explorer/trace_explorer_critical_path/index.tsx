@@ -32,7 +32,7 @@ const colors = euiPaletteForTemperature(100).slice(50, 85);
 const maxNumTraces = 50;
 export function TraceExplorerCriticalPath() {
   const {
-    query: { rangeFrom, rangeTo },
+    query: { rangeFrom, rangeTo, sampleRangeFrom, sampleRangeTo },
   } = useApmParams('/traces/explorer/critical-path');
 
   const { data: traceSamplesData } = useTraceExplorerSamplesFetchContext();
@@ -41,9 +41,15 @@ export function TraceExplorerCriticalPath() {
 
   const { data: criticalPathData } = useFetcher(
     (callApmApi) => {
-      const traceIds = traceSamplesData?.samples.map(
-        (sample) => sample.traceId
-      );
+      const from = sampleRangeFrom ?? 0;
+      const to =
+        (sampleRangeTo ?? 0) === 0 ? Number.MAX_VALUE : sampleRangeTo ?? 0;
+
+      const traceIds = traceSamplesData?.samples
+        .filter(
+          (sample) => sample.duration * 1000 >= from && sample.duration <= to
+        )
+        .map((sample) => sample.traceId);
 
       if (traceIds === undefined) {
         return;
@@ -64,7 +70,7 @@ export function TraceExplorerCriticalPath() {
         },
       });
     },
-    [start, end, traceSamplesData]
+    [start, end, traceSamplesData, sampleRangeFrom, sampleRangeTo]
   );
 
   let criticalPath: ICriticalPathItem[] | undefined;
