@@ -12,6 +12,8 @@ import { Setup } from '../../lib/helpers/setup_request';
 import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../typings/es_schemas/ui/span';
 
+import { calculateCriticalPath } from './cpa_helper';
+
 const SIZE = 1000;
 
 export async function getCriticalPath({
@@ -70,5 +72,5 @@ export async function getCriticalPath({
 
   const events = await getTraceEvents();
 
-  return events;
+  return calculateCriticalPath(events);
 }

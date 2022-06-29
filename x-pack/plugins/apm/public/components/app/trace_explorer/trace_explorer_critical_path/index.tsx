@@ -25,9 +25,10 @@ import { useApmParams } from '../../../../hooks/use_apm_params';
 import { useFetcher } from '../../../../hooks/use_fetcher';
 import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
-import { calculateCriticalPath, ICriticalPathItem } from './cpa_helper';
+import { Transaction } from '../../../../../typings/es_schemas/ui/transaction';
+import { Span } from '../../../../../typings/es_schemas/ui/span';
+import { ICriticalPathItem } from '../../../../../typings/critical_path';
 
-//const colors = colorPalette(['fbddd6','#c63219'],100);
 const colors = euiPaletteForStatus(130).slice(30, 130);
 const maxNumTraces = 50;
 export function TraceExplorerCriticalPath() {
@@ -51,12 +52,8 @@ export function TraceExplorerCriticalPath() {
         )
         .map((sample) => sample.traceId);
 
-      if (traceIds === undefined) {
-        return;
-      }
-
-      if (!traceIds.length) {
-        return Promise.resolve({ criticalPath: [] });
+      if (traceIds === undefined || !traceIds.length) {
+        return Promise.resolve({ items: [] , sampleSize: 0});
       }
 
       return callApmApi('POST /internal/apm/traces/critical_path', {
@@ -73,32 +70,26 @@ export function TraceExplorerCriticalPath() {
     [start, end, traceSamplesData, sampleRangeFrom, sampleRangeTo]
   );
 
-  let criticalPath: ICriticalPathItem[] | undefined;
-  if (criticalPathData) {
-    criticalPath = calculateCriticalPath(criticalPathData.criticalPath);
-  }
-
+  const criticalPath = criticalPathData ?? { items: [] , sampleSize: 0};
   const points = useMemo(() => {
-    return (
-      criticalPath?.map((item) => {
+    return criticalPath.items.map((item) => {
         return {
           id: item.hash,
           value: item.selfDuration,
           depth: item.depth,
           layers: item.layers,
         };
-      }) ?? []
-    );
+      });
   }, [criticalPath]);
 
-  const overallValue = criticalPath?.find(p => p.depth === 0)?.duration ?? 1;
+  const overallValue = criticalPath.items.find(p => p.depth === 0)?.duration ?? 1;
 
   const layers = useMemo(() => {
-    if (!criticalPath || !points || !points.length) {
+    if (!points.length) {
       return [];
     }
 
-    const itemsById = criticalPath.reduce(
+    const itemsById = criticalPath.items.reduce(
       (mapping: Record<string, ICriticalPathItem>, item) => {
         const entry = { [item.hash]: item };
         return { ...mapping, ...entry };
@@ -112,8 +103,17 @@ export function TraceExplorerCriticalPath() {
       return {
         groupByRollup: (d: Datum) => d.layers[depth],
         nodeLabel: (id: PrimitiveValue) => {
-          if (itemsById[id!]) {
-            return itemsById[id!].name;
+          const item = itemsById[id!];
+          if (item) {
+            if(item.docType === 'transaction'){
+              const transaction = item.sampleDoc as Transaction;
+              return `${transaction.service.name} - ${item.name}`;
+            } else if(item.docType === 'span'){
+              const span = item.sampleDoc as Span;
+              return `${span.service.name} - ${item.name}`;
+            } 
+              
+            return item.name;
           }
           return '';
         },

@@ -24,10 +24,9 @@ import { getTraceItems } from './get_trace_items';
 import { getTraceSamplesByQuery } from './get_trace_samples_by_query';
 import { getRandomSampler } from '../../lib/helpers/get_random_sampler';
 import { getCriticalPath } from './get_critical_path';
-import { Span } from '../../../typings/es_schemas/ui/span';
-import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { OverallLatencyDistributionResponse } from '../latency_distribution/types';
 import { getTracesLatencyDistribution } from './get_traces_latency_distribution';
+import { ICriticalPath } from '../../../typings/critical_path';
 
 const tracesRoute = createApmServerRoute({
   endpoint: 'GET /internal/apm/traces',
@@ -214,22 +213,18 @@ const criticalPathRoute = createApmServerRoute({
   },
   handler: async (
     resources
-  ): Promise<{
-    criticalPath: Array<Transaction | Span>;
-  }> => {
+  ): Promise<ICriticalPath> => {
     const { start, end, traceIds, maxNumTraces } = resources.params.body;
 
     const setup = await setupRequest(resources);
 
-    return {
-      criticalPath: await getCriticalPath({
+    return await getCriticalPath({
         setup,
         start,
         end,
         traceIds,
         maxNumTraces,
-      }),
-    };
+      });
   },
 });
 

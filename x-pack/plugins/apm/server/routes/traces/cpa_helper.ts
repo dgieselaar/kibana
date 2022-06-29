@@ -7,8 +7,9 @@
 
 import { groupBy } from 'lodash';
 import hash from 'object-hash';
-import { Transaction } from '../../../../../typings/es_schemas/ui/transaction';
-import { Span } from '../../../../../typings/es_schemas/ui/span';
+import { Transaction } from '../../../typings/es_schemas/ui/transaction';
+import { Span } from '../../../typings/es_schemas/ui/span';
+import { ICriticalPathItem, ICriticalPath } from '../../../typings/critical_path';
 
 const ROOT_ID = 'root';
 
@@ -36,25 +37,15 @@ interface TraceSegment {
   layers: Record<string, string>;
 }
 
-export interface ICriticalPathItem {
-  hash: string;
-  name: string;
-  selfDuration: number;
-  duration: number;
-  parentHash: string;
-  depth: number;
-  layers: Record<string, string>;
-}
-
 export const calculateCriticalPath = (
   criticalPathData: Array<Transaction | Span>
-): ICriticalPathItem[] => {
+): ICriticalPath => {
   const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
   const criticalPaths = Object.entries(tracesMap)
     .map((entry) => getTrace(entry[1]))
     .filter((t) => t !== undefined)
-    .map((trace) => calculateCriticalPathForTrace(trace));
-  const numOfcriticalPaths = criticalPaths.length;
+    .map((trace) => calculateCriticalPathForTrace(trace!));
+  const sampleSize = criticalPaths.length;
   const criticalPath: Record<string, ICriticalPathItem> = {};
 
   criticalPaths.forEach((cp) => {
@@ -63,16 +54,19 @@ export const calculateCriticalPath = (
       if (!obj) {
         criticalPath[cpi.hash] = cpi;
         obj = cpi;
-        obj.selfDuration = obj.selfDuration / numOfcriticalPaths;
-        obj.duration = obj.duration / numOfcriticalPaths;
+        obj.selfDuration = obj.selfDuration / sampleSize;
+        obj.duration = obj.duration / sampleSize;
       } else {
-        obj.selfDuration += cpi.selfDuration / numOfcriticalPaths;
-        obj.duration += cpi.duration / numOfcriticalPaths;
+        obj.selfDuration += cpi.selfDuration / sampleSize;
+        obj.duration += cpi.duration / sampleSize;
       }
     });
   });
 
-  return Object.entries(criticalPath).map((entry) => entry[1]);
+  return {
+    items: Object.entries(criticalPath).map((entry) => entry[1]),
+    sampleSize: sampleSize,
+  };
 };
 
 const getTrace = (
@@ -121,42 +115,42 @@ const getTrace = (
   }
 };
 
-const calculateCriticalPathForTrace = (trace: ITrace | undefined) => {
-  if (trace) {
-    const calculateCriticalPathForChildren: TraceSegment[] = [
-      {
-        item: trace.root,
-        intervalStart: trace.root.start,
-        intervalEnd: trace.root.end,
-        parentHash: ROOT_ID,
-        depth: 1,
-        layers: { [0]: ROOT_ID },
-      },
-    ];
-
-    const criticalPathSegments: ICriticalPathItem[] = [];
-
-    while (calculateCriticalPathForChildren.length > 0) {
-      const nextSegment = calculateCriticalPathForChildren.pop();
-      if (nextSegment) {
-        const result = criticalPathForItem(trace, nextSegment);
-        calculateCriticalPathForChildren.push(...result.childrenOnCriticalPath);
-        criticalPathSegments.push(result.criticalPathItem);
-      }
-    }
-
-    const root = {
-      hash: ROOT_ID,
-      name: ROOT_ID,
-      selfDuration: 0,
-      duration: trace.root.end - trace.root.start,
-      parentHash: '',
-      depth: 0,
+const calculateCriticalPathForTrace = (trace: ITrace) => {
+  const calculateCriticalPathForChildren: TraceSegment[] = [
+    {
+      item: trace.root,
+      intervalStart: trace.root.start,
+      intervalEnd: trace.root.end,
+      parentHash: ROOT_ID,
+      depth: 1,
       layers: { [0]: ROOT_ID },
-    };
+    },
+  ];
 
-    return [root, ...criticalPathSegments];
+  const criticalPathSegments: ICriticalPathItem[] = [];
+
+  while (calculateCriticalPathForChildren.length > 0) {
+    const nextSegment = calculateCriticalPathForChildren.pop();
+    if (nextSegment) {
+      const result = criticalPathForItem(trace, nextSegment);
+      calculateCriticalPathForChildren.push(...result.childrenOnCriticalPath);
+      criticalPathSegments.push(result.criticalPathItem);
+    }
   }
+
+  const root = {
+    hash: ROOT_ID,
+    name: ROOT_ID,
+    selfDuration: 0,
+    duration: trace.root.end - trace.root.start,
+    parentHash: '',
+    depth: 0,
+    layers: { [0]: ROOT_ID },
+    docType: 'none',
+  };
+
+  return [root, ...criticalPathSegments];
+
 };
 
 const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
@@ -206,6 +200,8 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
       parentHash: segment.parentHash,
       depth: segment.depth,
       layers: thisLayers,
+      docType: item.span ? 'span' : (item.transaction ? 'transaction' : 'none'),
+      sampleDoc: item.span ?? item.transaction, 
     },
     childrenOnCriticalPath,
   };
