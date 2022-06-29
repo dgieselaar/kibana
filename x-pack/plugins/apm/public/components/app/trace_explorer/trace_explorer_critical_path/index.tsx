@@ -16,9 +16,8 @@ import {
 import {
   EuiFlexGroup,
   EuiFlexItem,
-  euiPaletteForTemperature,
+  colorPalette
 } from '@elastic/eui';
-import seedrandom from 'seedrandom';
 import React, { useMemo } from 'react';
 import { useChartTheme } from '@kbn/observability-plugin/public';
 import { useTraceExplorerSamplesFetchContext } from '../../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
@@ -28,7 +27,7 @@ import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { calculateCriticalPath, ICriticalPathItem } from './cpa_helper';
 
-const colors = euiPaletteForTemperature(100).slice(50, 85);
+const colors = colorPalette(['fbddd6','#c63219'],100);
 const maxNumTraces = 50;
 export function TraceExplorerCriticalPath() {
   const {
@@ -91,6 +90,8 @@ export function TraceExplorerCriticalPath() {
     );
   }, [criticalPath]);
 
+  const overallValue = criticalPath?.find(p => p.depth === 0)?.duration ?? 1;
+
   const layers = useMemo(() => {
     if (!criticalPath || !points || !points.length) {
       return [];
@@ -117,10 +118,10 @@ export function TraceExplorerCriticalPath() {
         },
         showAccessor: (id: PrimitiveValue) => !!id,
         shape: {
-          fillColor: (d: { dataName: string }) => {
-            const integer =
-              Math.abs(seedrandom(d.dataName).int32()) % colors.length;
-            return colors[integer];
+          fillColor: (d: { dataName: string}) => {
+            const value = itemsById[d.dataName].selfDuration;
+            const idx = Math.max(0, Math.floor(100 * value / overallValue) % 101 - 1);
+            return colors[idx];
           },
         },
       };
