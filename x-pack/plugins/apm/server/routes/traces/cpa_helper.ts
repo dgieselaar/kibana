@@ -14,6 +14,7 @@ import {
   ICriticalPath,
 } from '../../../typings/critical_path';
 
+
 const ROOT_ID = 'root';
 
 interface ITraceItem {
@@ -24,6 +25,7 @@ interface ITraceItem {
   end: number;
   span?: Span;
   transaction?: Transaction;
+  skew: number;
 }
 
 interface ITrace {
@@ -72,38 +74,70 @@ export const calculateCriticalPath = (
   };
 };
 
+const getId = (item: Transaction | Span) => { return item.span ? (item as Span).span.id : (item as Transaction).transaction.id };
+
+const transformItem = (item: Transaction | Span) => {
+  const docType = item.span ? 'span' : 'transaction';
+  switch (docType) {
+    case 'span': {
+      const span = item as Span;
+      return {
+        name: span.span.name,
+        span,
+        transaction: undefined,
+        id: span.span.id,
+        parentId: span.parent?.id,
+        start: span.timestamp.us,
+        end: span.timestamp.us + span.span.duration.us,
+        skew: 0,
+      };
+    }
+    case 'transaction':
+      const transaction = item as Transaction;
+      return {
+        name: transaction.transaction.name,
+        span: undefined,
+        transaction,
+        id: transaction.transaction.id,
+        parentId: transaction.parent?.id,
+        start: transaction.timestamp.us,
+        end: transaction.timestamp.us + transaction.transaction.duration.us,
+        skew: 0,
+      };
+  }
+};
+
 const getTrace = (
   criticalPathData: Array<Transaction | Span>
 ): ITrace | undefined => {
-  const traceItems = criticalPathData.map((item) => {
-    const docType: 'span' | 'transaction' = item.processor.event;
-    switch (docType) {
-      case 'span': {
-        const span = item as Span;
-        return {
-          name: span.span.name,
-          span,
-          transaction: undefined,
-          id: span.span.id,
-          parentId: span.parent?.id,
-          start: span.timestamp.us,
-          end: span.timestamp.us + span.span.duration.us,
-        };
-      }
-      case 'transaction':
-        const transaction = item as Transaction;
-        return {
-          name: transaction.transaction.name,
-          span: undefined,
-          transaction,
-          id: transaction.transaction.id,
-          parentId: transaction.parent?.id,
-          start: transaction.timestamp.us,
-          end: transaction.timestamp.us + transaction.transaction.duration.us,
-        };
-    }
-  });
+  const rootTraceItem = criticalPathData.find(i => !(i.parent?.id));
+  if (!rootTraceItem) {
+    return undefined;
+  }
+  const itemsToProcess: {
+    parent?: ITraceItem;
+    item: Transaction | Span;
+  }[] = [{ parent: undefined, item: rootTraceItem! }];
 
+  const traceItems: Array<ITraceItem> = [];
+  while (itemsToProcess.length > 0) {
+    const toProcess = itemsToProcess.shift();
+    if (toProcess) {
+      const { parent, item } = toProcess;
+
+      const transformedItem = transformItem(item);
+
+      const skew = getClockSkew(transformedItem, parent);
+      transformedItem.skew = skew;
+      transformedItem.start += skew;
+      transformedItem.end += skew;
+      traceItems.push(transformedItem);
+      const children = criticalPathData.filter(i => i.parent?.id && i.parent.id === getId(item)).map(i => ({ parent: transformedItem, item: i }));
+      if (children?.length) {
+        itemsToProcess.push(...children)
+      }
+    }
+  }
   const itemsByParent = groupBy(traceItems, (item) =>
     item.parentId ? item.parentId : ROOT_ID
   );
@@ -212,3 +246,34 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
     childrenOnCriticalPath,
   };
 };
+
+function getClockSkew(
+  item: ITraceItem,
+  parentItem?: ITraceItem
+) {
+  if (!parentItem) {
+    return 0;
+  }
+  const docType = item.transaction ? 'transaction' : (item.span ? 'span' : 'none');
+  switch (docType) {
+    // don't calculate skew for spans and errors. Just use parent's skew
+    case 'none':
+      return 0;
+    case 'span':
+      return parentItem.skew;
+    // transaction is the inital entry in a service. Calculate skew for this, and it will be propogated to all child spans
+    case 'transaction': {
+      const parentStart = parentItem.start;
+
+      // determine if child starts before the parent
+      const offsetStart = parentStart - item.start;
+      if (offsetStart > 0) {
+        const latency = Math.max((parentItem.end - parentItem.start) - (item.end - item.start), 0) / 2;
+        return offsetStart + latency;
+      }
+
+      // child transaction starts after parent thus no adjustment is needed
+      return 0;
+    }
+  }
+}
