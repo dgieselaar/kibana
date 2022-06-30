@@ -9,7 +9,10 @@ import { groupBy } from 'lodash';
 import hash from 'object-hash';
 import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../typings/es_schemas/ui/span';
-import { ICriticalPathItem, ICriticalPath } from '../../../typings/critical_path';
+import {
+  ICriticalPathItem,
+  ICriticalPath,
+} from '../../../typings/critical_path';
 
 const ROOT_ID = 'root';
 
@@ -65,7 +68,7 @@ export const calculateCriticalPath = (
 
   return {
     items: Object.entries(criticalPath).map((entry) => entry[1]),
-    sampleSize: sampleSize,
+    sampleSize,
   };
 };
 
@@ -150,7 +153,6 @@ const calculateCriticalPathForTrace = (trace: ITrace) => {
   };
 
   return [root, ...criticalPathSegments];
-
 };
 
 const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
@@ -167,7 +169,11 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
     orderedChildren.forEach((child) => {
       const childStart = Math.max(child.start, segment.intervalStart);
       const childEnd = Math.min(child.end, scanTimestamp);
-      if (childStart >= scanTimestamp || childEnd < segment.intervalStart || child.end > scanTimestamp) {
+      if (
+        childStart >= scanTimestamp ||
+        childEnd < segment.intervalStart ||
+        child.end > scanTimestamp
+      ) {
         // ignore this child as it is not on the critical path
       } else {
         if (childEnd < scanTimestamp) {
@@ -200,8 +206,8 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
       parentHash: segment.parentHash,
       depth: segment.depth,
       layers: thisLayers,
-      docType: item.span ? 'span' : (item.transaction ? 'transaction' : 'none'),
-      sampleDoc: item.span ?? item.transaction, 
+      docType: item.span ? 'span' : item.transaction ? 'transaction' : 'none',
+      sampleDoc: item.span ?? item.transaction,
     },
     childrenOnCriticalPath,
   };

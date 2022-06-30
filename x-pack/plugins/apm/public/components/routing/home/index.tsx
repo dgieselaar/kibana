@@ -219,6 +219,7 @@ export const home = {
                     t.literal(TraceSearchType.kql),
                     t.literal(TraceSearchType.eql),
                   ]),
+                  flyoutItemId: t.string,
                 }),
                 t.partial({
                   sampleRangeFrom: toNumberRt,
@@ -234,7 +235,6 @@ export const home = {
                 element: <TraceExplorerWaterfall />,
                 params: t.type({
                   query: t.type({
-                    waterfallItemId: t.string,
                     traceId: t.string,
                     transactionId: t.string,
                     detailTab: t.union([
@@ -246,7 +246,6 @@ export const home = {
                 }),
                 defaults: {
                   query: {
-                    waterfallItemId: '',
                     traceId: '',
                     transactionId: '',
                     detailTab: TransactionTab.timeline,
@@ -261,6 +260,7 @@ export const home = {
               query: {
                 query: '',
                 type: TraceSearchType.kql,
+                flyoutItemId: '',
               },
             },
           },

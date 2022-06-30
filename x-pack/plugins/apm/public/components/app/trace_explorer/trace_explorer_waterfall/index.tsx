@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useTraceExplorerSamplesFetchContext } from '../../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
 import { useApmParams } from '../../../../hooks/use_apm_params';
@@ -23,18 +23,32 @@ export function TraceExplorerWaterfall() {
       rangeFrom,
       rangeTo,
       detailTab,
-      waterfallItemId,
+      flyoutItemId,
+      sampleRangeFrom = 0,
+      sampleRangeTo = 0,
     },
   } = useApmParams('/traces/explorer/waterfall');
 
   const traceSamplesFetch = useTraceExplorerSamplesFetchContext();
+
+  const filteredSamples = useMemo(() => {
+    return (
+      (sampleRangeTo > 0
+        ? traceSamplesFetch?.data?.samples.filter(
+            (sample) =>
+              sample.duration >= sampleRangeFrom &&
+              sample.duration <= sampleRangeTo
+          )
+        : traceSamplesFetch?.data?.samples) || []
+    );
+  }, [traceSamplesFetch?.data, sampleRangeFrom, sampleRangeTo]);
 
   const history = useHistory();
 
   const { start, end } = useTimeRange({ rangeFrom, rangeTo });
 
   useEffect(() => {
-    const nextSample = traceSamplesFetch.data?.samples[0];
+    const nextSample = filteredSamples[0];
     const nextWaterfallItemId = '';
     history.replace({
       ...history.location,
@@ -45,7 +59,7 @@ export function TraceExplorerWaterfall() {
         waterfallItemId: nextWaterfallItemId,
       }),
     });
-  }, [traceSamplesFetch.data, history]);
+  }, [filteredSamples, history]);
 
   const { waterfall, status: waterfallStatus } = useWaterfallFetcher({
     traceId,
@@ -68,7 +82,7 @@ export function TraceExplorerWaterfall() {
           query: {
             traceId: sample.traceId,
             transactionId: sample.transactionId,
-            waterfallItemId: '',
+            flyoutItemId: '',
           },
         });
       }}
@@ -79,10 +93,10 @@ export function TraceExplorerWaterfall() {
           },
         });
       }}
-      traceSamples={traceSamplesFetch.data?.samples ?? []}
+      traceSamples={filteredSamples}
       waterfall={waterfall}
       detailTab={detailTab}
-      waterfallItemId={waterfallItemId}
+      waterfallItemId={flyoutItemId}
       serviceName={waterfall.entryWaterfallTransaction?.doc.service.name}
       hideTabs
     />

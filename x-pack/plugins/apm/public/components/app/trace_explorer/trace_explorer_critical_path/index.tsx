@@ -9,17 +9,24 @@ import {
   Datum,
   PartialTheme,
   Partition,
+  PartitionElementEvent,
   PartitionLayout,
   PrimitiveValue,
   Settings,
 } from '@elastic/charts';
 import {
+  EuiBadge,
   EuiFlexGroup,
   EuiFlexItem,
+  EuiIcon,
   euiPaletteForStatus,
+  EuiText,
 } from '@elastic/eui';
 import React, { useMemo } from 'react';
 import { useChartTheme } from '@kbn/observability-plugin/public';
+import { euiStyled } from '@kbn/kibana-react-plugin/common';
+import { last } from 'lodash';
+import { useHistory } from 'react-router-dom';
 import { useTraceExplorerSamplesFetchContext } from '../../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
 import { useApmParams } from '../../../../hooks/use_apm_params';
 import { useFetcher } from '../../../../hooks/use_fetcher';
@@ -27,34 +34,181 @@ import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { Transaction } from '../../../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../../../typings/es_schemas/ui/span';
-import { ICriticalPathItem } from '../../../../../typings/critical_path';
+import {
+  ICriticalPath,
+  ICriticalPathItem,
+} from '../../../../../typings/critical_path';
 import { SampleSizeBadge } from './sample_size_badge';
+import { ProcessorEvent } from '../../../../../common/processor_event';
+import { getSpanIcon } from '../../../shared/span_icon/get_span_icon';
+import { AgentIcon } from '../../../shared/agent_icon';
+import { push } from '../../../shared/links/url_helpers';
 
 const colors = euiPaletteForStatus(130).slice(30, 130);
 const maxNumTraces = 100;
+
+const TooltipContainer = euiStyled.div`
+  background-color: ${(props) => props.theme.eui.euiColorDarkestShade};
+  border-radius: ${(props) => props.theme.eui.euiBorderRadius};
+  color: ${(props) => props.theme.eui.euiColorLightestShade};
+  padding: ${(props) => props.theme.eui.euiSizeS};
+`;
+
+function CustomTooltip({
+  values,
+  criticalPath,
+}: {
+  criticalPath: ICriticalPath;
+  values: Array<{
+    color: string;
+    label: string;
+    value: number;
+    formattedValue: string;
+  }>;
+}) {
+  const { value, color, formattedValue } = values[0];
+
+  let label = values[0].label;
+
+  const match = label.match(/(.*?)\s*\/\s*(.*)/);
+
+  let transaction: Transaction | undefined;
+  let span: Span | undefined;
+  let icon: string = 'dot';
+
+  if (match) {
+    const [, serviceName, operationName] = match;
+
+    const sampleDoc = criticalPath.items.find((item) => {
+      if (!item.sampleDoc) {
+        return false;
+      }
+      if (item.sampleDoc.service.name !== serviceName) {
+        return false;
+      }
+      if (
+        item.sampleDoc.processor.event === ProcessorEvent.transaction &&
+        (item.sampleDoc as Transaction).transaction.name !== operationName
+      ) {
+        return false;
+      }
+
+      if (
+        item.sampleDoc.processor.event === ProcessorEvent.span &&
+        (item.sampleDoc as Span).span.name !== operationName
+      ) {
+        return false;
+      }
+
+      return item.duration.toPrecision(4) === value.toPrecision(4);
+    })?.sampleDoc;
+
+    if (sampleDoc?.processor.event === ProcessorEvent.transaction) {
+      transaction = sampleDoc as Transaction;
+      label = transaction.transaction.name;
+      icon = 'merge';
+    } else if (sampleDoc?.processor.event === ProcessorEvent.span) {
+      span = sampleDoc as Span;
+      label = span.span.name;
+      icon = getSpanIcon(span.span.type, span.span.subtype);
+    }
+  }
+
+  return (
+    <TooltipContainer>
+      <EuiFlexGroup direction="column" gutterSize="s">
+        <EuiFlexItem>
+          <EuiFlexGroup
+            direction="row"
+            alignItems="center"
+            gutterSize="s"
+            justifyContent="flexStart"
+          >
+            <EuiFlexItem grow={false}>
+              <EuiIcon type={icon} color={color} />
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiText size="xs">{label}</EuiText>
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiText size="xs" style={{ fontWeight: 500 }}>
+                {formattedValue}
+              </EuiText>
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        </EuiFlexItem>
+        {(transaction || span) && (
+          <>
+            <EuiFlexItem grow={false}>
+              <EuiFlexGroup gutterSize="xs" alignItems="center">
+                <EuiFlexItem grow={false}>
+                  <AgentIcon
+                    size="s"
+                    agentName={(transaction || span)!.agent.name}
+                  />
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs">
+                    {(transaction || span)!.service.name}
+                  </EuiText>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </EuiFlexItem>
+            {transaction && (
+              <EuiFlexItem grow={false}>
+                <EuiBadge>{transaction.transaction.type}</EuiBadge>
+              </EuiFlexItem>
+            )}
+            {span && (
+              <EuiFlexItem grow={false}>
+                <EuiFlexGroup direction="row" gutterSize="xs">
+                  <EuiFlexItem grow={false}>
+                    <EuiBadge>{span.span.type}</EuiBadge>
+                  </EuiFlexItem>
+                  {span.span.subtype && (
+                    <EuiFlexItem grow={false}>
+                      <EuiBadge>{span.span.subtype}</EuiBadge>
+                    </EuiFlexItem>
+                  )}
+                </EuiFlexGroup>
+              </EuiFlexItem>
+            )}
+          </>
+        )}
+      </EuiFlexGroup>
+    </TooltipContainer>
+  );
+}
 export function TraceExplorerCriticalPath() {
   const {
-    query: { rangeFrom, rangeTo, sampleRangeFrom, sampleRangeTo },
+    query: { rangeFrom, rangeTo, sampleRangeFrom = 0, sampleRangeTo = 0 },
   } = useApmParams('/traces/explorer/critical-path');
 
   const { data: traceSamplesData } = useTraceExplorerSamplesFetchContext();
 
   const { start, end } = useTimeRange({ rangeFrom, rangeTo });
 
+  const history = useHistory();
+
   const { data: criticalPathData } = useFetcher(
     (callApmApi) => {
-      const from = sampleRangeFrom ?? 0;
-      const to =
-        (sampleRangeTo ?? 0) === 0 ? Number.MAX_VALUE : sampleRangeTo ?? 0;
+      const filteredSamples =
+        sampleRangeFrom > 0
+          ? traceSamplesData?.samples.filter(
+              (sample) =>
+                sample.duration >= sampleRangeFrom &&
+                sample.duration <= sampleRangeTo
+            )
+          : traceSamplesData?.samples;
 
-      const traceIds = traceSamplesData?.samples
-        .filter(
-          (sample) => sample.duration >= from && sample.duration <= to
-        )
-        .map((sample) => sample.traceId);
+      const traceIds = filteredSamples?.map((sample) => sample.traceId);
 
-      if (traceIds === undefined || !traceIds.length) {
-        return Promise.resolve({ items: [] , sampleSize: 0});
+      if (traceIds === undefined) {
+        return undefined;
+      }
+
+      if (!traceIds.length) {
+        return Promise.resolve({ items: [], sampleSize: 0 });
       }
 
       return callApmApi('POST /internal/apm/traces/critical_path', {
@@ -71,19 +225,23 @@ export function TraceExplorerCriticalPath() {
     [start, end, traceSamplesData, sampleRangeFrom, sampleRangeTo]
   );
 
-  const criticalPath = criticalPathData ?? { items: [] , sampleSize: 0};
+  const criticalPath = useMemo(() => {
+    return criticalPathData ?? { items: [], sampleSize: 0 };
+  }, [criticalPathData]);
+
   const points = useMemo(() => {
     return criticalPath.items.map((item) => {
-        return {
-          id: item.hash,
-          value: item.selfDuration,
-          depth: item.depth,
-          layers: item.layers,
-        };
-      });
+      return {
+        id: item.hash,
+        value: item.selfDuration,
+        depth: item.depth,
+        layers: item.layers,
+      };
+    });
   }, [criticalPath]);
 
-  const overallValue = criticalPath.items.find(p => p.depth === 0)?.duration ?? 1;
+  const overallValue =
+    criticalPath.items.find((p) => p.depth === 0)?.duration ?? 1;
 
   const layers = useMemo(() => {
     if (!points.length) {
@@ -106,29 +264,32 @@ export function TraceExplorerCriticalPath() {
         nodeLabel: (id: PrimitiveValue) => {
           const item = itemsById[id!];
           if (item) {
-            if(item.docType === 'transaction'){
+            if (item.docType === 'transaction') {
               const transaction = item.sampleDoc as Transaction;
-              return `${transaction.service.name} - ${item.name}`;
-            } else if(item.docType === 'span'){
+              return `${transaction.service.name} / ${item.name}`;
+            } else if (item.docType === 'span') {
               const span = item.sampleDoc as Span;
-              return `${span.service.name} - ${item.name}`;
-            } 
-              
+              return `${span.service.name} / ${item.name}`;
+            }
+
             return item.name;
           }
           return '';
         },
         showAccessor: (id: PrimitiveValue) => !!id,
         shape: {
-          fillColor: (d: { dataName: string}) => {
+          fillColor: (d: { dataName: string }) => {
             const value = itemsById[d.dataName].selfDuration;
-            const idx = Math.max(0, Math.floor(100 * value / overallValue) % 101 - 1);
+            const idx = Math.max(
+              0,
+              (Math.floor((100 * value) / overallValue) % 101) - 1
+            );
             return colors[idx];
           },
         },
       };
     });
-  }, [points, criticalPath]);
+  }, [points, criticalPath, overallValue]);
 
   const chartSize = {
     height: layers.length * 15,
@@ -151,27 +312,47 @@ export function TraceExplorerCriticalPath() {
   };
 
   return (
-    <EuiFlexGroup direction="column">
-      <EuiFlexItem>
-        <SampleSizeBadge 
-          sampleSize={criticalPath.sampleSize}
-        />
-      </EuiFlexItem>
-      <EuiFlexItem grow>
-        <Chart size={chartSize}>
-          <Settings theme={[themeOverrides, ...chartTheme]} />
-          <Partition
-            id="critical_path_flamegraph"
-            data={points}
-            layers={layers}
-            drilldown
-            maxRowCount={1}
-            layout={PartitionLayout.icicle}
-            valueAccessor={(d: Datum) => d.value as number}
-            valueFormatter={() => ''}
-          />
-        </Chart>
-      </EuiFlexItem>
-    </EuiFlexGroup>
+    <>
+      <EuiFlexGroup direction="column">
+        <EuiFlexItem>
+          <SampleSizeBadge sampleSize={criticalPath.sampleSize} />
+        </EuiFlexItem>
+        <EuiFlexItem grow>
+          <Chart size={chartSize}>
+            <Settings
+              theme={[themeOverrides, ...chartTheme]}
+              tooltip={{
+                customTooltip: (info) => (
+                  <CustomTooltip criticalPath={criticalPath} {...info} />
+                ),
+              }}
+              onElementClick={(elements) => {
+                const clicked = last((elements[0] as PartitionElementEvent)[0]);
+                const node = criticalPath.items.find(
+                  (item) => item.hash === clicked?.groupByRollup
+                );
+                push(history, {
+                  query: {
+                    flyoutItemId:
+                      (node?.sampleDoc as Span)?.span?.id ||
+                      node?.sampleDoc?.transaction?.id ||
+                      '',
+                  },
+                });
+              }}
+            />
+            <Partition
+              id="critical_path_flamegraph"
+              data={points}
+              layers={layers}
+              maxRowCount={1}
+              layout={PartitionLayout.icicle}
+              valueAccessor={(d: Datum) => d.value as number}
+              valueFormatter={() => ''}
+            />
+          </Chart>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+    </>
   );
 }

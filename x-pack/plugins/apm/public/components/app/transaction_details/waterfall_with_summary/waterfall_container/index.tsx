@@ -18,7 +18,6 @@ import { Waterfall } from './waterfall';
 import { WaterfallLegends } from './waterfall_legends';
 import { calculateCriticalPath } from './critical_path';
 
-
 interface Props {
   waterfallItemId?: string;
   serviceName?: string;
@@ -30,14 +29,18 @@ export function WaterfallContainer({
   waterfallItemId,
   waterfall,
 }: Props) {
-  const [ showInTabCriticalPath, setShowInTabCriticalPath] = useState(false);
+  const [showInTabCriticalPath, setShowInTabCriticalPath] = useState(false);
 
   if (!waterfall) {
     return null;
   }
 
-  if (showInTabCriticalPath  && waterfall.entryWaterfallTransaction && !waterfall.entryWaterfallTransaction.criticalPath){
-    calculateCriticalPath(waterfall)
+  if (
+    showInTabCriticalPath &&
+    waterfall.entryWaterfallTransaction &&
+    !waterfall.entryWaterfallTransaction.criticalPath
+  ) {
+    calculateCriticalPath(waterfall);
   }
 
   const { legends, items } = waterfall;
@@ -86,19 +89,23 @@ export function WaterfallContainer({
 
   return (
     <div>
-      <EuiFlexGroup direction="row" gutterSize="s" justifyContent='spaceBetween'>
-            <EuiFlexItem grow={false} key={"legend"}>
-              <WaterfallLegends legends={legendsWithFallbackLabel} type={colorBy} />
-            </EuiFlexItem>
-            <EuiFlexItem grow={false} key={"critical path button"}>
-              <EuiSwitch
-                label="Show critical path"
-                checked={showInTabCriticalPath}
-                onChange={() => setShowInTabCriticalPath(!showInTabCriticalPath)}
-              />
-            </EuiFlexItem>
+      <EuiFlexGroup
+        direction="row"
+        gutterSize="s"
+        justifyContent="spaceBetween"
+      >
+        <EuiFlexItem grow={false} key={'legend'}>
+          <WaterfallLegends legends={legendsWithFallbackLabel} type={colorBy} />
+        </EuiFlexItem>
+        <EuiFlexItem grow={false} key={'critical path button'}>
+          <EuiSwitch
+            label="Show critical path"
+            checked={showInTabCriticalPath}
+            onChange={() => setShowInTabCriticalPath(!showInTabCriticalPath)}
+          />
+        </EuiFlexItem>
       </EuiFlexGroup>
-      
+
       <Waterfall
         waterfallItemId={waterfallItemId}
         waterfall={waterfall}

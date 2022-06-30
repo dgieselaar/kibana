@@ -44,7 +44,10 @@ export async function getCriticalPath({
           bool: {
             filter: [
               ...rangeQuery(start, end),
-              ...termsQuery(TRACE_ID, ...traceIds.slice(0, Math.min(maxNumTraces, traceIds.length))),
+              ...termsQuery(
+                TRACE_ID,
+                ...traceIds.slice(0, Math.min(maxNumTraces, traceIds.length))
+              ),
             ],
           },
         },

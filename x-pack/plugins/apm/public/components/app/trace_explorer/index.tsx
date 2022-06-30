@@ -121,7 +121,7 @@ export function TraceExplorer({ children }: { children: React.ReactElement }) {
                 traceId: '',
                 transactionId: '',
                 detailTab: TransactionTab.timeline,
-                waterfallItemId: '',
+                flyoutItemId: '',
               },
             })}
           >

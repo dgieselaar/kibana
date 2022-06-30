@@ -211,20 +211,18 @@ const criticalPathRoute = createApmServerRoute({
   options: {
     tags: ['access:apm'],
   },
-  handler: async (
-    resources
-  ): Promise<ICriticalPath> => {
+  handler: async (resources): Promise<ICriticalPath> => {
     const { start, end, traceIds, maxNumTraces } = resources.params.body;
 
     const setup = await setupRequest(resources);
 
     return await getCriticalPath({
-        setup,
-        start,
-        end,
-        traceIds,
-        maxNumTraces,
-      });
+      setup,
+      start,
+      end,
+      traceIds,
+      maxNumTraces,
+    });
   },
 });
 
