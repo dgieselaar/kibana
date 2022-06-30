@@ -25,7 +25,9 @@ const criticalPathForItem = ( waterfall: IWaterfall,item: IWaterfallSpanOrTransa
       const childStart = Math.max(child.offset + child.skew, start);
       const childSpanEnd = child.offset + child.skew + child.duration;
       const childEnd = Math.min(childSpanEnd, scanTimestamp);
-      if(childStart >= scanTimestamp || childEnd < start || childSpanEnd > scanTimestamp) {
+      if(childStart >= scanTimestamp || 
+        childEnd < start || 
+        (child.docType === 'span' && childSpanEnd > scanTimestamp)) {
         // ignore this child as it is not on the critical path
       } else {
         if(childEnd < scanTimestamp - 1000){

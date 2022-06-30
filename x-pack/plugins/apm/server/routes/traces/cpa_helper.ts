@@ -206,7 +206,7 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
       if (
         childStart >= scanTimestamp ||
         childEnd < segment.intervalStart ||
-        child.end > scanTimestamp
+        (child.span && child.end > scanTimestamp)
       ) {
         // ignore this child as it is not on the critical path
       } else {
