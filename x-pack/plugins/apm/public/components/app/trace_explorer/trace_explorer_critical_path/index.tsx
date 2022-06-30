@@ -29,7 +29,7 @@ import { last } from 'lodash';
 import { useHistory } from 'react-router-dom';
 import { useTraceExplorerSamplesFetchContext } from '../../../../context/api_fetch_context/trace_explorer_samples_fetch_context';
 import { useApmParams } from '../../../../hooks/use_apm_params';
-import { useFetcher } from '../../../../hooks/use_fetcher';
+import { FETCH_STATUS, useFetcher } from '../../../../hooks/use_fetcher';
 import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { Transaction } from '../../../../../typings/es_schemas/ui/transaction';
@@ -43,6 +43,8 @@ import { ProcessorEvent } from '../../../../../common/processor_event';
 import { getSpanIcon } from '../../../shared/span_icon/get_span_icon';
 import { AgentIcon } from '../../../shared/agent_icon';
 import { push } from '../../../shared/links/url_helpers';
+import { LoadingStatePrompt } from '../../../shared/loading_state_prompt';
+import { TraceExplorerCriticalPathFlyout } from './trace_explorer_critical_path_flyout';
 
 const colors = euiPaletteForStatus(130).slice(30, 130);
 const maxNumTraces = 100;
@@ -181,49 +183,58 @@ function CustomTooltip({
 }
 export function TraceExplorerCriticalPath() {
   const {
-    query: { rangeFrom, rangeTo, sampleRangeFrom = 0, sampleRangeTo = 0 },
+    query: {
+      rangeFrom,
+      rangeTo,
+      sampleRangeFrom = 0,
+      sampleRangeTo = 0,
+      flyoutItemId,
+    },
   } = useApmParams('/traces/explorer/critical-path');
 
-  const { data: traceSamplesData } = useTraceExplorerSamplesFetchContext();
+  const { data: traceSamplesData, status: traceSamplesFetchStatus } =
+    useTraceExplorerSamplesFetchContext();
 
   const { start, end } = useTimeRange({ rangeFrom, rangeTo });
 
   const history = useHistory();
 
-  const { data: criticalPathData } = useFetcher(
-    (callApmApi) => {
-      const filteredSamples =
-        sampleRangeFrom > 0
-          ? traceSamplesData?.samples.filter(
-              (sample) =>
-                sample.duration >= sampleRangeFrom &&
-                sample.duration <= sampleRangeTo
-            )
-          : traceSamplesData?.samples;
+  const filteredSamples = useMemo(() => {
+    return sampleRangeFrom > 0
+      ? traceSamplesData?.samples.filter(
+          (sample) =>
+            sample.duration >= sampleRangeFrom &&
+            sample.duration <= sampleRangeTo
+        )
+      : traceSamplesData?.samples;
+  }, [traceSamplesData?.samples, sampleRangeFrom, sampleRangeTo]);
 
-      const traceIds = filteredSamples?.map((sample) => sample.traceId);
+  const { data: criticalPathData, status: criticalPathFetchStatus } =
+    useFetcher(
+      (callApmApi) => {
+        const traceIds = filteredSamples?.map((sample) => sample.traceId);
 
-      if (traceIds === undefined) {
-        return undefined;
-      }
+        if (traceIds === undefined) {
+          return undefined;
+        }
 
-      if (!traceIds.length) {
-        return Promise.resolve({ items: [], sampleSize: 0 });
-      }
+        if (!traceIds.length) {
+          return Promise.resolve({ items: [], sampleSize: 0 });
+        }
 
-      return callApmApi('POST /internal/apm/traces/critical_path', {
-        params: {
-          body: {
-            traceIds,
-            start,
-            end,
-            maxNumTraces,
+        return callApmApi('POST /internal/apm/traces/critical_path', {
+          params: {
+            body: {
+              traceIds,
+              start,
+              end,
+              maxNumTraces,
+            },
           },
-        },
-      });
-    },
-    [start, end, traceSamplesData, sampleRangeFrom, sampleRangeTo]
-  );
+        });
+      },
+      [start, end, filteredSamples]
+    );
 
   const criticalPath = useMemo(() => {
     return criticalPathData ?? { items: [], sampleSize: 0 };
@@ -311,6 +322,16 @@ export function TraceExplorerCriticalPath() {
     },
   };
 
+  const isLoading =
+    traceSamplesFetchStatus === FETCH_STATUS.LOADING ||
+    criticalPathFetchStatus === FETCH_STATUS.LOADING ||
+    ((filteredSamples?.length ?? 0) > 0 &&
+      criticalPathFetchStatus === FETCH_STATUS.NOT_INITIATED);
+
+  if (isLoading) {
+    return <LoadingStatePrompt />;
+  }
+
   return (
     <>
       <EuiFlexGroup direction="column">
@@ -353,6 +374,18 @@ export function TraceExplorerCriticalPath() {
           </Chart>
         </EuiFlexItem>
       </EuiFlexGroup>
+      <TraceExplorerCriticalPathFlyout
+        start={start}
+        end={end}
+        flyoutItemId={flyoutItemId}
+        onFlyoutClose={() => {
+          push(history, {
+            query: {
+              flyoutItemId: '',
+            },
+          });
+        }}
+      />
     </>
   );
 }

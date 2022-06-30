@@ -27,6 +27,10 @@ import { getCriticalPath } from './get_critical_path';
 import { OverallLatencyDistributionResponse } from '../latency_distribution/types';
 import { getTracesLatencyDistribution } from './get_traces_latency_distribution';
 import { ICriticalPath } from '../../../typings/critical_path';
+import {
+  CriticalPathFlyoutEvents,
+  getCriticalPathFlyoutEvents,
+} from './get_critical_path_flyout_events';
 
 const tracesRoute = createApmServerRoute({
   endpoint: 'GET /internal/apm/traces',
@@ -226,6 +230,33 @@ const criticalPathRoute = createApmServerRoute({
   },
 });
 
+const criticalPathFlyoutRoute = createApmServerRoute({
+  endpoint: 'GET /internal/apm/traces/critical_path/flyout',
+  params: t.type({
+    query: t.intersection([
+      rangeRt,
+      t.type({
+        flyoutItemId: t.string,
+      }),
+    ]),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (resources): Promise<CriticalPathFlyoutEvents> => {
+    const { start, end, flyoutItemId } = resources.params.query;
+
+    const setup = await setupRequest(resources);
+
+    return await getCriticalPathFlyoutEvents({
+      setup,
+      start,
+      end,
+      flyoutItemId,
+    });
+  },
+});
+
 const tracesDistributionRoute = createApmServerRoute({
   endpoint: 'POST /internal/apm/traces/distribution',
   params: t.type({
@@ -267,5 +298,6 @@ export const traceRouteRepository = {
   ...transactionByIdRoute,
   ...findTracesRoute,
   ...criticalPathRoute,
+  ...criticalPathFlyoutRoute,
   ...tracesDistributionRoute,
 };

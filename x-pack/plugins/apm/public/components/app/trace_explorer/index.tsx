@@ -132,7 +132,10 @@ export function TraceExplorer({ children }: { children: React.ReactElement }) {
           <EuiTab
             isSelected={routePath === '/traces/explorer/critical-path'}
             href={router.link('/traces/explorer/critical-path', {
-              query: urlQuery,
+              query: {
+                ...urlQuery,
+                flyoutItemId: '',
+              },
             })}
           >
             {i18n.translate('xpack.apm.traceExplorer.criticalPathTab', {

@@ -71,7 +71,8 @@ export function TraceExplorerWaterfall() {
   const isLoading =
     traceSamplesFetch.status === FETCH_STATUS.LOADING ||
     waterfallStatus === FETCH_STATUS.LOADING ||
-    waterfallStatus === FETCH_STATUS.NOT_INITIATED;
+    (waterfallStatus === FETCH_STATUS.NOT_INITIATED &&
+      filteredSamples.length > 0);
 
   return (
     <WaterfallWithSummary

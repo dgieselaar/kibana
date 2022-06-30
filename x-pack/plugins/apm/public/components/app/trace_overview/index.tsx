@@ -10,7 +10,6 @@ import { useApmRouter } from '../../../hooks/use_apm_router';
 import { useApmParams } from '../../../hooks/use_apm_params';
 import { useApmRoutePath } from '../../../hooks/use_apm_route_path';
 import { TraceSearchType } from '../../../../common/trace_explorer';
-import { TransactionTab } from '../transaction_details/waterfall_with_summary/transaction_tabs';
 import { useTraceExplorerEnabledSetting } from '../../../hooks/use_trace_explorer_enabled_setting';
 import { Breadcrumb } from '../breadcrumb';
 import { ApmMainTemplate } from '../../routing/templates/apm_main_template';
@@ -43,10 +42,7 @@ export function TraceOverview({ children }: { children: React.ReactElement }) {
       refreshPaused: query.refreshPaused,
       query: '',
       type: TraceSearchType.kql,
-      waterfallItemId: '',
-      traceId: '',
-      transactionId: '',
-      detailTab: TransactionTab.timeline,
+      flyoutItemId: '',
     },
   });
 
@@ -77,7 +73,9 @@ export function TraceOverview({ children }: { children: React.ReactElement }) {
             defaultMessage: 'Explorer',
           }),
           href: explorerLink,
-          isSelected: routePath === '/traces/explorer',
+          isSelected:
+            routePath === '/traces/explorer/critical-path' ||
+            routePath === '/traces/explorer/waterfall',
         },
       ]
     : [];
