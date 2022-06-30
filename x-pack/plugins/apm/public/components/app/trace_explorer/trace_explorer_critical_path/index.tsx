@@ -34,6 +34,7 @@ import { useTheme } from '../../../../hooks/use_theme';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { Transaction } from '../../../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../../../typings/es_schemas/ui/span';
+import { asDuration, asPercent } from '../../../../../common/utils/formatters';
 import {
   ICriticalPath,
   ICriticalPathItem,
@@ -50,15 +51,16 @@ const colors = euiPaletteForStatus(130).slice(30, 130);
 const maxNumTraces = 100;
 
 const TooltipContainer = euiStyled.div`
-  background-color: ${(props) => props.theme.eui.euiColorDarkestShade};
+  background-color: ${(props) => props.theme.eui.euiColorLightestShade};
   border-radius: ${(props) => props.theme.eui.euiBorderRadius};
-  color: ${(props) => props.theme.eui.euiColorLightestShade};
+  color: ${(props) => props.theme.eui.euiColorDarkestShade};
   padding: ${(props) => props.theme.eui.euiSizeS};
 `;
 
 function CustomTooltip({
   values,
   criticalPath,
+  overallValue,
 }: {
   criticalPath: ICriticalPath;
   values: Array<{
@@ -67,21 +69,25 @@ function CustomTooltip({
     value: number;
     formattedValue: string;
   }>;
+  overallValue: number;
 }) {
   const { value, color, formattedValue } = values[0];
 
   let label = values[0].label;
 
-  const match = label.match(/(.*?)\s*\/\s*(.*)/);
+  const match = label.match(/(.*?)\s*\|\s*(.*)/);
 
   let transaction: Transaction | undefined;
   let span: Span | undefined;
   let icon: string = 'dot';
-
+  let duration: number = value;
+  let pctDuration: number = value / overallValue;
+  let selfDuration: number = value;
+  let pctSelfDuration: number = value / overallValue;
   if (match) {
     const [, serviceName, operationName] = match;
 
-    const sampleDoc = criticalPath.items.find((item) => {
+    const cpItem = criticalPath.items.find((item) => {
       if (!item.sampleDoc) {
         return false;
       }
@@ -103,8 +109,14 @@ function CustomTooltip({
       }
 
       return item.duration.toPrecision(4) === value.toPrecision(4);
-    })?.sampleDoc;
-
+    });
+    
+    const sampleDoc = cpItem?.sampleDoc;
+    duration = cpItem?.duration ?? value;
+    pctDuration = duration / overallValue;
+    selfDuration = cpItem?.selfDuration ?? value;
+    pctSelfDuration = selfDuration / overallValue;
+    
     if (sampleDoc?.processor.event === ProcessorEvent.transaction) {
       transaction = sampleDoc as Transaction;
       label = transaction.transaction.name;
@@ -132,11 +144,6 @@ function CustomTooltip({
             <EuiFlexItem grow={false}>
               <EuiText size="xs">{label}</EuiText>
             </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <EuiText size="xs" style={{ fontWeight: 500 }}>
-                {formattedValue}
-              </EuiText>
-            </EuiFlexItem>
           </EuiFlexGroup>
         </EuiFlexItem>
         {(transaction || span) && (
@@ -158,7 +165,11 @@ function CustomTooltip({
             </EuiFlexItem>
             {transaction && (
               <EuiFlexItem grow={false}>
-                <EuiBadge>{transaction.transaction.type}</EuiBadge>
+                <EuiFlexGroup direction="row" gutterSize="xs">
+                  <EuiFlexItem grow={false}>
+                    <EuiBadge>{transaction.transaction.type}</EuiBadge>
+                  </EuiFlexItem>
+                </EuiFlexGroup>
               </EuiFlexItem>
             )}
             {span && (
@@ -175,8 +186,40 @@ function CustomTooltip({
                 </EuiFlexGroup>
               </EuiFlexItem>
             )}
+            <EuiFlexItem grow={false}>
+              <EuiFlexGroup direction="row" gutterSize="xs">
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs">
+                    {`Duration: ${asDuration(duration)}`}
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs">
+                    {`(${asPercent(duration, overallValue)})`}
+                  </EuiText>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+              <EuiFlexGroup direction="row" gutterSize="xs">
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs" >
+                    {`Self time:`}
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs" color={color} style={{ fontWeight: 800 }}>
+                    {`${asDuration(selfDuration)}`}
+                  </EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <EuiText size="xs" color={color} style={{ fontWeight: 800 }}>
+                    {`(${asPercent(selfDuration, overallValue)})`}
+                  </EuiText>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </EuiFlexItem>
           </>
         )}
+
       </EuiFlexGroup>
     </TooltipContainer>
   );
@@ -277,10 +320,10 @@ export function TraceExplorerCriticalPath() {
           if (item) {
             if (item.docType === 'transaction') {
               const transaction = item.sampleDoc as Transaction;
-              return `${transaction.service.name} / ${item.name}`;
+              return `${transaction.service.name} | ${item.name}`;
             } else if (item.docType === 'span') {
               const span = item.sampleDoc as Span;
-              return `${span.service.name} / ${item.name}`;
+              return `${span.service.name} | ${item.name}`;
             }
 
             return item.name;
@@ -344,7 +387,7 @@ export function TraceExplorerCriticalPath() {
               theme={[themeOverrides, ...chartTheme]}
               tooltip={{
                 customTooltip: (info) => (
-                  <CustomTooltip criticalPath={criticalPath} {...info} />
+                  <CustomTooltip criticalPath={criticalPath} overallValue={overallValue} {...info} />
                 ),
               }}
               onElementClick={(elements) => {
