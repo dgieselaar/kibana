@@ -6,6 +6,7 @@
  */
 
 import { groupBy } from 'lodash';
+import { withSpan } from '@kbn/apm-utils'
 import hash from 'object-hash';
 import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../typings/es_schemas/ui/span';
@@ -41,36 +42,38 @@ interface TraceSegment {
   layers: Record<string, string>;
 }
 
-export const calculateCriticalPath = (
+export const calculateCriticalPath = async (
   criticalPathData: Array<Transaction | Span>
-): ICriticalPath => {
-  const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
-  const criticalPaths = Object.entries(tracesMap)
-    .map((entry) => getTrace(entry[1]))
-    .filter((t) => t !== undefined)
-    .map((trace) => calculateCriticalPathForTrace(trace!));
-  const sampleSize = criticalPaths.length;
-  const criticalPath: Record<string, ICriticalPathItem> = {};
+): Promise<ICriticalPath> => {
+  return await withSpan('calculate critical path', async () => {
+    const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
+    const criticalPaths = Object.entries(tracesMap)
+      .map((entry) => getTrace(entry[1]))
+      .filter((t) => t !== undefined)
+      .map((trace) => calculateCriticalPathForTrace(trace!));
+    const sampleSize = criticalPaths.length;
+    const criticalPath: Record<string, ICriticalPathItem> = {};
 
-  criticalPaths.forEach((cp) => {
-    cp?.forEach((cpi) => {
-      let obj = criticalPath[cpi.hash];
-      if (!obj) {
-        criticalPath[cpi.hash] = cpi;
-        obj = cpi;
-        obj.selfDuration = obj.selfDuration / sampleSize;
-        obj.duration = obj.duration / sampleSize;
-      } else {
-        obj.selfDuration += cpi.selfDuration / sampleSize;
-        obj.duration += cpi.duration / sampleSize;
-      }
+    criticalPaths.forEach((cp) => {
+      cp?.forEach((cpi) => {
+        let obj = criticalPath[cpi.hash];
+        if (!obj) {
+          criticalPath[cpi.hash] = cpi;
+          obj = cpi;
+          obj.selfDuration = obj.selfDuration / sampleSize;
+          obj.duration = obj.duration / sampleSize;
+        } else {
+          obj.selfDuration += cpi.selfDuration / sampleSize;
+          obj.duration += cpi.duration / sampleSize;
+        }
+      });
     });
-  });
 
-  return {
-    items: Object.entries(criticalPath).map((entry) => entry[1]),
-    sampleSize,
-  };
+    return {
+      items: Object.entries(criticalPath).map((entry) => entry[1]),
+      sampleSize,
+    };
+  });
 };
 
 const getId = (item: Transaction | Span) => {
