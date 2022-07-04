@@ -21,12 +21,14 @@ import { fromQuery, toQuery } from '../../shared/links/url_helpers';
 import { failedTransactionsCorrelationsTab } from './failed_transactions_correlations_tab';
 import { latencyCorrelationsTab } from './latency_correlations_tab';
 import { traceSamplesTab } from './trace_samples_tab';
+import { criticalPathTab } from './critical_path_tab';
 import { useSampleChartSelection } from '../../../hooks/use_sample_chart_selection';
 
 const tabs = [
   traceSamplesTab,
   latencyCorrelationsTab,
   failedTransactionsCorrelationsTab,
+  criticalPathTab,
 ];
 
 export function TransactionDetailsTabs() {

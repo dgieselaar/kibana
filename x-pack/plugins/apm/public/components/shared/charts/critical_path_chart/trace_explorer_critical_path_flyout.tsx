@@ -7,8 +7,8 @@
 
 import React from 'react';
 import { useFetcher } from '../../../../hooks/use_fetcher';
-import { SpanFlyout } from '../../transaction_details/waterfall_with_summary/waterfall_container/waterfall/span_flyout';
-import { TransactionFlyout } from '../../transaction_details/waterfall_with_summary/waterfall_container/waterfall/transaction_flyout';
+import { SpanFlyout } from '../../../app/transaction_details/waterfall_with_summary/waterfall_container/waterfall/span_flyout';
+import { TransactionFlyout } from '../../../app/transaction_details/waterfall_with_summary/waterfall_container/waterfall/transaction_flyout';
 
 export function TraceExplorerCriticalPathFlyout({
   start,

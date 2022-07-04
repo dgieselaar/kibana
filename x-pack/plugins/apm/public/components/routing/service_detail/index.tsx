@@ -157,6 +157,7 @@ export const serviceDetail = {
                 t.partial({
                   traceId: t.string,
                   transactionId: t.string,
+                  flyoutItemId: t.string,
                 }),
                 offsetRt,
               ]),

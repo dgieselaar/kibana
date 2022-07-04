@@ -208,6 +208,8 @@ const criticalPathRoute = createApmServerRoute({
       rangeRt,
       t.type({
         traceIds: t.array(t.string),
+        serviceName: t.string,
+        transactionName: t.string,
       }),
     ]),
   }),
@@ -215,7 +217,7 @@ const criticalPathRoute = createApmServerRoute({
     tags: ['access:apm'],
   },
   handler: async (resources): Promise<ICriticalPath> => {
-    const { start, end, traceIds } = resources.params.body;
+    const { start, end, traceIds, serviceName, transactionName } = resources.params.body;
 
     const setup = await setupRequest(resources);
 
@@ -224,6 +226,8 @@ const criticalPathRoute = createApmServerRoute({
       start,
       end,
       traceIds,
+      serviceName,
+      transactionName,
     });
   },
 });

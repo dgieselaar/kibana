@@ -16,17 +16,21 @@ import { calculateCriticalPath } from './cpa_helper';
 import { withApmSpan } from '../../utils/with_apm_span';
 
 const SIZE = 1000;
-
+const MAX_NUM_TRACES = 100;
 export async function getCriticalPath({
   setup,
   start,
   end,
   traceIds,
+  serviceName,
+  transactionName,
 }: {
   setup: Setup;
   start: number;
   end: number;
   traceIds: string[];
+  serviceName: string;
+  transactionName: string;
 }) {
   const { apmEventClient } = setup;
 
@@ -70,13 +74,14 @@ export async function getCriticalPath({
     return hits.map((hit) => hit._source as Transaction | Span);
   }
 
-  const batches = chunk(traceIds, Math.max(1, traceIds.length / 10));
+  const traceIdsSampleSet = traceIds.slice(0, Math.min(MAX_NUM_TRACES, traceIds.length));
+  const batches = chunk(traceIdsSampleSet, Math.max(1, traceIdsSampleSet.length / 10));
 
   const events = (
     await Promise.all(batches.map((batch) => getTraceEvents(batch)))
   ).flat();
 
   return withApmSpan('calculate_critical_path', async () =>
-    calculateCriticalPath(events)
+    calculateCriticalPath(events, serviceName, transactionName)
   );
 }

@@ -6,7 +6,6 @@
  */
 
 import { groupBy } from 'lodash';
-import { withSpan } from '@kbn/apm-utils'
 import hash from 'object-hash';
 import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../typings/es_schemas/ui/span';
@@ -42,38 +41,38 @@ interface TraceSegment {
   layers: Record<string, string>;
 }
 
-export const calculateCriticalPath = async (
-  criticalPathData: Array<Transaction | Span>
-): Promise<ICriticalPath> => {
-  return await withSpan('calculate critical path', async () => {
-    const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
-    const criticalPaths = Object.entries(tracesMap)
-      .map((entry) => getTrace(entry[1]))
-      .filter((t) => t !== undefined)
-      .map((trace) => calculateCriticalPathForTrace(trace!));
-    const sampleSize = criticalPaths.length;
-    const criticalPath: Record<string, ICriticalPathItem> = {};
+export const calculateCriticalPath = (
+  criticalPathData: Array<Transaction | Span>,
+  serviceName: string,
+  transactionName: string
+): ICriticalPath => {
+  const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
+  const criticalPaths = Object.entries(tracesMap)
+    .map((entry) => getTrace(entry[1], serviceName, transactionName))
+    .filter((t) => t !== undefined)
+    .map((trace) => calculateCriticalPathForTrace(trace!));
+  const sampleSize = criticalPaths.length;
+  const criticalPath: Record<string, ICriticalPathItem> = {};
 
-    criticalPaths.forEach((cp) => {
-      cp?.forEach((cpi) => {
-        let obj = criticalPath[cpi.hash];
-        if (!obj) {
-          criticalPath[cpi.hash] = cpi;
-          obj = cpi;
-          obj.selfDuration = obj.selfDuration / sampleSize;
-          obj.duration = obj.duration / sampleSize;
-        } else {
-          obj.selfDuration += cpi.selfDuration / sampleSize;
-          obj.duration += cpi.duration / sampleSize;
-        }
-      });
+  criticalPaths.forEach((cp) => {
+    cp?.forEach((cpi) => {
+      let obj = criticalPath[cpi.hash];
+      if (!obj) {
+        criticalPath[cpi.hash] = cpi;
+        obj = cpi;
+        obj.selfDuration = obj.selfDuration / sampleSize;
+        obj.duration = obj.duration / sampleSize;
+      } else {
+        obj.selfDuration += cpi.selfDuration / sampleSize;
+        obj.duration += cpi.duration / sampleSize;
+      }
     });
-
-    return {
-      items: Object.entries(criticalPath).map((entry) => entry[1]),
-      sampleSize,
-    };
   });
+
+  return {
+    items: Object.entries(criticalPath).map((entry) => entry[1]),
+    sampleSize,
+  };
 };
 
 const getId = (item: Transaction | Span) => {
@@ -114,12 +113,21 @@ const transformItem = (item: Transaction | Span) => {
 };
 
 const getTrace = (
-  criticalPathData: Array<Transaction | Span>
+  criticalPathData: Array<Transaction | Span>,
+  serviceName: string,
+  transactionName: string
 ): ITrace | undefined => {
-  const rootTraceItem = criticalPathData.find((i) => !i.parent?.id);
+  const rootTraceItem = (transactionName && serviceName) ? 
+    criticalPathData.find(i =>
+      (!(i.span) &&
+        i.service.name === serviceName &&
+        (i as Transaction).transaction.name === transactionName)) :
+    criticalPathData.find(i => !(i.parent?.id));
+    
   if (!rootTraceItem) {
     return undefined;
   }
+
   const itemsToProcess: Array<{
     parent?: ITraceItem;
     item: Transaction | Span;
@@ -146,10 +154,11 @@ const getTrace = (
       }
     }
   }
+  const rootParentId = rootTraceItem.parent?.id ?? ROOT_ID;
   const itemsByParent = groupBy(traceItems, (item) =>
-    item.parentId ? item.parentId : ROOT_ID
+    item.parentId ? item.parentId : rootParentId
   );
-  const rootItem = itemsByParent[ROOT_ID];
+  const rootItem = itemsByParent[rootParentId];
   if (rootItem) {
     return {
       root: rootItem[0],
