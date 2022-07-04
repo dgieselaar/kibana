@@ -71,7 +71,7 @@ function CustomTooltip({
   }>;
   overallValue: number;
 }) {
-  const { value, color, formattedValue } = values[0];
+  const { value, color } = values[0];
 
   let label = values[0].label;
 
@@ -81,9 +81,7 @@ function CustomTooltip({
   let span: Span | undefined;
   let icon: string = 'dot';
   let duration: number = value;
-  let pctDuration: number = value / overallValue;
   let selfDuration: number = value;
-  let pctSelfDuration: number = value / overallValue;
   if (match) {
     const [, serviceName, operationName] = match;
 
@@ -113,9 +111,7 @@ function CustomTooltip({
     
     const sampleDoc = cpItem?.sampleDoc;
     duration = cpItem?.duration ?? value;
-    pctDuration = duration / overallValue;
     selfDuration = cpItem?.selfDuration ?? value;
-    pctSelfDuration = selfDuration / overallValue;
     
     if (sampleDoc?.processor.event === ProcessorEvent.transaction) {
       transaction = sampleDoc as Transaction;
