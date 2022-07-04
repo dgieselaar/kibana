@@ -77,7 +77,7 @@ export function addCustomPipelineProcessor(pipeline: PipelineInstall): PipelineI
   const customPipelineProcessor = {
     pipeline: {
       name: pipeline.customIngestPipelineNameForInstallation,
-      ignore_missing_pipeline: true,
+      // ignore_missing_pipeline: true,
     },
   };
 

@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { last } from 'lodash';
+import { chunk, last } from 'lodash';
 import { rangeQuery, termsQuery } from '@kbn/observability-plugin/server';
 import { TRACE_ID } from '../../../common/elasticsearch_fieldnames';
 import { ProcessorEvent } from '../../../common/processor_event';
@@ -13,6 +13,7 @@ import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../typings/es_schemas/ui/span';
 
 import { calculateCriticalPath } from './cpa_helper';
+import { withApmSpan } from '../../utils/with_apm_span';
 
 const SIZE = 1000;
 
@@ -21,17 +22,16 @@ export async function getCriticalPath({
   start,
   end,
   traceIds,
-  maxNumTraces,
 }: {
   setup: Setup;
   start: number;
   end: number;
   traceIds: string[];
-  maxNumTraces: number;
 }) {
   const { apmEventClient } = setup;
 
   async function getTraceEvents(
+    traceIdsInBatch: string[],
     searchAfter?: any[]
   ): Promise<Array<Transaction | Span>> {
     const response = await apmEventClient.search('get_critical_path', {
@@ -44,10 +44,7 @@ export async function getCriticalPath({
           bool: {
             filter: [
               ...rangeQuery(start, end),
-              ...termsQuery(
-                TRACE_ID,
-                ...traceIds.slice(0, Math.min(maxNumTraces, traceIds.length))
-              ),
+              ...termsQuery(TRACE_ID, ...traceIdsInBatch),
             ],
           },
         },
@@ -67,13 +64,19 @@ export async function getCriticalPath({
 
       return hits
         .map((hit) => hit._source as Transaction | Span)
-        .concat(await getTraceEvents(nextSearchAfter));
+        .concat(await getTraceEvents(traceIdsInBatch, nextSearchAfter));
     }
 
     return hits.map((hit) => hit._source as Transaction | Span);
   }
 
-  const events = await getTraceEvents();
+  const batches = chunk(traceIds, Math.max(1, traceIds.length / 10));
 
-  return calculateCriticalPath(events);
+  const events = (
+    await Promise.all(batches.map((batch) => getTraceEvents(batch)))
+  ).flat();
+
+  return withApmSpan('calculate_critical_path', async () =>
+    calculateCriticalPath(events)
+  );
 }

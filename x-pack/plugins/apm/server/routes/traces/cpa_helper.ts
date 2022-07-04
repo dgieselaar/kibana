@@ -14,7 +14,6 @@ import {
   ICriticalPath,
 } from '../../../typings/critical_path';
 
-
 const ROOT_ID = 'root';
 
 interface ITraceItem {
@@ -74,7 +73,11 @@ export const calculateCriticalPath = (
   };
 };
 
-const getId = (item: Transaction | Span) => { return item.span ? (item as Span).span.id : (item as Transaction).transaction.id };
+const getId = (item: Transaction | Span) => {
+  return item.span
+    ? (item as Span).span.id
+    : (item as Transaction).transaction.id;
+};
 
 const transformItem = (item: Transaction | Span) => {
   const docType = item.span ? 'span' : 'transaction';
@@ -110,16 +113,16 @@ const transformItem = (item: Transaction | Span) => {
 const getTrace = (
   criticalPathData: Array<Transaction | Span>
 ): ITrace | undefined => {
-  const rootTraceItem = criticalPathData.find(i => !(i.parent?.id));
+  const rootTraceItem = criticalPathData.find((i) => !i.parent?.id);
   if (!rootTraceItem) {
     return undefined;
   }
-  const itemsToProcess: {
+  const itemsToProcess: Array<{
     parent?: ITraceItem;
     item: Transaction | Span;
-  }[] = [{ parent: undefined, item: rootTraceItem! }];
+  }> = [{ parent: undefined, item: rootTraceItem! }];
 
-  const traceItems: Array<ITraceItem> = [];
+  const traceItems: ITraceItem[] = [];
   while (itemsToProcess.length > 0) {
     const toProcess = itemsToProcess.shift();
     if (toProcess) {
@@ -132,9 +135,11 @@ const getTrace = (
       transformedItem.start += skew;
       transformedItem.end += skew;
       traceItems.push(transformedItem);
-      const children = criticalPathData.filter(i => i.parent?.id && i.parent.id === getId(item)).map(i => ({ parent: transformedItem, item: i }));
+      const children = criticalPathData
+        .filter((i) => i.parent?.id && i.parent.id === getId(item))
+        .map((i) => ({ parent: transformedItem, item: i }));
       if (children?.length) {
-        itemsToProcess.push(...children)
+        itemsToProcess.push(...children);
       }
     }
   }
@@ -247,14 +252,15 @@ const criticalPathForItem = (trace: ITrace, segment: TraceSegment) => {
   };
 };
 
-function getClockSkew(
-  item: ITraceItem,
-  parentItem?: ITraceItem
-) {
+function getClockSkew(item: ITraceItem, parentItem?: ITraceItem) {
   if (!parentItem) {
     return 0;
   }
-  const docType = item.transaction ? 'transaction' : (item.span ? 'span' : 'none');
+  const docType = item.transaction
+    ? 'transaction'
+    : item.span
+    ? 'span'
+    : 'none';
   switch (docType) {
     // don't calculate skew for spans and errors. Just use parent's skew
     case 'none':
@@ -268,7 +274,11 @@ function getClockSkew(
       // determine if child starts before the parent
       const offsetStart = parentStart - item.start;
       if (offsetStart > 0) {
-        const latency = Math.max((parentItem.end - parentItem.start) - (item.end - item.start), 0) / 2;
+        const latency =
+          Math.max(
+            parentItem.end - parentItem.start - (item.end - item.start),
+            0
+          ) / 2;
         return offsetStart + latency;
       }
 

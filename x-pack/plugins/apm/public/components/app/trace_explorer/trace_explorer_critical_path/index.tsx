@@ -48,7 +48,6 @@ import { LoadingStatePrompt } from '../../../shared/loading_state_prompt';
 import { TraceExplorerCriticalPathFlyout } from './trace_explorer_critical_path_flyout';
 
 const colors = euiPaletteForStatus(130).slice(30, 130);
-const maxNumTraces = 100;
 
 const TooltipContainer = euiStyled.div`
   background-color: ${(props) => props.theme.eui.euiColorLightestShade};
@@ -110,13 +109,13 @@ function CustomTooltip({
 
       return item.duration.toPrecision(4) === value.toPrecision(4);
     });
-    
+
     const sampleDoc = cpItem?.sampleDoc;
     duration = cpItem?.duration ?? value;
     pctDuration = duration / overallValue;
     selfDuration = cpItem?.selfDuration ?? value;
     pctSelfDuration = selfDuration / overallValue;
-    
+
     if (sampleDoc?.processor.event === ProcessorEvent.transaction) {
       transaction = sampleDoc as Transaction;
       label = transaction.transaction.name;
@@ -201,9 +200,7 @@ function CustomTooltip({
               </EuiFlexGroup>
               <EuiFlexGroup direction="row" gutterSize="xs">
                 <EuiFlexItem grow={false}>
-                  <EuiText size="xs" >
-                    {`Self time:`}
-                  </EuiText>
+                  <EuiText size="xs">{`Self time:`}</EuiText>
                 </EuiFlexItem>
                 <EuiFlexItem grow={false}>
                   <EuiText size="xs" color={color} style={{ fontWeight: 800 }}>
@@ -219,7 +216,6 @@ function CustomTooltip({
             </EuiFlexItem>
           </>
         )}
-
       </EuiFlexGroup>
     </TooltipContainer>
   );
@@ -271,7 +267,6 @@ export function TraceExplorerCriticalPath() {
               traceIds,
               start,
               end,
-              maxNumTraces,
             },
           },
         });
@@ -387,7 +382,11 @@ export function TraceExplorerCriticalPath() {
               theme={[themeOverrides, ...chartTheme]}
               tooltip={{
                 customTooltip: (info) => (
-                  <CustomTooltip criticalPath={criticalPath} overallValue={overallValue} {...info} />
+                  <CustomTooltip
+                    criticalPath={criticalPath}
+                    overallValue={overallValue}
+                    {...info}
+                  />
                 ),
               }}
               onElementClick={(elements) => {
