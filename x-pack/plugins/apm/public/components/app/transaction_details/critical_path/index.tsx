@@ -7,7 +7,7 @@
 
 import { XYBrushEvent } from '@elastic/charts';
 import { EuiSpacer } from '@elastic/eui';
-import React from 'react';
+import React, { useMemo }  from 'react';
 
 import { useLegacyUrlParams } from '../../../../context/url_params_context/use_url_params';
 import { FETCH_STATUS } from '../../../../hooks/use_fetcher';
@@ -49,7 +49,7 @@ export function TransactionCriticalPath({
 
   const { serviceName } = useApmServiceContext();
   const transactionName = urlParams.transactionName;
-  const traceIds = traceSamples.map((sample) => sample.traceId);
+  const traceIds = useMemo(() => traceSamples.map((sample) => sample.traceId), [traceSamples]);
 
   const { chartData, hasData, percentileThresholdValue, status } =
     useTransactionDistributionChartData();

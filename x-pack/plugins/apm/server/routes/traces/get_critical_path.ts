@@ -38,7 +38,7 @@ export async function getCriticalPath({
     traceIdsInBatch: string[],
     searchAfter?: any[]
   ): Promise<Array<Transaction | Span>> {
-    const response = await apmEventClient.search('get_critical_path', {
+    const response = await apmEventClient.search('get_traces', {
       apm: {
         events: [ProcessorEvent.span, ProcessorEvent.transaction],
       },
@@ -76,7 +76,6 @@ export async function getCriticalPath({
 
   const traceIdsSampleSet = traceIds.slice(0, Math.min(MAX_NUM_TRACES, traceIds.length));
   const batches = chunk(traceIdsSampleSet, Math.max(1, traceIdsSampleSet.length / 10));
-
   const events = (
     await Promise.all(batches.map((batch) => getTraceEvents(batch)))
   ).flat();

@@ -9,6 +9,7 @@ import { groupBy } from 'lodash';
 import hash from 'object-hash';
 import { Transaction } from '../../../typings/es_schemas/ui/transaction';
 import { Span } from '../../../typings/es_schemas/ui/span';
+import { withApmSpan } from '../../utils/with_apm_span';
 import {
   ICriticalPathItem,
   ICriticalPath,
@@ -41,16 +42,21 @@ interface TraceSegment {
   layers: Record<string, string>;
 }
 
-export const calculateCriticalPath = (
+export const calculateCriticalPath = async (
   criticalPathData: Array<Transaction | Span>,
   serviceName: string,
   transactionName: string
-): ICriticalPath => {
-  const tracesMap = groupBy(criticalPathData, (item) => item.trace.id);
-  const criticalPaths = Object.entries(tracesMap)
-    .map((entry) => getTrace(entry[1], serviceName, transactionName))
-    .filter((t) => t !== undefined)
-    .map((trace) => calculateCriticalPathForTrace(trace!));
+): Promise<ICriticalPath> => {
+  const tracesMap = await withApmSpan('groupByTraces', async () => groupBy(criticalPathData, (item) => item.trace.id));
+  const traces = await withApmSpan('transformTraces', async () => Object.entries(tracesMap)
+    .map((entry) => getTraces(entry[1], serviceName, transactionName)).flat());
+  const criticalPaths = await withApmSpan('calculateCriticalPaths', async () => traces.map((trace) => calculateCriticalPathForTrace(trace!)));
+  const criticalPath = await withApmSpan('aggreagteCriticalPaths', async () => aggregateCriticalPaths(criticalPaths));
+
+  return criticalPath;
+};
+
+const aggregateCriticalPaths = (criticalPaths: ICriticalPathItem[][]): ICriticalPath => {
   const sampleSize = criticalPaths.length;
   const criticalPath: Record<string, ICriticalPathItem> = {};
 
@@ -112,36 +118,43 @@ const transformItem = (item: Transaction | Span) => {
   }
 };
 
-const getTrace = (
+const getTraces = (
   criticalPathData: Array<Transaction | Span>,
   serviceName: string,
   transactionName: string
-): ITrace | undefined => {
-  const rootTraceItem = (transactionName && serviceName) ? 
-    criticalPathData.find(i =>
-      (!(i.span) &&
-        i.service.name === serviceName &&
-        (i as Transaction).transaction.name === transactionName)) :
-    criticalPathData.find(i => !(i.parent?.id));
-    
-  if (!rootTraceItem) {
-    return undefined;
+): ITrace[] => {
+  const transactions = criticalPathData.filter(i => !(i.span) && !!(i.transaction)).map(i => i as Transaction);
+  const rootItems = (transactionName && serviceName) ?
+    transactions.filter(i => (i.service.name === serviceName && i.transaction.name === transactionName)) :
+    transactions.filter(i => !(i.parent?.id));
+
+  if (!rootItems || !rootItems.length) {
+    return [];
   }
 
+  return rootItems.map((root) => getTrace(criticalPathData, root));
+}
+
+const getTrace = (
+  criticalPathData: Array<Transaction | Span>,
+  rootTransaction: Transaction,
+): ITrace => {
   const itemsToProcess: Array<{
     parent?: ITraceItem;
     item: Transaction | Span;
-  }> = [{ parent: undefined, item: rootTraceItem! }];
+  }> = [{ parent: undefined, item: rootTransaction }];
 
   const traceItems: ITraceItem[] = [];
   while (itemsToProcess.length > 0) {
     const toProcess = itemsToProcess.shift();
+
     if (toProcess) {
       const { parent, item } = toProcess;
 
       const transformedItem = transformItem(item);
 
       const skew = getClockSkew(transformedItem, parent);
+
       transformedItem.skew = skew;
       transformedItem.start += skew;
       transformedItem.end += skew;
@@ -154,22 +167,19 @@ const getTrace = (
       }
     }
   }
-  const rootParentId = rootTraceItem.parent?.id ?? ROOT_ID;
+
+  const rootParentId = rootTransaction.parent?.id ?? ROOT_ID;
   const itemsByParent = groupBy(traceItems, (item) =>
     item.parentId ? item.parentId : rootParentId
   );
-  const rootItem = itemsByParent[rootParentId];
-  if (rootItem) {
-    return {
-      root: rootItem[0],
-      childrenByParentId: itemsByParent,
-    };
-  } else {
-    return undefined;
-  }
+
+  return {
+    root: itemsByParent[rootParentId][0],
+    childrenByParentId: itemsByParent,
+  };
 };
 
-const calculateCriticalPathForTrace = (trace: ITrace) => {
+const calculateCriticalPathForTrace = (trace: ITrace): ICriticalPathItem[] => {
   const calculateCriticalPathForChildren: TraceSegment[] = [
     {
       item: trace.root,
@@ -271,8 +281,8 @@ function getClockSkew(item: ITraceItem, parentItem?: ITraceItem) {
   const docType = item.transaction
     ? 'transaction'
     : item.span
-    ? 'span'
-    : 'none';
+      ? 'span'
+      : 'none';
   switch (docType) {
     // don't calculate skew for spans and errors. Just use parent's skew
     case 'none':
