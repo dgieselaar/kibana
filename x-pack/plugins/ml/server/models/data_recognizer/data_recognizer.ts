@@ -304,9 +304,6 @@ export class DataRecognizer {
       query: moduleConfig.query,
     };
 
-    console.log('searching for');
-    console.log(JSON.stringify(moduleConfig, null, 2));
-
     const body = await this._client.asCurrentUser.search(
       {
         index,

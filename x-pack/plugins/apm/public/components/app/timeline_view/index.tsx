@@ -193,13 +193,13 @@ export function TimelineView() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const formattedDestinations = mapValues(data?.destinationMap, (node, key) => {
-    if (node.type === NodeType.dependency) {
+    if (node.type === NodeType.backend) {
       return {
-        label: node.dependencyName,
+        label: node.backendName,
         icon: getSpanIcon(node.spanType, node.spanSubtype),
-        link: router.link('/dependencies/overview', {
+        link: router.link('/backends/overview', {
           query: {
-            dependencyName: node.dependencyName,
+            backendName: node.backendName,
             comparisonEnabled,
             environment,
             rangeTo,
@@ -286,8 +286,6 @@ export function TimelineView() {
     const [, value, unit] = (data?.intervalString ?? '60s').match(
       /(.*)([a-z])$/
     )!;
-
-    console.log({ value, unit });
 
     return {
       type: ScaleType.Time,
