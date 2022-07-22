@@ -40,6 +40,8 @@ import { suggestionsRouteRepository } from '../suggestions/route';
 import { agentKeysRouteRepository } from '../agent_keys/route';
 import { spanLinksRouteRepository } from '../span_links/route';
 import { debugTelemetryRoute } from '../debug_telemetry/route';
+import { timelineRouteRepository } from '../timeline/route';
+
 function getTypedGlobalApmServerRouteRepository() {
   const repository = {
     ...dataViewRouteRepository,
@@ -72,6 +74,7 @@ function getTypedGlobalApmServerRouteRepository() {
     ...spanLinksRouteRepository,
     ...infrastructureRouteRepository,
     ...debugTelemetryRoute,
+    ...timelineRouteRepository,
   };
 
   return repository;
