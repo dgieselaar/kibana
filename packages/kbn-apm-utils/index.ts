@@ -17,6 +17,8 @@ export interface SpanOptions {
   intercept?: boolean;
 }
 
+export { createEventLoopDelayMonitor } from './create_event_loop_delay_monitor';
+
 type Span = Exclude<typeof agent.currentSpan, undefined | null>;
 
 export function parseSpanOptions(optionsOrName: SpanOptions | string) {

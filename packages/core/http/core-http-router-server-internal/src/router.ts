@@ -24,6 +24,7 @@ import type {
   RequestHandler,
 } from '@kbn/core-http-server';
 import { validBodyOutput } from '@kbn/core-http-server';
+import { createEventLoopDelayMonitor } from '@kbn/apm-utils';
 import { CoreKibanaRequest } from './request';
 import { kibanaResponseFactory } from './response';
 import { HapiResponseAdapter } from './response_adapter';
@@ -180,6 +181,8 @@ export class Router<Context extends RequestHandlerContextBase = RequestHandlerCo
     handler: RequestHandlerEnhanced<P, Q, B, typeof request.method>;
     routeSchemas?: RouteValidator<P, Q, B>;
   }) {
+    const monitor = createEventLoopDelayMonitor();
+
     let kibanaRequest: KibanaRequest<P, Q, B, typeof request.method>;
     const hapiResponseAdapter = new HapiResponseAdapter(responseToolkit);
     try {
@@ -190,7 +193,17 @@ export class Router<Context extends RequestHandlerContextBase = RequestHandlerCo
 
     try {
       const kibanaResponse = await handler(kibanaRequest, kibanaResponseFactory);
-      return hapiResponseAdapter.handle(kibanaResponse);
+      const responseObject = hapiResponseAdapter.handle(kibanaResponse);
+
+      monitor.stop();
+
+      if (monitor.total > 0) {
+        this.log.warn(
+          `${request.path}: measured ${Math.round(monitor.total)}ms of event loop delay`
+        );
+      }
+
+      return responseObject;
     } catch (e) {
       this.log.error(e);
       // forward 401 errors from ES client
