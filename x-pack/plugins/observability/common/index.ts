@@ -29,6 +29,7 @@ export {
   apmAWSLambdaPriceFactor,
   apmAWSLambdaRequestCostPerMillion,
   enableCriticalPath,
+  profilingSpecificFeature,
 } from './ui_settings_keys';
 
 export {

@@ -27,6 +27,7 @@ import {
   apmAWSLambdaRequestCostPerMillion,
   enableCriticalPath,
   enableInfrastructureHostsView,
+  profilingSpecificFeature,
 } from '../common/ui_settings_keys';
 
 const betaLabel = i18n.translate('xpack.observability.uiSettings.betaLabel', {
@@ -344,5 +345,21 @@ export const uiSettings: Record<string, UiSettings> = {
     requiresPageReload: true,
     type: 'boolean',
     showInLabs: true,
+  },
+  [profilingSpecificFeature]: {
+    category: [observabilityFeatureId],
+    name: i18n.translate('xpack.observability.profilingSpecificFeature', {
+      defaultMessage: 'Profiling specific feature',
+    }),
+    description: i18n.translate('xpack.observability.profilingSpecificFeatureDescription', {
+      defaultMessage: '{technicalPreviewLabel} Enable a profiling-specific feature.',
+      values: {
+        technicalPreviewLabel: `<em>[${technicalPreviewLabel}]</em>`,
+      },
+    }),
+    schema: schema.boolean(),
+    value: false,
+    requiresPageReload: true,
+    type: 'boolean',
   },
 };
