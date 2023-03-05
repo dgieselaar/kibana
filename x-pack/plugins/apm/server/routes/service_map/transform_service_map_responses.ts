@@ -113,7 +113,7 @@ export function transformServiceMapResponses(response: ServiceMapResponse) {
 
     const serviceAnomalyStats = serviceName
       ? anomalies.serviceAnomalies.find(
-          (item) => item.serviceName === serviceName
+          (item) => item.partition === serviceName
         )
       : undefined;
 

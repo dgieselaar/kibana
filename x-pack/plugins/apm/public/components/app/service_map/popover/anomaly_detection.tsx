@@ -61,12 +61,11 @@ interface Props {
 export function AnomalyDetection({ serviceName, serviceAnomalyStats }: Props) {
   const theme = useTheme();
 
-  const anomalyScore = serviceAnomalyStats?.anomalyScore;
+  const anomalyScore = serviceAnomalyStats?.anomalies.max;
   const severity = getSeverity(anomalyScore);
-  const actualValue = serviceAnomalyStats?.actualValue;
-  const mlJobId = serviceAnomalyStats?.jobId;
-  const transactionType =
-    serviceAnomalyStats?.transactionType ?? TRANSACTION_REQUEST;
+  const actualValue = serviceAnomalyStats?.anomalies.actual;
+  const mlJobId = serviceAnomalyStats?.job.jobId;
+  const transactionType = serviceAnomalyStats?.by ?? TRANSACTION_REQUEST;
   const hasAnomalyDetectionScore = anomalyScore !== undefined;
 
   const healthStatus = getServiceHealthStatus({ severity });

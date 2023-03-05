@@ -6,11 +6,12 @@
  */
 
 import { ApmMlDetectorType } from '@kbn/apm-plugin/common/anomaly_detection/apm_ml_detectors';
-import { ServiceAnomalyTimeseries } from '@kbn/apm-plugin/common/anomaly_detection/service_anomaly_timeseries';
 import { Environment } from '@kbn/apm-plugin/common/environment_rt';
 import { apm, timerange } from '@kbn/apm-synthtrace-client';
 import expect from '@kbn/expect';
 import { last, omit, range } from 'lodash';
+import { ApmMlModule } from '@kbn/apm-plugin/common/anomaly_detection/apm_ml_module';
+import { ApmMlJobResultWithTimeseries } from '@kbn/apm-plugin/common/anomaly_detection/apm_ml_job_result';
 import { ApmApiError } from '../../common/apm_api_supertest';
 import { FtrProviderContext } from '../../common/ftr_provider_context';
 import { createAndRunApmMlJobs } from '../../common/utils/create_and_run_apm_ml_jobs';
@@ -202,11 +203,11 @@ export default function ApiTest({ getService }: FtrProviderContext) {
         });
 
         describe('inspecting the body', () => {
-          let allAnomalyTimeseries: ServiceAnomalyTimeseries[];
+          let allAnomalyTimeseries: ApmMlJobResultWithTimeseries[];
 
-          let latencySeries: ServiceAnomalyTimeseries | undefined;
-          let throughputSeries: ServiceAnomalyTimeseries | undefined;
-          let failureRateSeries: ServiceAnomalyTimeseries | undefined;
+          let latencySeries: ApmMlJobResultWithTimeseries | undefined;
+          let throughputSeries: ApmMlJobResultWithTimeseries | undefined;
+          let failureRateSeries: ApmMlJobResultWithTimeseries | undefined;
           const endTimeMs = new Date(end).getTime();
 
           before(async () => {
@@ -235,7 +236,9 @@ export default function ApiTest({ getService }: FtrProviderContext) {
             expect(allAnomalyTimeseries.length).to.eql(3);
 
             expect(
-              allAnomalyTimeseries.every((spec) => spec.bounds.some((bound) => bound.y0 ?? 0 > 0))
+              allAnomalyTimeseries.every((spec) =>
+                spec.bounds.timeseries.some((bound) => bound.y0 ?? 0 > 0)
+              )
             );
           });
 
@@ -244,59 +247,65 @@ export default function ApiTest({ getService }: FtrProviderContext) {
 
             expect(
               allAnomalyTimeseries.every((spec) =>
-                spec.bounds.every(
+                spec.bounds.timeseries.every(
                   (bound) => bound.x >= new Date(start).getTime() && bound.x <= endTimeMs
                 )
               )
             );
           });
           it('returns model plots with latest bucket matching the end time', () => {
-            expect(allAnomalyTimeseries.every((spec) => last(spec.bounds)?.x === endTimeMs));
+            expect(
+              allAnomalyTimeseries.every((spec) => last(spec.bounds.timeseries)?.x === endTimeMs)
+            );
           });
 
           it('returns the correct metadata', () => {
-            function omitTimeseriesData(series: ServiceAnomalyTimeseries | undefined) {
+            function omitTimeseriesData(series: ApmMlJobResultWithTimeseries | undefined) {
               return series ? omit(series, 'anomalies', 'bounds') : undefined;
             }
 
+            const job = {
+              datafeedId: 'apm_tx_metrics-production-datafeed',
+              module: ApmMlModule.Transaction,
+              jobId: 'apm_tx_metrics-production',
+              environment: 'production',
+              version: 3,
+              jobState: 'closed',
+              bucketSpan: '5m',
+            };
+
             expect(omitTimeseriesData(latencySeries)).to.eql({
               type: ApmMlDetectorType.txLatency,
-              jobId: 'apm-tx-metrics-production',
-              serviceName: 'a',
-              environment: 'production',
-              transactionType: 'request',
-              version: 3,
+              job,
+              partition: 'a',
+              by: 'request',
             });
 
             expect(omitTimeseriesData(throughputSeries)).to.eql({
               type: ApmMlDetectorType.txThroughput,
-              jobId: 'apm-tx-metrics-production',
-              serviceName: 'a',
-              environment: 'production',
-              transactionType: 'request',
-              version: 3,
+              job,
+              partition: 'a',
+              by: 'request',
             });
 
             expect(omitTimeseriesData(failureRateSeries)).to.eql({
               type: ApmMlDetectorType.txFailureRate,
-              jobId: 'apm-tx-metrics-production',
-              serviceName: 'a',
-              environment: 'production',
-              transactionType: 'request',
-              version: 3,
+              job,
+              partition: 'a',
+              by: 'request',
             });
           });
 
           it('returns anomalies for during the spike', () => {
-            const latencyAnomalies = latencySeries?.anomalies.filter(
+            const latencyAnomalies = latencySeries?.anomalies.timeseries.filter(
               (anomaly) => anomaly.y ?? 0 > 0
             );
 
-            const throughputAnomalies = throughputSeries?.anomalies.filter(
+            const throughputAnomalies = throughputSeries?.anomalies.timeseries.filter(
               (anomaly) => anomaly.y ?? 0 > 0
             );
 
-            const failureRateAnomalies = failureRateSeries?.anomalies.filter(
+            const failureRateAnomalies = failureRateSeries?.anomalies.timeseries.filter(
               (anomaly) => anomaly.y ?? 0 > 0
             );
 

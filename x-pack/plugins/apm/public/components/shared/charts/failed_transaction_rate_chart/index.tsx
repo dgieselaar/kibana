@@ -180,14 +180,8 @@ export function FailedTransactionRateChart({
         yLabelFormat={yLabelFormat}
         yDomain={{ min: 0, max: 1 }}
         customTheme={comparisonChartTheme}
-        anomalyTimeseries={
-          preferredAnomalyTimeseries
-            ? {
-                ...preferredAnomalyTimeseries,
-                color: previousPeriodColor,
-              }
-            : undefined
-        }
+        anomalyTimeseries={preferredAnomalyTimeseries}
+        anomalyTimeseriesColor={previousPeriodColor}
       />
     </EuiPanel>
   );

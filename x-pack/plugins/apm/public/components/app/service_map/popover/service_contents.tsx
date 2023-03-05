@@ -25,6 +25,7 @@ import { AnomalyDetection } from './anomaly_detection';
 import { StatsList } from './stats_list';
 import { useTimeRange } from '../../../../hooks/use_time_range';
 import { APIReturnType } from '../../../../services/rest/create_call_apm_api';
+import { ServiceAnomalyStats } from '../../../../../common/anomaly_detection';
 
 type ServiceNodeReturn =
   APIReturnType<'GET /internal/apm/service-map/service/{serviceName}'>;
@@ -120,7 +121,7 @@ export function ServiceContents({
           <>
             <AnomalyDetection
               serviceName={serviceName}
-              serviceAnomalyStats={serviceAnomalyStats}
+              serviceAnomalyStats={serviceAnomalyStats as ServiceAnomalyStats}
             />
             <EuiHorizontalRule margin="xs" />
           </>

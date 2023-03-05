@@ -18,7 +18,6 @@ import { i18n } from '@kbn/i18n';
 import { asAbsoluteDateTime } from '../../../../common/utils/formatters';
 import { useAnnotationsContext } from '../../../context/annotations/use_annotations_context';
 import { useAnyOfApmParams } from '../../../hooks/use_apm_params';
-import { ServiceAnomalyTimeseries } from '../../../../common/anomaly_detection/service_anomaly_timeseries';
 import { Coordinate, TimeSeries } from '../../../../typings/timeseries';
 import { useApmPluginContext } from '../../../context/apm_plugin/use_apm_plugin_context';
 import { FETCH_STATUS } from '../../../hooks/use_fetcher';
@@ -26,10 +25,8 @@ import { unit } from '../../../utils/style';
 import { getTimeZone } from './helper/timezone';
 import { TimeseriesChart } from './timeseries_chart';
 import { useTheme } from '../../../hooks/use_theme';
+import { ApmMlJobResultWithTimeseries } from '../../../../common/anomaly_detection/apm_ml_job_result';
 
-interface AnomalyTimeseries extends ServiceAnomalyTimeseries {
-  color?: string;
-}
 export interface TimeseriesChartWithContextProps {
   id: string;
   fetchStatus: FETCH_STATUS;
@@ -46,7 +43,7 @@ export interface TimeseriesChartWithContextProps {
   yTickFormat?: (y: number) => string;
   showAnnotations?: boolean;
   yDomain?: YDomainRange;
-  anomalyTimeseries?: AnomalyTimeseries;
+  anomalyTimeseries?: ApmMlJobResultWithTimeseries;
   customTheme?: Record<string, unknown>;
   anomalyTimeseriesColor?: string;
 }

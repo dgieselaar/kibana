@@ -169,14 +169,8 @@ export function ServiceOverviewThroughputChart({
         timeseries={timeseries}
         yLabelFormat={asExactTransactionRate}
         customTheme={comparisonChartTheme}
-        anomalyTimeseries={
-          preferredAnomalyTimeseries
-            ? {
-                ...preferredAnomalyTimeseries,
-                color: previousPeriodColor,
-              }
-            : undefined
-        }
+        anomalyTimeseries={preferredAnomalyTimeseries}
+        anomalyTimeseriesColor={previousPeriodColor}
       />
     </EuiPanel>
   );

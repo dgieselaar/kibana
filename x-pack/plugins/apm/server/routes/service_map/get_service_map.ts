@@ -7,26 +7,26 @@
 
 import { Logger } from '@kbn/core/server';
 import { chunk } from 'lodash';
-
-import { withApmSpan } from '../../utils/with_apm_span';
+import { APMConfig } from '../..';
+import { Environment } from '../../../common/environment_rt';
+import { APMEventClient } from '../../lib/helpers/create_es_client/create_apm_event_client';
 import { MlClient } from '../../lib/helpers/get_ml_client';
+import { withApmSpan } from '../../utils/with_apm_span';
 import {
   DEFAULT_ANOMALIES,
   getServiceAnomalies,
 } from './get_service_anomalies';
 import { getServiceMapFromTraceIds } from './get_service_map_from_trace_ids';
+import { getServiceStats } from './get_service_stats';
 import { getTraceSampleIds } from './get_trace_sample_ids';
 import { transformServiceMapResponses } from './transform_service_map_responses';
-import { APMEventClient } from '../../lib/helpers/create_es_client/create_apm_event_client';
-import { APMConfig } from '../..';
-import { getServiceStats } from './get_service_stats';
 
 export interface IEnvOptions {
   mlClient?: MlClient;
   config: APMConfig;
   apmEventClient: APMEventClient;
   serviceName?: string;
-  environment: string;
+  environment: Environment;
   searchAggregatedTransactions: boolean;
   logger: Logger;
   start: number;
@@ -101,16 +101,17 @@ export function getServiceMap(
   options: IEnvOptions & { maxNumberOfServices: number }
 ) {
   return withApmSpan('get_service_map', async () => {
-    const { logger } = options;
-    const anomaliesPromise = getServiceAnomalies(
-      options
-
-      // always catch error to avoid breaking service maps if there is a problem with ML
-    ).catch((error) => {
-      logger.warn(`Unable to retrieve anomalies for service maps.`);
-      logger.error(error);
-      return DEFAULT_ANOMALIES;
-    });
+    const { logger, mlClient } = options;
+    const anomaliesPromise = mlClient
+      ? getServiceAnomalies(
+          { ...options, mlClient }
+          // always catch error to avoid breaking service maps if there is a problem with ML
+        ).catch((error) => {
+          logger.warn(`Unable to retrieve anomalies for service maps.`);
+          logger.error(error);
+          return DEFAULT_ANOMALIES;
+        })
+      : Promise.resolve(DEFAULT_ANOMALIES);
 
     const [connectionData, servicesData, anomalies] = await Promise.all([
       getConnectionData(options),

@@ -10,7 +10,11 @@ import { Meta, Story } from '@storybook/react';
 import cytoscape from 'cytoscape';
 import React from 'react';
 import { Popover } from '.';
+import { ServiceAnomalyStats } from '../../../../../common/anomaly_detection';
+import { ApmMlDetectorType } from '../../../../../common/anomaly_detection/apm_ml_detectors';
+import { ApmMlModule } from '../../../../../common/anomaly_detection/apm_ml_module';
 import { ENVIRONMENT_ALL } from '../../../../../common/environment_filter_values';
+import { Environment } from '../../../../../common/environment_rt';
 import { ApmPluginContextValue } from '../../../../context/apm_plugin/apm_plugin_context';
 import { MockApmPluginStorybook } from '../../../../context/apm_plugin/mock_apm_plugin_storybook';
 import { APIReturnType } from '../../../../services/rest/create_call_apm_api';
@@ -181,17 +185,30 @@ export const Service: Story<Args> = () => {
     />
   );
 };
+
 Service.args = {
   nodeData: {
     id: 'example service',
     'service.name': 'example service',
     serviceAnomalyStats: {
-      serviceName: 'opbeans-java',
-      jobId: 'apm-production-802c-high_mean_transaction_duration',
-      transactionType: 'request',
-      actualValue: 16258.496000000017,
-      anomalyScore: 0,
       healthStatus: 'healthy',
-    },
+      partition: 'example service',
+      by: 'request',
+      type: ApmMlDetectorType.txLatency,
+      anomalies: {
+        max: 0,
+        actual: null,
+      },
+      bounds: {
+        min: null,
+        max: null,
+      },
+      job: {
+        jobId: '',
+        version: 3,
+        environment: 'production' as Environment,
+        module: ApmMlModule.Transaction,
+      },
+    } as ServiceAnomalyStats,
   },
 };

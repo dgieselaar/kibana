@@ -6,15 +6,15 @@
  */
 
 import { i18n } from '@kbn/i18n';
-import { rgba } from 'polished';
 import { EuiTheme } from '@kbn/kibana-react-plugin/common';
 import { getSeverity } from '@kbn/ml-plugin/public';
+import { rgba } from 'polished';
 import { getSeverityColor } from '../../../../../common/anomaly_detection';
+import { ApmMlJobResultWithTimeseries } from '../../../../../common/anomaly_detection/apm_ml_job_result';
 import {
   ANOMALY_SEVERITY,
   ANOMALY_THRESHOLD,
 } from '../../../../../common/ml_constants';
-import { ServiceAnomalyTimeseries } from '../../../../../common/anomaly_detection/service_anomaly_timeseries';
 import { APMChartSpec } from '../../../../../typings/timeseries';
 
 export const expectedBoundsTitle = i18n.translate(
@@ -28,7 +28,7 @@ export function getChartAnomalyTimeseries({
   theme,
   anomalyTimeseriesColor,
 }: {
-  anomalyTimeseries?: ServiceAnomalyTimeseries;
+  anomalyTimeseries?: ApmMlJobResultWithTimeseries;
   theme: EuiTheme;
   anomalyTimeseriesColor?: string;
 }):
@@ -55,7 +55,7 @@ export function getChartAnomalyTimeseries({
       color: anomalyTimeseriesColor ?? rgba(theme.eui.euiColorVis1, 0.5),
       yAccessors: ['y1'],
       y0Accessors: ['y0'],
-      data: anomalyTimeseries.bounds,
+      data: anomalyTimeseries.bounds.timeseries,
       key: 'expected_bounds',
     },
   ];
@@ -88,7 +88,7 @@ export function getChartAnomalyTimeseries({
       },
     };
 
-    const data = anomalyTimeseries.anomalies.map((anomaly) => ({
+    const data = anomalyTimeseries.anomalies.timeseries.map((anomaly) => ({
       ...anomaly,
       y: getSeverity(anomaly.y ?? 0).id === severity ? anomaly.actual : null,
     }));

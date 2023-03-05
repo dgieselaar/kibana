@@ -17,6 +17,8 @@ import { ScopedAnnotationsClient } from '@kbn/observability-plugin/server';
 import * as t from 'io-ts';
 import { mergeWith, uniq } from 'lodash';
 import { ML_ERRORS } from '../../../common/anomaly_detection';
+import { ApmMlJobResultWithTimeseries } from '../../../common/anomaly_detection/apm_ml_job_result';
+import { ApmMlModule } from '../../../common/anomaly_detection/apm_ml_module';
 import { offsetRt } from '../../../common/comparison_rt';
 import { ConnectionStatsItemWithImpact } from '../../../common/connections';
 import { latencyAggregationTypeRt } from '../../../common/latency_aggregation_types';
@@ -1108,9 +1110,7 @@ const serviceAnomalyChartsRoute = createApmServerRoute({
   handler: async (
     resources
   ): Promise<{
-    allAnomalyTimeseries: Array<
-      import('./../../../common/anomaly_detection/service_anomaly_timeseries').ServiceAnomalyTimeseries
-    >;
+    allAnomalyTimeseries: ApmMlJobResultWithTimeseries[];
   }> => {
     const mlClient = await getMlClient(resources);
 
@@ -1125,13 +1125,15 @@ const serviceAnomalyChartsRoute = createApmServerRoute({
 
     try {
       const allAnomalyTimeseries = await getAnomalyTimeseries({
-        serviceName,
-        transactionType,
+        partition: serviceName,
+        by: transactionType,
         start,
         end,
         mlClient,
         logger: resources.logger,
         environment,
+        bucketSizeInSeconds: 'auto',
+        module: ApmMlModule.Transaction,
       });
 
       return {

@@ -123,7 +123,7 @@ export function LatencyChart({ height, kuery }: Props) {
           <EuiFlexItem grow={false}>
             <MLHeader
               hasValidMlLicense={license?.getFeature('ml').isAvailable}
-              mlJobId={preferredAnomalyTimeseries?.jobId}
+              mlJobId={preferredAnomalyTimeseries?.job.jobId}
             />
           </EuiFlexItem>
         </EuiFlexGroup>
@@ -136,14 +136,8 @@ export function LatencyChart({ height, kuery }: Props) {
           customTheme={comparisonChartTheme}
           timeseries={timeseries}
           yLabelFormat={getResponseTimeTickFormatter(latencyFormatter)}
-          anomalyTimeseries={
-            preferredAnomalyTimeseries
-              ? {
-                  ...preferredAnomalyTimeseries,
-                  color: anomalyTimeseriesColor,
-                }
-              : undefined
-          }
+          anomalyTimeseries={preferredAnomalyTimeseries}
+          anomalyTimeseriesColor={anomalyTimeseriesColor}
         />
       </EuiFlexItem>
     </EuiFlexGroup>

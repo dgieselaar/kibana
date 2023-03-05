@@ -137,6 +137,7 @@ const serviceMapRoute = createApmServerRoute({
       end,
       kuery,
     });
+
     return getServiceMap({
       mlClient,
       config,

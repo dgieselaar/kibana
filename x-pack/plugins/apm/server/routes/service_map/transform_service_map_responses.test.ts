@@ -19,35 +19,58 @@ import {
   transformServiceMapResponses,
   ServiceMapResponse,
 } from './transform_service_map_responses';
+import { Environment } from '../../../common/environment_rt';
+import { ApmMlModule } from '../../../common/anomaly_detection/apm_ml_module';
+import { ApmMlDetectorType } from '../../../common/anomaly_detection/apm_ml_detectors';
 
 const nodejsService = {
   [SERVICE_NAME]: 'opbeans-node',
-  [SERVICE_ENVIRONMENT]: 'production',
+  [SERVICE_ENVIRONMENT]: 'production' as Exclude<
+    Environment,
+    'ENVIRONMENT_ALL'
+  >,
   [AGENT_NAME]: 'nodejs',
+  anomalyResults: [],
 };
 
 const nodejsExternal = {
   [SPAN_DESTINATION_SERVICE_RESOURCE]: 'opbeans-node',
   [SPAN_TYPE]: 'external',
   [SPAN_SUBTYPE]: 'aa',
+  anomalyResults: [],
 };
 
 const javaService = {
   [SERVICE_NAME]: 'opbeans-java',
-  [SERVICE_ENVIRONMENT]: 'production',
+  [SERVICE_ENVIRONMENT]: 'production' as Exclude<
+    Environment,
+    'ENVIRONMENT_ALL'
+  >,
   [AGENT_NAME]: 'java',
+  anomalyResults: [],
 };
 
 const anomalies = {
-  mlJobIds: ['apm-test-1234-ml-module-name'],
   serviceAnomalies: [
     {
-      serviceName: 'opbeans-test',
-      transactionType: 'request',
-      actualValue: 10000,
-      anomalyScore: 50,
-      jobId: 'apm-test-1234-ml-module-name',
+      partition: 'opbeans-test',
+      by: 'request',
+      anomalies: {
+        actual: 10000,
+        max: 50,
+      },
+      job: {
+        environment: 'production' as Environment,
+        module: ApmMlModule.Transaction,
+        jobId: 'apm-test-1234-ml-module-name',
+        version: 3,
+      },
+      type: ApmMlDetectorType.txLatency,
       healthStatus: ServiceHealthStatus.warning,
+      bounds: {
+        min: 0,
+        max: 0,
+      },
     },
   ],
 };

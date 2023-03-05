@@ -64,6 +64,7 @@ export function TimeseriesChart({
   showAnnotations = true,
   yDomain,
   anomalyTimeseries,
+  anomalyTimeseriesColor,
   customTheme = {},
   comparisonEnabled,
   offset,
@@ -77,7 +78,7 @@ export function TimeseriesChart({
   const anomalyChartTimeseries = getChartAnomalyTimeseries({
     anomalyTimeseries,
     theme,
-    anomalyTimeseriesColor: anomalyTimeseries?.color,
+    anomalyTimeseriesColor,
   });
   const isEmpty = isTimeseriesEmpty(timeseries);
   const isComparingExpectedBounds =
