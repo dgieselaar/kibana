@@ -20,7 +20,6 @@ import {
 import { jsonRt, mergeRt } from '@kbn/io-ts-utils';
 import { InspectResponse } from '@kbn/observability-plugin/typings/common';
 import apm from 'elastic-apm-node';
-import { performance } from 'perf_hooks';
 import { pickKeys } from '../../../common/utils/pick_keys';
 import { APMRouteHandlerResources, TelemetryUsageCounter } from '../typings';
 import type { ApmPluginRequestHandlerContext } from '../typings';
@@ -83,8 +82,6 @@ export function registerRoutes({
         validate: routeValidationObject,
       },
       async (context, request, response) => {
-        const startUtilization = performance.eventLoopUtilization();
-
         if (agent.isStarted()) {
           agent.addLabels({
             plugin: 'apm',
@@ -143,8 +140,6 @@ export function registerRoutes({
             throw new Error('Return type cannot be an array');
           }
 
-          const endUtilization = performance.eventLoopUtilization();
-
           if (!options.disableTelemetry && telemetryUsageCounter) {
             telemetryUsageCounter.incrementCounter({
               counterName: `${method.toUpperCase()} ${pathname}`,
@@ -152,23 +147,10 @@ export function registerRoutes({
             });
           }
 
-          const eventLoopUtilization = performance.eventLoopUtilization(
-            endUtilization,
-            startUtilization
-          );
-
-          apm.currentTransaction?.addLabels({
-            event_loop_utilization: eventLoopUtilization.utilization,
-            event_loop_active: eventLoopUtilization.active,
-          });
-
           const body = validatedParams.query?._inspect
             ? {
                 ...data,
                 _inspect: inspectableEsQueriesMap.get(request),
-                _perf: {
-                  eventLoopUtilization,
-                },
               }
             : { ...data };
 
