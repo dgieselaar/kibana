@@ -11,7 +11,7 @@ import type { ElasticsearchClientConfig } from '@kbn/core-elasticsearch-server';
 import type { Logger } from '@kbn/logging';
 import apm from 'elastic-apm-node';
 import * as Https from 'https';
-import { isUndefined, omitBy } from 'lodash';
+import { get, isUndefined, omitBy } from 'lodash';
 import LRUCache from 'lru-cache';
 import type { AgentFactoryProvider } from './agent_manager';
 import { parseClientOptions } from './client_config';
@@ -179,6 +179,9 @@ export const configureClient = (
       );
       span?.setLabel('es_deserialization', getDurationInMs(timings.deserializationStart, end));
       span?.setLabel('es_response_time', getDurationInMs(timings.requestStart, end));
+
+      const took = get(result, 'body.took');
+      span?.setLabel('es_took', took);
     }
   });
 
