@@ -54,14 +54,19 @@ const promptRoutes: {
   })
 );
 
-const messageRt = t.type({
-  role: t.union([
-    t.literal(ChatCompletionRequestMessageRoleEnum.Assistant),
-    t.literal(ChatCompletionRequestMessageRoleEnum.System),
-    t.literal(ChatCompletionRequestMessageRoleEnum.User),
-  ]),
-  content: t.string,
-});
+const messageRt = t.intersection([
+  t.type({
+    role: t.union([
+      t.literal(ChatCompletionRequestMessageRoleEnum.Assistant),
+      t.literal(ChatCompletionRequestMessageRoleEnum.System),
+      t.literal(ChatCompletionRequestMessageRoleEnum.User),
+    ]),
+    content: t.string,
+  }),
+  t.partial({
+    function_call: t.partial({ name: t.string, arguments: t.string }),
+  }),
+]);
 
 const createConversationRoute = createObservabilityServerRoute({
   endpoint: 'POST /internal/observability/copilot/conversation/create',

@@ -10,6 +10,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CoPilotConversation, CoPilotConversationMessage } from '../../../common/co_pilot';
 import { ChatResponseObservable } from '../../../common/co_pilot/streaming_chat_response_observable';
 import { CoPilotChatBody } from '../co_pilot_chat_body';
+import { CoPilotFunctionCall } from '../co_pilot_chat_body/co_pilot_function_call';
 import { CoPilotChatBalloon } from './co_pilot_chat_balloon';
 
 export function CoPilotChatConversation({
@@ -67,7 +68,13 @@ export function CoPilotChatConversation({
             {messages?.map((message) => (
               <EuiFlexItem grow={false}>
                 <CoPilotChatBalloon role={message.message.role}>
-                  {message.message.content}
+                  {message.message.content || (
+                    <CoPilotFunctionCall
+                      name={message.message.function_call?.name!}
+                      arguments={message.message.function_call?.arguments!}
+                      loading={isLoading}
+                    />
+                  )}
                 </CoPilotChatBalloon>
               </EuiFlexItem>
             ))}

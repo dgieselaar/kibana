@@ -19,6 +19,7 @@ import {
 } from '@elastic/eui';
 import { css } from '@emotion/react';
 import { i18n } from '@kbn/i18n';
+import { ChatCompletionRequestMessage, ChatCompletionResponseMessage } from 'openai';
 import React, { useEffect, useState } from 'react';
 import useAsyncFn from 'react-use/lib/useAsyncFn';
 import { Observable } from 'rxjs';
@@ -188,6 +189,8 @@ export function CoPilotChat() {
 
               setResponse$(observable$);
 
+              const newMessages: ChatCompletionRequestMessage[] = [];
+
               try {
                 let isNew = false;
                 let conversationId = coPilot.conversationId;
@@ -195,24 +198,48 @@ export function CoPilotChat() {
                   const { conversation: nextConversation } = await coPilot.createConversation();
                   conversationId = nextConversation.conversation.id;
                   isNew = true;
+                  newMessages.push({
+                    content:
+                      "You are a helpful assistant for the Elastic APM product. Your users might be SREs or application developers who need help debugging a performance regression or a stability issue. Assume problems should be solved within the context of the Elastic APM app. You're talking to experienced professionals so don't baby them on basics. Some important field names are 'service.name', 'service.environment' (usually something like 'production', 'development', 'testing', 'qa') and 'service.version' (all keyword fields). Hosts are uniquely identified by `service.node.name`. For transactions and spans, 'event.outcome' describes whether the event was succesful or not. 'event.duration' describes how long the event took. For transaction data, we have 'transaction.type' (usually 'request' or 'page load'). For exit span data, there is 'span.destination.service.resource', which defines the name of the downstream target of the exit span. Don't suggest a function if you're not sure on what to call it with, and don't name it. Instead, ask the user for clarification or additional context.",
+                    role: 'system',
+                  });
                 }
 
-                const userMessage = { content: input, role: 'user' as const };
+                newMessages.push({ content: input, role: 'user' });
 
-                observable$ = coPilot.chat([userMessage]);
+                observable$ = coPilot.chat(
+                  (conversation.value?.messages ?? [])
+                    .map((msg) => {
+                      const { order, ...rest } = msg.message;
+                      return rest;
+                    })
+                    .concat(newMessages)
+                );
 
                 setResponse$(observable$);
 
-                const reply = await new Promise<string>((resolve, reject) => {
-                  let content: string = '';
+                const reply = await new Promise<
+                  Pick<ChatCompletionResponseMessage, 'content' | 'function_call'>
+                >((resolve, reject) => {
+                  let choice = {
+                    function_call: { arguments: '', name: '' },
+                    content: '',
+                  };
+
                   observable$.subscribe({
                     next: (chunks) => {
-                      content = chunks
-                        .map((chunk) => chunk.choices[0]?.delta.content ?? '')
-                        .join('');
+                      choice = { function_call: { arguments: '', name: '' }, content: '' };
+
+                      chunks.forEach((chunk) => {
+                        const delta = chunk.choices[0].delta;
+                        choice.content += delta.content ?? '';
+                        choice.function_call.arguments += delta.function_call?.arguments ?? '';
+                        choice.function_call.name += delta.function_call?.name ?? '';
+                      });
                     },
                     complete: () => {
-                      resolve(content);
+                      console.log('completing');
+                      resolve(choice);
                     },
                     error: (err) => {
                       reject(err);
@@ -220,10 +247,15 @@ export function CoPilotChat() {
                   });
                 });
 
-                await coPilot.append(conversationId, [
-                  userMessage,
-                  { content: reply, role: 'assistant' as const },
-                ]);
+                await coPilot.append(
+                  conversationId,
+                  newMessages.concat({
+                    ...(reply.content
+                      ? { content: reply.content }
+                      : { function_call: reply.function_call, content: '' }),
+                    role: 'assistant' as const,
+                  })
+                );
 
                 if (isNew) {
                   try {
@@ -247,7 +279,9 @@ export function CoPilotChat() {
             }}
             loading={conversation.loading}
             conversation={conversation.value?.conversation}
-            messages={conversation.value?.messages}
+            messages={conversation.value?.messages.filter(
+              (message) => message.message.role !== 'system'
+            )}
             response$={response$}
             inflightRequest={inflightRequest}
           />

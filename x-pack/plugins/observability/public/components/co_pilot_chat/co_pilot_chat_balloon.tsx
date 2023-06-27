@@ -9,7 +9,7 @@ import { css } from '@emotion/react';
 import React from 'react';
 
 interface Props {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'function';
   children: React.ReactNode;
 }
 

@@ -30,6 +30,91 @@ export class OpenAIClient implements IOpenAIClient {
           messages,
           model: this.config.model,
           stream,
+          function_call: 'auto',
+          functions: [
+            {
+              name: 'get_apm_chart',
+              description:
+                "Get a time-based line or bar chart for various APM metrics, like throughput, failure rate, or latency, for any service or all services, or any or all of its dependencies. If no environment is given, assume it should be over all environments. In KQL, escaping happens with double quotes, not single quotes. When in doubt, don't escape at all. This is very important! Suppose that you want to filter for the value opbeans-go for the service.name field. Best: `service.name:opbeans-go`. OK: `service.name:\"opbeans-go\"`. Wrong: `service.name:'opbeans-go'`. If you use grouping, make sure to include groupBy in the label for a specific series, this is very important. For instance, when grouping by service.node.name, use: `Avg latency for {{groupBy}}`, not: `Avg latency for host` or `Avg latency for {{service.node.name}}`",
+              parameters: {
+                type: 'object',
+                properties: {
+                  title: {
+                    type: 'string',
+                    description: 'A title for the visualisation. Should be very concise.',
+                  },
+                  series: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        label: {
+                          type: 'string',
+                          description:
+                            'A unique, human readable, concise Mustache template for this specific series. It needs to be unique. The only available variable is groupBy. Keep it as concise as possible, in many cases you only need groupBy.',
+                        },
+                        metric: {
+                          description: 'The metric to be displayed',
+                          oneOf: [
+                            {
+                              type: 'object',
+                              properties: {
+                                name: {
+                                  type: 'string',
+                                  enum: [
+                                    'transaction_throughput',
+                                    'transaction_failure_rate',
+                                    'exit_span_throughput',
+                                    'exit_span_failure_rate',
+                                  ],
+                                },
+                              },
+                              required: ['name'],
+                            },
+                            {
+                              type: 'object',
+                              properties: {
+                                name: {
+                                  type: 'string',
+                                  enum: ['transaction_latency', 'exit_span_latency'],
+                                },
+                                function: {
+                                  type: 'string',
+                                  enum: ['avg', 'p95', 'p99'],
+                                },
+                              },
+                              required: ['name', 'function'],
+                            },
+                          ],
+                        },
+                        start: {
+                          type: 'string',
+                          description:
+                            'The start of the time range, in Elasticsearch date math, like `now`.',
+                        },
+                        end: {
+                          type: 'string',
+                          description:
+                            'The end of the time range, in Elasticsearch date math, like `now-24h`.',
+                        },
+                        filter: {
+                          type: 'string',
+                          description:
+                            'a KQL query to filter the data by. If no filter should be applied, leave it empty.',
+                        },
+                        groupBy: {
+                          type: 'string',
+                          description: 'Group data by this field.',
+                        },
+                      },
+                      required: ['metric', 'start', 'end', 'label'],
+                    },
+                  },
+                },
+                required: ['series', 'title'],
+              },
+            },
+          ],
         },
         ...(stream ? [{ responseType: 'stream' as const }] : [])
       );

@@ -214,6 +214,7 @@ export class CoPilotClient {
           message: {
             content: message.content,
             role: message.role,
+            function_call: message.function_call,
             order: index,
           },
           user: {

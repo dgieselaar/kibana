@@ -49,8 +49,12 @@ export interface CoPilotConversationMessage {
     id: string;
   };
   message: {
-    content: string;
-    role: 'system' | 'user' | 'assistant';
+    content?: string;
+    function_call?: {
+      name?: string;
+      arguments?: string;
+    };
+    role: 'system' | 'user' | 'assistant' | 'function';
     order: number;
   };
   labels: Record<string, string | number | string[] | number[]>;
@@ -267,7 +271,7 @@ export type PromptParamsOf<TPromptId extends CoPilotPromptId> = t.OutputOf<
 export type CreateChatCompletionResponseChunk = Omit<CreateChatCompletionResponse, 'choices'> & {
   choices: Array<
     Omit<CreateChatCompletionResponseChoicesInner, 'message'> & {
-      delta: { content?: string };
+      delta: { content?: string; function_call?: { name?: string; arguments?: string } };
     }
   >;
 };
