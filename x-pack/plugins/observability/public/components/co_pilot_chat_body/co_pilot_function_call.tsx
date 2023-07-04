@@ -5,96 +5,30 @@
  * 2.0.
  */
 import { Axis, Chart, LineSeries, niceTimeFormatter, Position, Settings } from '@elastic/charts';
-import { EuiFlexGroup, EuiFlexItem, EuiIcon, EuiLoadingSpinner, EuiText } from '@elastic/eui';
-import { i18n } from '@kbn/i18n';
-import React, { useCallback, useRef } from 'react';
-import useAsync from 'react-use/lib/useAsync';
+import { EuiFlexGroup, EuiFlexItem, EuiText } from '@elastic/eui';
 import { useChartTheme } from '@kbn/observability-shared-plugin/public';
-import { enableInspectEsQueries } from '../../../common';
-import { useKibana } from '../../utils/kibana_react';
+import { ChatCompletionResponseMessage } from 'openai';
+import React from 'react';
 import { isFiniteNumber } from '../../../common/utils/is_finite_number';
 
 export function CoPilotFunctionCall({
-  name,
-  arguments: args,
-  loading,
+  message,
 }: {
-  name: string;
-  arguments: string;
-  loading: boolean;
+  message: ChatCompletionResponseMessage & { data: unknown };
 }) {
-  const {
-    services: { http, uiSettings },
-  } = useKibana();
-
-  const inspectableEsQueriesEnabled: boolean = uiSettings.get(enableInspectEsQueries);
-
   const chartTheme = useChartTheme();
 
-  const getCharts: () => Promise<any> = useCallback(() => {
-    return http.post('/internal/apm/assistant/get_apm_chart', {
-      body: JSON.stringify({
-        now: Date.now(),
-        args: JSON.parse(args),
-      }),
-      query: {
-        _inspect: inspectableEsQueriesEnabled ? 'true' : 'false',
-      },
-    });
-  }, [http, args, inspectableEsQueriesEnabled]);
-
-  const hasLoaded = useRef(false);
-
-  if (!loading && hasLoaded.current === false) {
-    hasLoaded.current = true;
-  }
-
-  const charts = useAsync(() => {
-    if (!hasLoaded.current) {
-      return new Promise(() => {});
-    }
-    return getCharts();
-  }, [hasLoaded.current, getCharts]);
-
-  if (charts.error) {
-    return (
-      <EuiFlexGroup direction="row" gutterSize="s" alignItems="center">
-        <EuiFlexItem grow={false}>
-          <EuiIcon type="warning" color="danger" />
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiText size="s" color="danger">
-            {charts.error.message}
-          </EuiText>
-        </EuiFlexItem>
-      </EuiFlexGroup>
-    );
-  }
-
-  if (charts.loading || !charts.value) {
-    return (
-      <EuiFlexGroup direction="row" gutterSize="s" alignItems="center">
-        <EuiFlexItem grow={false}>
-          <EuiLoadingSpinner />
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          {i18n.translate('xpack.observability.coPilot.functionCall.functionLoadingMessage', {
-            defaultMessage: 'Executing function...',
-          })}
-        </EuiFlexItem>
-      </EuiFlexGroup>
-    );
-  }
-
-  const chartData: {
-    title: string;
-    series: Array<{ label: string; data: Array<{ x: number; y: number }> }>;
-  } = charts.value;
+  const chartData = message.data as {
+    charts: Array<{
+      title: string;
+      series: Array<{ label: string; data: Array<{ x: number; y: number }> }>;
+    }>;
+  };
 
   const times: number[] = [];
   const values: number[] = [];
 
-  chartData.series
+  chartData.charts[0].series
     .flatMap((serie) => serie.data)
     .forEach((coord) => {
       times.push(coord.x);
@@ -115,7 +49,7 @@ export function CoPilotFunctionCall({
     <EuiFlexGroup direction="column">
       <EuiFlexItem grow={false}>
         <EuiText size="m">
-          <strong>{chartData.title}</strong>
+          <strong>{chartData.charts[0].title}</strong>
         </EuiText>
       </EuiFlexItem>
       <EuiFlexItem>
@@ -139,7 +73,7 @@ export function CoPilotFunctionCall({
             }}
             ticks={3}
           />
-          {chartData.series.map((serie) => {
+          {chartData.charts[0].series.map((serie) => {
             return (
               <LineSeries data={serie.data} id={serie.label} yAccessors={['y']} xAccessor="x" />
             );

@@ -33,9 +33,24 @@ export class OpenAIClient implements IOpenAIClient {
           function_call: 'auto',
           functions: [
             {
+              name: 'get_service_summary',
+              description:
+                'Gets a summary of services, including: the language, service version, deployments, and the infrastructure that they are running in, for instance on how many pods, and a list of its downstream dependencies. It does not report on metrics or health state.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  'service.name': {
+                    type: 'string',
+                    description:
+                      'The name of the service that should be summarized. If not defined, all services are returned individually',
+                  },
+                },
+              },
+            },
+            {
               name: 'get_apm_chart',
               description:
-                "Get a time-based line or bar chart for various APM metrics, like throughput, failure rate, or latency, for any service or all services, or any or all of its dependencies. If no environment is given, assume it should be over all environments. In KQL, escaping happens with double quotes, not single quotes. When in doubt, don't escape at all. This is very important! Suppose that you want to filter for the value opbeans-go for the service.name field. Best: `service.name:opbeans-go`. OK: `service.name:\"opbeans-go\"`. Wrong: `service.name:'opbeans-go'`. If you use grouping, make sure to include groupBy in the label for a specific series, this is very important. For instance, when grouping by service.node.name, use: `Avg latency for {{groupBy}}`, not: `Avg latency for host` or `Avg latency for {{service.node.name}}`",
+                "Display different APM metrics, like throughput, failure rate, or latency, for any service or all services, or any or all of its dependencies, both as a timeseries and as a single statistic. Additionally, the function will return any changes, such as spikes, step and trend changes, or dips. You can also use it to compare data by requesting two different time ranges, or for instance two different service versions. If you use grouping, make sure to include groupBy in the label for a specific series, this is very important. For instance, when grouping by service.node.name, use: `Avg latency for {{groupBy}}`, not: `Avg latency for host` or `Avg latency for {{service.node.name}}`. In KQL, escaping happens with double quotes, not single quotes. When in doubt, don't escape at all. This is very important! Suppose that you want to filter for the value opbeans-go for the service.name field. Best: `service.name:opbeans-go`. OK: `service.name:\"opbeans-go\"`. Wrong: `service.name:'opbeans-go'.",
               parameters: {
                 type: 'object',
                 properties: {
@@ -43,7 +58,12 @@ export class OpenAIClient implements IOpenAIClient {
                     type: 'string',
                     description: 'A title for the visualisation. Should be very concise.',
                   },
-                  series: {
+                  description: {
+                    type: 'string',
+                    description:
+                      'A readable description of what the visualisation shows. Include an explanation why it was suggested.',
+                  },
+                  stats: {
                     type: 'array',
                     items: {
                       type: 'object',
@@ -111,7 +131,7 @@ export class OpenAIClient implements IOpenAIClient {
                     },
                   },
                 },
-                required: ['series', 'title'],
+                required: ['stats', 'title', 'description'],
               },
             },
           ],

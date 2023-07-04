@@ -6,7 +6,8 @@
  */
 
 import { HttpResponse, type HttpSetup } from '@kbn/core/public';
-import { BehaviorSubject, concatMap, delay, of } from 'rxjs';
+import { omit } from 'lodash';
+import { BehaviorSubject } from 'rxjs';
 import { CoPilotConversation, CoPilotConversationMessage } from '../../../common/co_pilot';
 import { createStreamingChatResponseObservable } from '../../../common/co_pilot/streaming_chat_response_observable';
 import { type CoPilotService } from '../../typings/co_pilot';
@@ -51,9 +52,7 @@ function httpResponseIntoObservable(responsePromise: Promise<HttpResponse>) {
     .catch((err) => {
       subject.error(err);
     });
-  return createStreamingChatResponseObservable(subject).pipe(
-    concatMap((value) => of(value).pipe(delay(50)))
-  );
+  return createStreamingChatResponseObservable(subject);
 }
 
 export function createCoPilotService({ enabled, http }: { enabled: boolean; http: HttpSetup }) {
@@ -119,6 +118,31 @@ export function createCoPilotService({ enabled, http }: { enabled: boolean; http
       )) as {
         messages: CoPilotConversationMessage[];
       };
+    },
+    async callFunction(message) {
+      switch (message.function_call?.name) {
+        default:
+          throw new Error(`No or unknown function call defined`);
+
+        case 'get_apm_chart':
+          return {
+            ...omit(
+              await http.post(`/internal/apm/assistant/${message.function_call!.name!}`, {
+                body: JSON.stringify({
+                  now: Date.now(),
+                  args: JSON.parse(message.function_call!.arguments!),
+                }),
+                query: {
+                  _inspect: 'true',
+                },
+              }),
+              '_inspect'
+            ),
+            role: 'function',
+            name: message.function_call.name,
+          };
+          break;
+      }
     },
   };
 

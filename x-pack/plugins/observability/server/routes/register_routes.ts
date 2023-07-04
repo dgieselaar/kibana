@@ -9,6 +9,7 @@ import Boom from '@hapi/boom';
 import { RulesClientApi } from '@kbn/alerting-plugin/server/types';
 import { CoreSetup, KibanaRequest, Logger, RouteRegistrar } from '@kbn/core/server';
 import { RuleDataPluginService } from '@kbn/rule-registry-plugin/server';
+import stream from 'stream';
 import {
   decodeRequestParams,
   parseEndpoint,
@@ -86,10 +87,27 @@ export function registerRoutes({ repository, core, logger, dependencies }: Regis
 
           if (axios.isAxiosError(error)) {
             logger.error(error);
+
+            const errorBody: any = await new Promise((resolve) => {
+              let res = '';
+              error.response.data.on('data', (chunk) => {
+                res += chunk.toString();
+              });
+              error.response.data.on('end', () => {
+                try {
+                  const parsed = JSON.parse(res);
+                  resolve(parsed);
+                } catch (err: any) {
+                  resolve(res);
+                }
+              });
+            });
+
             return response.customError({
               statusCode: error.response?.status || 500,
               body: {
                 message: error.message,
+                attributes: errorBody,
               },
             });
           }

@@ -181,6 +181,13 @@ export class CoPilotService {
                     order: {
                       type: 'byte',
                     },
+                    data: {
+                      type: 'object',
+                      enabled: false,
+                    },
+                    name: {
+                      type: 'keyword',
+                    },
                   },
                 },
                 conversation: {

@@ -7,7 +7,7 @@
 import Boom from '@hapi/boom';
 import { ServerRoute } from '@kbn/server-route-repository';
 import * as t from 'io-ts';
-import { map } from 'lodash';
+import { map, omitBy } from 'lodash';
 import { ChatCompletionRequestMessageRoleEnum } from 'openai';
 import { Readable } from 'stream';
 import { toNumberRt } from '@kbn/io-ts-utils';
@@ -60,11 +60,14 @@ const messageRt = t.intersection([
       t.literal(ChatCompletionRequestMessageRoleEnum.Assistant),
       t.literal(ChatCompletionRequestMessageRoleEnum.System),
       t.literal(ChatCompletionRequestMessageRoleEnum.User),
+      t.literal(ChatCompletionRequestMessageRoleEnum.Function),
     ]),
-    content: t.string,
   }),
   t.partial({
+    content: t.string,
     function_call: t.partial({ name: t.string, arguments: t.string }),
+    data: t.unknown,
+    name: t.string,
   }),
 ]);
 
@@ -102,7 +105,15 @@ const chatRoute = createObservabilityServerRoute({
     }
 
     return client.chat({
-      messages: resources.params.body.messages,
+      messages: resources.params.body.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+        function_call:
+          message.function_call?.name && message.function_call?.arguments
+            ? message.function_call
+            : undefined,
+        name: message.name,
+      })),
     });
   },
 });

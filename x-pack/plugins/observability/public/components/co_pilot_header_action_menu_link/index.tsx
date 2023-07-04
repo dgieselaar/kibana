@@ -26,7 +26,7 @@ export function CoPilotHeaderActionMenuLink() {
         <EuiFlexItem grow={false}>
           <EuiText size="s">
             {i18n.translate('xpack.observability.headerMenuPortal.coPilotLink', {
-              defaultMessage: 'Co-Pilot',
+              defaultMessage: 'AI Assistant',
             })}
           </EuiText>
         </EuiFlexItem>

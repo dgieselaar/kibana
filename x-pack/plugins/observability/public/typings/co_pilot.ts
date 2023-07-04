@@ -53,4 +53,5 @@ export interface CoPilotService {
     conversationId: string,
     messages: ChatCompletionRequestMessage[]
   ) => Promise<{ messages: CoPilotConversationMessage[] }>;
+  callFunction: (message: ChatCompletionRequestMessage) => Promise<ChatCompletionRequestMessage>;
 }

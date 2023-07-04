@@ -6,11 +6,12 @@
  */
 import { EuiButtonIcon, EuiFlexGroup, EuiFlexItem, EuiTextArea, useEuiTheme } from '@elastic/eui';
 import { css } from '@emotion/css';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import useObservable from 'react-use/lib/useObservable';
+import { concatMap, delay, map, Observable, of } from 'rxjs';
 import { CoPilotConversation, CoPilotConversationMessage } from '../../../common/co_pilot';
 import { ChatResponseObservable } from '../../../common/co_pilot/streaming_chat_response_observable';
 import { CoPilotChatBody } from '../co_pilot_chat_body';
-import { CoPilotFunctionCall } from '../co_pilot_chat_body/co_pilot_function_call';
 import { CoPilotChatBalloon } from './co_pilot_chat_balloon';
 
 export function CoPilotChatConversation({
@@ -52,7 +53,93 @@ export function CoPilotChatConversation({
     adjustTextAreaHeight();
   }, [input]);
 
-  const isLoading = !!(loading || inflightRequest || response$);
+  const [isResponseLoading, setIsResponseLoading] = useState(false);
+  const [responseError, setResponseError] = useState();
+
+  const isLoading = !!(loading || inflightRequest || response$ || isResponseLoading);
+
+  const mappedResponse$ = useMemo(() => {
+    if (!response$) {
+      setIsResponseLoading(false);
+      setResponseError(undefined);
+      return new Observable<never>((subscribe) => {
+        subscribe.next();
+      });
+    }
+
+    setIsResponseLoading(true);
+    setResponseError(undefined);
+
+    const piped$ = response$?.pipe(
+      concatMap((value) => of(value).pipe(delay(50))),
+      map((chunks) => {
+        return chunks.reduce(
+          (prev, current) => {
+            const delta = current.choices[0].delta;
+            prev.content += delta.content ?? '';
+            prev.function_call.name += delta.function_call?.name ?? '';
+            prev.function_call.arguments += delta.function_call?.arguments ?? '';
+            return prev;
+          },
+          {
+            content: '',
+            function_call: { name: '', arguments: '' },
+          }
+        );
+      })
+    );
+
+    piped$?.subscribe({
+      complete: () => {
+        setIsResponseLoading(false);
+      },
+      error: (err) => {
+        setResponseError(err);
+      },
+    });
+
+    return piped$;
+  }, [response$]);
+
+  const choice = useObservable(mappedResponse$);
+
+  const displayedMessages = useMemo(() => {
+    const allMessages =
+      messages?.map((message) => ({
+        loading: false,
+        message: message.message,
+      })) ?? [];
+
+    if (inflightRequest) {
+      allMessages.push({
+        loading: false,
+        message: {
+          order: 1,
+          role: 'user',
+          content: inflightRequest,
+        },
+      });
+    }
+
+    if (choice) {
+      allMessages.push({
+        loading: isResponseLoading,
+        message: {
+          ...choice,
+          order: 2,
+          role: 'assistant',
+        },
+      });
+    }
+
+    return allMessages.filter(
+      (message) =>
+        !(
+          (!message.loading && message.message.role === 'assistant' && !message.message.content) ||
+          message.message.role === 'system'
+        )
+    );
+  }, [messages, inflightRequest, choice, isResponseLoading]);
 
   return (
     <EuiFlexGroup
@@ -63,35 +150,15 @@ export function CoPilotChatConversation({
       `}
     >
       <EuiFlexItem grow>
-        {messages || response$ || inflightRequest ? (
+        {displayedMessages.length > 0 ? (
           <EuiFlexGroup direction="column">
-            {messages?.map((message) => (
+            {displayedMessages.map((message) => (
               <EuiFlexItem grow={false}>
                 <CoPilotChatBalloon role={message.message.role}>
-                  {message.message.content || (
-                    <CoPilotFunctionCall
-                      name={message.message.function_call?.name!}
-                      arguments={message.message.function_call?.arguments!}
-                      loading={isLoading}
-                    />
-                  )}
+                  <CoPilotChatBody message={message.message} loading={message.loading} />
                 </CoPilotChatBalloon>
               </EuiFlexItem>
             ))}
-            {inflightRequest ? (
-              <EuiFlexItem grow={false}>
-                {/* eslint-disable-next-line jsx-a11y/aria-role*/}
-                <CoPilotChatBalloon role="user">{inflightRequest}</CoPilotChatBalloon>
-              </EuiFlexItem>
-            ) : undefined}
-            {response$ ? (
-              <EuiFlexItem grow={false}>
-                {/* eslint-disable-next-line jsx-a11y/aria-role*/}
-                <CoPilotChatBalloon role="assistant">
-                  <CoPilotChatBody response$={response$} />
-                </CoPilotChatBalloon>
-              </EuiFlexItem>
-            ) : undefined}
           </EuiFlexGroup>
         ) : null}
       </EuiFlexItem>

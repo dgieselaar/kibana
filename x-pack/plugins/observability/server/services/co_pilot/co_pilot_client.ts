@@ -146,6 +146,7 @@ export class CoPilotClient {
       index: this.resources.concreteIndices.conversations,
       id: esDocument._id,
       document: updated,
+      refresh: true,
     });
 
     return { conversation: updated };
@@ -178,7 +179,7 @@ export class CoPilotClient {
     await this.esClient.index({
       index: this.resources.concreteIndices.conversations,
       document: conversation,
-      refresh: 'wait_for',
+      refresh: true,
       op_type: 'create',
     });
 
@@ -194,7 +195,7 @@ export class CoPilotClient {
     messages,
   }: {
     conversationId: string;
-    messages: ChatCompletionRequestMessage[];
+    messages: Array<ChatCompletionRequestMessage & { data?: unknown }>;
   }) {
     const time = new Date().toISOString();
 
@@ -202,7 +203,7 @@ export class CoPilotClient {
 
     const bulkResponse = await this.esClient.bulk({
       index: this.resources.concreteIndices.messages,
-      refresh: 'wait_for',
+      refresh: true,
       operations: messages.flatMap((message, index) => {
         const messageDoc: CoPilotConversationMessage = {
           '@timestamp': time,
@@ -216,6 +217,8 @@ export class CoPilotClient {
             role: message.role,
             function_call: message.function_call,
             order: index,
+            data: message.data,
+            name: message.name,
           },
           user: {
             id: this.user.id,

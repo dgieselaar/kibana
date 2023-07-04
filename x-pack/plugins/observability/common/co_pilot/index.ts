@@ -56,6 +56,8 @@ export interface CoPilotConversationMessage {
     };
     role: 'system' | 'user' | 'assistant' | 'function';
     order: number;
+    data?: unknown;
+    name?: string;
   };
   labels: Record<string, string | number | string[] | number[]>;
   numeric_labels: Record<string, number | number[]>;

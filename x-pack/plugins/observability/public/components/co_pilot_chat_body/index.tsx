@@ -5,15 +5,16 @@
  * 2.0.
  */
 import { EuiFlexGroup, EuiFlexItem, EuiIcon, EuiLoadingSpinner, EuiText } from '@elastic/eui';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { i18n } from '@kbn/i18n';
 import { css } from '@emotion/css';
 import { ChatCompletionResponseMessage } from 'openai';
-import { ChatResponseObservable } from '../../../common/co_pilot/streaming_chat_response_observable';
 import { CoPilotFunctionCall } from './co_pilot_function_call';
 
 interface Props {
-  response$: ChatResponseObservable;
+  loading: boolean;
+  message: ChatCompletionResponseMessage & { data?: unknown };
+  error?: any;
 }
 
 const cursorCss = css`
@@ -37,73 +38,27 @@ const cursorCss = css`
   background: rgba(0, 0, 0, 0.25);
 `;
 
-export function CoPilotChatBody({ response$ }: Props) {
-  const [choice, setChoice] =
-    useState<Pick<ChatCompletionResponseMessage, 'content' | 'function_call'>>();
-
-  const [error, setError] = useState<any>(undefined);
-
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setChoice({});
-    setError(undefined);
-    setLoading(true);
-
-    const subscription = response$.subscribe({
-      next: (chunks) => {
-        setChoice(() =>
-          chunks.reduce(
-            (prev, current) => {
-              const delta = current.choices[0].delta;
-              prev.content += delta.content ?? '';
-              prev.function_call.name += delta.function_call?.name ?? '';
-              prev.function_call.arguments += delta.function_call?.arguments ?? '';
-              return prev;
-            },
-            {
-              content: '',
-              function_call: { name: '', arguments: '' },
-            }
-          )
-        );
-      },
-      error: (nextError) => {
-        setError(nextError);
-        setLoading(() => false);
-      },
-      complete: () => {
-        setLoading(() => false);
-      },
-    });
-
-    return () => subscription.unsubscribe();
-  }, [response$]);
-
+export function CoPilotChatBody({ loading, message, error }: Props) {
   let state: 'init' | 'loading' | 'streaming' | 'error' | 'complete' = 'init';
 
+  const hasContent = !!(message.content || message.function_call?.name);
+
   if (loading) {
-    state = choice ? 'streaming' : 'loading';
+    state = hasContent ? 'streaming' : 'loading';
   } else if (error) {
     state = 'error';
-  } else if (choice) {
+  } else if (hasContent) {
     state = 'complete';
   }
 
+  const children =
+    'data' in message && message.data ? <CoPilotFunctionCall message={message} /> : message.content;
+
   if (state === 'complete' || state === 'streaming') {
-    if (choice?.function_call?.name) {
-      return (
-        <CoPilotFunctionCall
-          arguments={choice.function_call.arguments!}
-          name={choice.function_call.name!}
-          loading={state !== 'complete'}
-        />
-      );
-    }
     return (
       <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-        {choice?.content}
-        {state === 'streaming' || !choice?.content ? <span className={cursorCss} /> : <></>}
+        {children}
+        {state === 'streaming' || !children ? <span className={cursorCss} /> : <></>}
       </p>
     );
   } else if (state === 'init' || state === 'loading') {
@@ -128,7 +83,7 @@ export function CoPilotChatBody({ response$ }: Props) {
         <EuiIcon color="danger" type="warning" />
       </EuiFlexItem>
       <EuiFlexItem grow={false}>
-        <EuiText size="s">{choice?.content}</EuiText>
+        <EuiText size="s">{children}</EuiText>
       </EuiFlexItem>
     </EuiFlexGroup>
   );

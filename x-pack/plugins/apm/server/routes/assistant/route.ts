@@ -9,9 +9,9 @@ import { AggregationsAggregationContainer } from '@elastic/elasticsearch/lib/api
 import { SubAggregateOf } from '@kbn/es-types/src/search';
 import { toNumberRt } from '@kbn/io-ts-utils';
 import { kqlQuery, rangeQuery } from '@kbn/observability-plugin/server';
+import { SPAN_DESTINATION_SERVICE_RESPONSE_TIME_SUM } from '@kbn/observability-shared-plugin/common';
 import * as t from 'io-ts';
 import Mustache from 'mustache';
-import { SPAN_DESTINATION_SERVICE_RESPONSE_TIME_SUM } from '@kbn/observability-shared-plugin/common';
 import { ApmDocumentType } from '../../../common/document_type';
 import {
   SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
@@ -20,6 +20,7 @@ import {
 import { LatencyAggregationType } from '../../../common/latency_aggregation_types';
 import { RollupInterval } from '../../../common/rollup';
 import { getBucketSize } from '../../../common/utils/get_bucket_size';
+import { isFiniteNumber } from '../../../common/utils/is_finite_number';
 import { calculateThroughputWithInterval } from '../../lib/helpers/calculate_throughput';
 import { getApmEventClient } from '../../lib/helpers/get_apm_event_client';
 import {
@@ -31,7 +32,6 @@ import {
   getOutcomeAggregation,
 } from '../../lib/helpers/transaction_error_rate';
 import { createApmServerRoute } from '../apm_routes/create_apm_server_route';
-import { isFiniteNumber } from '../../../common/utils/is_finite_number';
 
 enum ApmChartMetricType {
   transactionThroughput = 'transaction_throughput',
@@ -44,7 +44,8 @@ enum ApmChartMetricType {
 
 const getApmChartArgsRt = t.type({
   title: t.string,
-  series: t.array(
+  description: t.string,
+  stats: t.array(
     t.intersection([
       t.type({
         label: t.string,
@@ -79,7 +80,7 @@ const getApmChartArgsRt = t.type({
     ])
   ),
 });
-
+/* eslint-disable @typescript-eslint/explicit-function-return-type*/
 const assistentGetApmChartRoute = createApmServerRoute({
   endpoint: 'POST /internal/apm/assistant/get_apm_chart',
   params: t.type({
@@ -102,9 +103,9 @@ const assistentGetApmChartRoute = createApmServerRoute({
 
     const allSeries = (
       await Promise.all(
-        args.series.map(async (serie) => {
-          const start = dateMath.parse(serie.start)?.valueOf()!;
-          const end = dateMath.parse(serie.end, { forceNow })?.valueOf()!;
+        args.stats.map(async (stat) => {
+          const start = dateMath.parse(stat.start)?.valueOf()!;
+          const end = dateMath.parse(stat.end, { forceNow })?.valueOf()!;
 
           const { bucketSize, intervalString } = getBucketSize({
             start,
@@ -114,7 +115,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
           });
 
           async function fetchSeries<
-            T extends Record<string, AggregationsAggregationContainer>
+            T extends Record<'value', AggregationsAggregationContainer>
           >({
             operationName,
             documentType,
@@ -135,6 +136,13 @@ const assistentGetApmChartRoute = createApmServerRoute({
                   doc_count: number;
                 } & SubAggregateOf<{ aggs: T }, unknown>
               >;
+              change_points: {
+                bucket: {
+                  key: string;
+                };
+                type: Record<string, { change_point: number; p_value: number }>;
+              };
+              value: number | null;
             }>
           > {
             const response = await apmEventClient.search(operationName, {
@@ -147,27 +155,27 @@ const assistentGetApmChartRoute = createApmServerRoute({
                 query: {
                   bool: {
                     filter: [
-                      ...kqlQuery(serie.filter ?? ''),
+                      ...kqlQuery(stat.filter ?? ''),
                       ...rangeQuery(start, end),
                     ],
                   },
                 },
                 aggs: {
                   groupBy: {
-                    ...(serie.groupBy
+                    ...(stat.groupBy
                       ? {
                           terms: {
-                            field: serie.groupBy,
+                            field: stat.groupBy,
                           },
                         }
                       : {
-                          filter: {
-                            bool: {
-                              filter: [],
-                            },
+                          terms: {
+                            field: 'non_existing_field',
+                            missing: '',
                           },
                         }),
                     aggs: {
+                      ...aggs,
                       timeseries: {
                         date_histogram: {
                           field: '@timestamp',
@@ -176,6 +184,11 @@ const assistentGetApmChartRoute = createApmServerRoute({
                           extended_bounds: { min: start, max: end },
                         },
                         aggs,
+                      },
+                      change_points: {
+                        change_point: {
+                          buckets_path: 'timeseries>value',
+                        },
                       },
                     },
                   },
@@ -187,40 +200,50 @@ const assistentGetApmChartRoute = createApmServerRoute({
               return [];
             }
 
-            if ('buckets' in response.aggregations.groupBy) {
-              return response.aggregations.groupBy.buckets.map((bucket) => {
-                return {
-                  groupBy: bucket.key_as_string || String(bucket.key),
-                  data: bucket.timeseries.buckets,
-                };
-              });
-            }
-
-            return [
-              {
-                data: response.aggregations.groupBy.timeseries.buckets,
-              },
-            ];
+            return response.aggregations.groupBy.buckets.map((bucket) => {
+              return {
+                groupBy: bucket.key_as_string || String(bucket.key),
+                data: bucket.timeseries.buckets,
+                value: bucket.value?.value ?? null,
+                change_points: bucket.change_points,
+              };
+            });
           }
 
           let fetchedSeries: Array<{
             groupBy?: string;
             data: Array<{ x: number; y: number | null }>;
+            change_points: {
+              bucket: {
+                key: string;
+              };
+              type: Record<string, { change_point: number; p_value: number }>;
+            };
+            value: number | null;
           }>;
 
-          switch (serie.metric.name) {
+          switch (stat.metric.name) {
             case ApmChartMetricType.transactionLatency:
               {
-                const fn = serie.metric.function;
                 fetchedSeries = (
                   await fetchSeries({
                     operationName: 'get_transaction_latency',
                     documentType: ApmDocumentType.TransactionMetric,
                     rollupInterval: RollupInterval.OneMinute,
-                    aggs: getLatencyAggregation(
-                      serie.metric.function,
-                      TRANSACTION_DURATION_HISTOGRAM
-                    ),
+                    aggs: {
+                      ...getLatencyAggregation(
+                        stat.metric.function,
+                        TRANSACTION_DURATION_HISTOGRAM
+                      ),
+                      value: {
+                        bucket_script: {
+                          buckets_path: {
+                            latency: 'latency',
+                          },
+                          script: 'params.latency',
+                        },
+                      },
+                    },
                   })
                 ).map((fetchedSerie) => {
                   return {
@@ -228,10 +251,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     data: fetchedSerie.data.map((bucket) => {
                       return {
                         x: bucket.key,
-                        y: getLatencyValue({
-                          latencyAggregationType: fn,
-                          aggregation: bucket.latency,
-                        }),
+                        y: bucket.value?.value as number | null,
                       };
                     }),
                   };
@@ -246,7 +266,13 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     operationName: 'get_transaction_throughput',
                     documentType: ApmDocumentType.TransactionMetric,
                     rollupInterval: RollupInterval.OneMinute,
-                    aggs: {},
+                    aggs: {
+                      value: {
+                        rate: {
+                          unit: 'minute',
+                        },
+                      },
+                    },
                   })
                 ).map((fetchedSerie) => {
                   return {
@@ -254,10 +280,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     data: fetchedSerie.data.map((bucket) => {
                       return {
                         x: bucket.key,
-                        y: calculateThroughputWithInterval({
-                          bucketSize,
-                          value: bucket.doc_count,
-                        }),
+                        y: bucket.value?.value as number,
                       };
                     }),
                   };
@@ -272,9 +295,21 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     operationName: 'get_transaction_failure_rate',
                     documentType: ApmDocumentType.TransactionMetric,
                     rollupInterval: RollupInterval.OneMinute,
-                    aggs: getOutcomeAggregation(
-                      ApmDocumentType.ServiceTransactionMetric
-                    ),
+                    aggs: {
+                      ...getOutcomeAggregation(
+                        ApmDocumentType.ServiceTransactionMetric
+                      ),
+                      value: {
+                        bucket_script: {
+                          buckets_path: {
+                            successful_or_failed: 'successful_or_failed',
+                            successful: 'successful',
+                          },
+                          script:
+                            'params.successful / params.successful_or_failed',
+                        },
+                      },
+                    },
                   })
                 ).map((fetchedSerie) => {
                   return {
@@ -282,7 +317,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     data: fetchedSerie.data.map((bucket) => {
                       return {
                         x: bucket.key,
-                        y: calculateFailedTransactionRate(bucket),
+                        y: bucket.value?.value as number | null,
                       };
                     }),
                   };
@@ -297,9 +332,10 @@ const assistentGetApmChartRoute = createApmServerRoute({
                   documentType: ApmDocumentType.ServiceDestinationMetric,
                   rollupInterval: RollupInterval.OneMinute,
                   aggs: {
-                    count: {
-                      sum: {
+                    value: {
+                      rate: {
                         field: SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
+                        unit: 'minute',
                       },
                     },
                   },
@@ -310,10 +346,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
                   data: fetchedSerie.data.map((bucket) => {
                     return {
                       x: bucket.key,
-                      y: calculateThroughputWithInterval({
-                        bucketSize,
-                        value: bucket.count.value ?? 0,
-                      }),
+                      y: bucket.value?.value as number | null,
                     };
                   }),
                 };
@@ -338,6 +371,15 @@ const assistentGetApmChartRoute = createApmServerRoute({
                           field: SPAN_DESTINATION_SERVICE_RESPONSE_TIME_SUM,
                         },
                       },
+                      value: {
+                        bucket_script: {
+                          buckets_path: {
+                            total_latency: 'latency',
+                            total_count: 'count',
+                          },
+                          script: 'params.latency / params.count',
+                        },
+                      },
                     },
                   })
                 ).map((fetchedSerie) => {
@@ -346,9 +388,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     data: fetchedSerie.data.map((bucket) => {
                       return {
                         x: bucket.key,
-                        y: isFiniteNumber(bucket.latency.value)
-                          ? bucket.latency.value / (bucket.count.value ?? 0)
-                          : null,
+                        y: bucket.value?.value as number | null,
                       };
                     }),
                   };
@@ -362,9 +402,21 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     operationName: 'exit_span_failure_rate',
                     documentType: ApmDocumentType.ServiceDestinationMetric,
                     rollupInterval: RollupInterval.OneMinute,
-                    aggs: getOutcomeAggregation(
-                      ApmDocumentType.ServiceDestinationMetric
-                    ),
+                    aggs: {
+                      ...getOutcomeAggregation(
+                        ApmDocumentType.ServiceDestinationMetric
+                      ),
+                      value: {
+                        bucket_script: {
+                          buckets_path: {
+                            successful_or_failed: 'successful_or_failed>_count',
+                            successful: 'successful>_count',
+                          },
+                          script:
+                            'params.successful / params.successful_or_failed',
+                        },
+                      },
+                    },
                   })
                 ).map((fetchedSerie) => {
                   return {
@@ -372,7 +424,7 @@ const assistentGetApmChartRoute = createApmServerRoute({
                     data: fetchedSerie.data.map((bucket) => {
                       return {
                         x: bucket.key,
-                        y: calculateFailedTransactionRate(bucket),
+                        y: bucket.value?.value as number | null,
                       };
                     }),
                   };
@@ -382,13 +434,34 @@ const assistentGetApmChartRoute = createApmServerRoute({
           }
 
           return fetchedSeries.map((fetchedSerie) => {
+            const changePointType = Object.keys(
+              fetchedSerie.change_points?.type ?? {}
+            )?.[0];
+
             return {
-              label: Mustache.render(serie.label, {
+              label: Mustache.render(stat.label, {
                 groupBy: fetchedSerie.groupBy,
               }),
               data: fetchedSerie.data,
+              value: fetchedSerie.value,
               start,
               end,
+              changes: [
+                ...(changePointType
+                  ? [
+                      {
+                        date: fetchedSerie.change_points.bucket.key,
+                        type: changePointType,
+                        p_value:
+                          fetchedSerie.change_points.type[changePointType]
+                            .p_value,
+                        change_point:
+                          fetchedSerie.change_points.type[changePointType]
+                            .change_point,
+                      },
+                    ]
+                  : []),
+              ],
             };
           });
         })
@@ -396,11 +469,24 @@ const assistentGetApmChartRoute = createApmServerRoute({
     ).flat();
 
     return {
-      title: args.title,
-      series: allSeries,
+      content: JSON.stringify(
+        allSeries.map((series) => {
+          const { start, end, data, ...rest } = series;
+          return {
+            ...rest,
+            start: new Date(start).toISOString(),
+            end: new Date(end).toISOString(),
+          };
+        })
+      ),
+      data: {
+        charts: [{ title: args.title, series: allSeries }],
+      },
     };
   },
 });
+
+/* eslint-enable @typescript-eslint/explicit-function-return-type */
 
 export const assistantRouteRepository = {
   ...assistentGetApmChartRoute,
