@@ -87,6 +87,7 @@ export async function getServiceAnomalies({
                     { field: 'by_field_value' },
                     { field: 'result_type' },
                     { field: 'record_score' },
+                    { field: 'timestamp' },
                   ],
                   sort: {
                     record_score: 'desc' as const,
@@ -138,6 +139,7 @@ export async function getServiceAnomalies({
         const healthStatus = getServiceHealthStatus({ severity });
 
         return {
+          '@timestamp': new Date(metrics.timestamp).toISOString() as string,
           serviceName: bucket.key.serviceName as string,
           jobId: bucket.key.jobId as string,
           transactionType: metrics.by_field_value as string,

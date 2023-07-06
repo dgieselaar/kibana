@@ -23,7 +23,7 @@ export async function getMlClient({
   plugins,
   context,
   request,
-}: APMRouteHandlerResources) {
+}: APMRouteHandlerResources): Promise<MlClient | undefined> {
   const [coreContext, licensingContext] = await Promise.all([
     context.core,
     context.licensing,
@@ -32,7 +32,7 @@ export async function getMlClient({
   const mlplugin = plugins.ml;
 
   if (!mlplugin || !isActivePlatinumLicense(licensingContext.license)) {
-    return;
+    return undefined;
   }
   return {
     mlSystem: mlplugin.setup.mlSystemProvider(

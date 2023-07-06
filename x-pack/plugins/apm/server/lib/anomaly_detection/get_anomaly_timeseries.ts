@@ -97,6 +97,7 @@ export async function getAnomalyTimeseries({
     // use the original job's bucket_span
     minBucketSize,
   });
+
   const anomaliesResponse = await anomalySearch(
     mlClient.mlSystem.mlAnomalySearch,
     {
