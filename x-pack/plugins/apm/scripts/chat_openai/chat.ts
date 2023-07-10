@@ -15,11 +15,14 @@ import inquirer from 'inquirer';
 import yargs from 'yargs';
 import chalk from 'chalk';
 import ora from 'ora';
+import { omit } from 'lodash';
 
 const functionToEndpointMap: Record<string, string> = {
   get_service_summary: '/internal/apm/assistant/get_service_summary',
   get_apm_chart: '/internal/apm/assistant/get_apm_chart',
   get_dependencies: '/internal/apm/assistant/get_downstream_dependencies',
+  get_correlation_values: '/internal/apm/assistant/get_correlation_values',
+  get_error: '/internal/apm/assistant/get_error',
 };
 
 const argv = yargs(process.argv)
@@ -147,14 +150,17 @@ async function getNext(): Promise<any> {
   append(message);
 
   if (message.function_call?.name) {
-    const functionReply = await kibanaClient.post(
-      functionToEndpointMap[message.function_call.name],
-      message.function_call.arguments
-        ? {
-            now: new Date().getTime(),
-            args: JSON.parse(message.function_call.arguments),
-          }
-        : {}
+    const functionReply = omit(
+      await kibanaClient.post<{ content?: any; data?: any }>(
+        functionToEndpointMap[message.function_call.name] + '?_inspect=true',
+        message.function_call.arguments
+          ? {
+              now: new Date().getTime(),
+              args: JSON.parse(message.function_call.arguments),
+            }
+          : {}
+      ),
+      'data._inspect'
     );
     append({
       role: 'function',
@@ -189,7 +195,10 @@ promise.catch((err) => {
   log('');
 
   if (axios.isAxiosError(err)) {
-    console.error(err.toJSON());
+    console.error({
+      ...err.toJSON(),
+      error: (err.response?.data as any).error,
+    });
   } else {
     console.error(err);
   }

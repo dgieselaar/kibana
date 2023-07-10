@@ -11,6 +11,7 @@ import { ApmDocumentType } from '../../../../common/document_type';
 import {
   METRICSET_INTERVAL,
   METRICSET_NAME,
+  SPAN_DESTINATION_SERVICE_RESOURCE,
 } from '../../../../common/es_fields/apm';
 import { RollupInterval } from '../../../../common/rollup';
 import { termQuery } from '../../../../common/utils/term_query';
@@ -91,6 +92,23 @@ const documentTypeConfigMap: Record<
   [ApmDocumentType.ErrorEvent]: {
     processorEvent: ProcessorEvent.error,
     rollupIntervals: [RollupInterval.None],
+  },
+  [ApmDocumentType.SpanEvent]: {
+    processorEvent: ProcessorEvent.span,
+    rollupIntervals: [RollupInterval.None],
+  },
+  [ApmDocumentType.ExitSpanEvent]: {
+    processorEvent: ProcessorEvent.span,
+    rollupIntervals: [RollupInterval.None],
+    getQuery: () => ({
+      bool: {
+        filter: [
+          {
+            exists: { field: SPAN_DESTINATION_SERVICE_RESOURCE },
+          },
+        ],
+      },
+    }),
   },
 };
 

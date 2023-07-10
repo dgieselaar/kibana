@@ -290,10 +290,10 @@ export async function getAssistantServiceSummary({
     anomalies,
     alerts: alerts.hits.hits.map((alert) => ({
       type: alert._source?.['kibana.alert.rule.type'],
-      started: alert._source?.['kibana.alert.start'],
+      started: new Date(alert._source?.['kibana.alert.start']!).toISOString(),
     })),
     deployments: annotations.annotations.map((annotation) => ({
-      '@timestamp': annotation['@timestamp'],
+      '@timestamp': new Date(annotation['@timestamp']).toISOString(),
     })),
   };
 }

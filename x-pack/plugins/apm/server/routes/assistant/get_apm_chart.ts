@@ -10,6 +10,7 @@ import * as t from 'io-ts';
 import { SubAggregateOf } from '@kbn/es-types/src/search';
 import Mustache from 'mustache';
 import { kqlQuery, rangeQuery } from '@kbn/observability-plugin/server';
+import { ProcessorEvent } from '@kbn/observability-plugin/common';
 import { ApmDocumentType } from '../../../common/document_type';
 import { LatencyAggregationType } from '../../../common/latency_aggregation_types';
 import { RollupInterval } from '../../../common/rollup';
@@ -17,11 +18,17 @@ import { getBucketSize } from '../../../common/utils/get_bucket_size';
 import { APMEventClient } from '../../lib/helpers/create_es_client/create_apm_event_client';
 import { getOutcomeAggregation } from '../../lib/helpers/transaction_error_rate';
 import {
+  EVENT_OUTCOME,
+  SERVICE_NAME,
   SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
   SPAN_DESTINATION_SERVICE_RESPONSE_TIME_SUM,
+  SPAN_DURATION,
+  TRANSACTION_DURATION,
   TRANSACTION_DURATION_HISTOGRAM,
 } from '../../../common/es_fields/apm';
 import { getLatencyAggregation } from '../../lib/helpers/latency_aggregation_type';
+import { termQuery } from '../../../common/utils/term_query';
+import { EventOutcome } from '../../../common/event_outcome';
 
 enum ApmChartMetricType {
   transactionThroughput = 'transaction_throughput',
@@ -30,15 +37,14 @@ enum ApmChartMetricType {
   exitSpanThroughput = 'exit_span_throughput',
   exitSpanLatency = 'exit_span_latency',
   exitSpanFailureRate = 'exit_span_failure_rate',
+  errorEventRate = 'error_event_rate',
 }
 
 export const getApmChartArgsRt = t.type({
-  title: t.string,
-  description: t.string,
   stats: t.array(
     t.intersection([
       t.type({
-        label: t.string,
+        'service.name': t.string,
         metric: t.union([
           t.type({
             name: t.union([
@@ -46,6 +52,7 @@ export const getApmChartArgsRt = t.type({
               t.literal(ApmChartMetricType.transactionFailureRate),
               t.literal(ApmChartMetricType.exitSpanThroughput),
               t.literal(ApmChartMetricType.exitSpanFailureRate),
+              t.literal(ApmChartMetricType.errorEventRate),
             ]),
           }),
           t.type({
@@ -62,6 +69,7 @@ export const getApmChartArgsRt = t.type({
         ]),
         start: t.string,
         end: t.string,
+        label: t.string,
       }),
       t.partial({
         filter: t.string,
@@ -103,13 +111,6 @@ export async function getAssistantApmChart({
         const start = datemath.parse(stat.start)?.valueOf()!;
         const end = datemath.parse(stat.end, { forceNow })?.valueOf()!;
 
-        const { bucketSize, intervalString } = getBucketSize({
-          start,
-          end,
-          numBuckets: 100,
-          minBucketSize: 60,
-        });
-
         async function fetchSeries<
           T extends Record<'value', AggregationsAggregationContainer>
         >({
@@ -117,14 +118,16 @@ export async function getAssistantApmChart({
           documentType,
           rollupInterval,
           aggs,
+          unit,
         }: {
           operationName: string;
           documentType: ApmDocumentType;
           rollupInterval: RollupInterval;
           aggs: T;
+          unit: 'ms' | 'rpm' | '%';
         }): Promise<
           Array<{
-            groupBy?: string;
+            groupBy?: Record<string, string>;
             data: Array<
               {
                 key: number;
@@ -134,6 +137,7 @@ export async function getAssistantApmChart({
             >;
             change_point: ChangePointResult;
             value: number | null;
+            unit: string;
           }>
         > {
           const response = await apmEventClient.search(operationName, {
@@ -148,6 +152,7 @@ export async function getAssistantApmChart({
                   filter: [
                     ...kqlQuery(stat.filter ?? ''),
                     ...rangeQuery(start, end),
+                    ...termQuery(SERVICE_NAME, stat['service.name']),
                   ],
                 },
               },
@@ -157,6 +162,7 @@ export async function getAssistantApmChart({
                     ? {
                         terms: {
                           field: stat.groupBy,
+                          size: 20,
                         },
                       }
                     : {
@@ -193,20 +199,65 @@ export async function getAssistantApmChart({
 
           return response.aggregations.groupBy.buckets.map((bucket) => {
             return {
-              groupBy: bucket.key_as_string || String(bucket.key),
+              ...(stat.groupBy
+                ? {
+                    groupBy: {
+                      [stat.groupBy]:
+                        bucket.key_as_string || String(bucket.key),
+                    },
+                  }
+                : {}),
               data: bucket.timeseries.buckets,
-              value: bucket.value?.value ?? null,
+              value:
+                bucket.value?.value === undefined ||
+                bucket.value?.value === null
+                  ? null
+                  : Math.round(bucket.value.value),
               change_point: bucket.change_points,
+              unit,
             };
           });
         }
 
         let fetchedSeries: Array<{
-          groupBy?: string;
+          groupBy?: Record<string, string>;
           data: Array<{ x: number; y: number | null }>;
           change_point: ChangePointResult;
           value: number | null;
+          unit: string;
         }>;
+
+        const useMetrics = end - start > 1000 * 60 * 30;
+
+        const { bucketSize, intervalString } = getBucketSize({
+          start,
+          end,
+          numBuckets: 100,
+          minBucketSize: useMetrics ? 60 : 0,
+        });
+
+        const bucketSizeInMinutes = bucketSize / 60;
+        const rangeInMinutes = (end - start) / 1000 / 60;
+
+        const transactionParams = useMetrics
+          ? {
+              documentType: ApmDocumentType.TransactionMetric,
+              rollupInterval: RollupInterval.OneMinute,
+            }
+          : {
+              documentType: ApmDocumentType.TransactionEvent,
+              rollupInterval: RollupInterval.None,
+            };
+
+        const spanParams = useMetrics
+          ? {
+              documentType: ApmDocumentType.ServiceDestinationMetric,
+              rollupInterval: RollupInterval.OneMinute,
+            }
+          : {
+              documentType: ApmDocumentType.ExitSpanEvent,
+              rollupInterval: RollupInterval.None,
+            };
 
         switch (stat.metric.name) {
           case ApmChartMetricType.transactionLatency:
@@ -214,19 +265,21 @@ export async function getAssistantApmChart({
               fetchedSeries = (
                 await fetchSeries({
                   operationName: 'get_transaction_latency',
-                  documentType: ApmDocumentType.TransactionMetric,
-                  rollupInterval: RollupInterval.OneMinute,
+                  ...transactionParams,
+                  unit: 'ms',
                   aggs: {
                     ...getLatencyAggregation(
                       stat.metric.function,
-                      TRANSACTION_DURATION_HISTOGRAM
+                      useMetrics
+                        ? TRANSACTION_DURATION_HISTOGRAM
+                        : TRANSACTION_DURATION
                     ),
                     value: {
                       bucket_script: {
                         buckets_path: {
                           latency: 'latency',
                         },
-                        script: 'params.latency',
+                        script: 'params.latency / 1000',
                       },
                     },
                   },
@@ -250,8 +303,8 @@ export async function getAssistantApmChart({
               fetchedSeries = (
                 await fetchSeries({
                   operationName: 'get_transaction_throughput',
-                  documentType: ApmDocumentType.TransactionMetric,
-                  rollupInterval: RollupInterval.OneMinute,
+                  ...transactionParams,
+                  unit: 'rpm',
                   aggs: {
                     value: {
                       bucket_script: {
@@ -261,9 +314,9 @@ export async function getAssistantApmChart({
                         script: {
                           lang: 'painless',
                           params: {
-                            rangeInMinutes: (end - start) / 60 / 1000,
+                            bucketSizeInMinutes,
                           },
-                          source: 'params.count / params.rangeInMinutes',
+                          source: 'params.count / params.bucketSizeInMinutes',
                         },
                       },
                     },
@@ -272,6 +325,10 @@ export async function getAssistantApmChart({
               ).map((fetchedSerie) => {
                 return {
                   ...fetchedSerie,
+                  value:
+                    fetchedSerie.value !== null
+                      ? fetchedSerie.value / rangeInMinutes
+                      : null,
                   data: fetchedSerie.data.map((bucket) => {
                     return {
                       x: bucket.key,
@@ -288,20 +345,18 @@ export async function getAssistantApmChart({
               fetchedSeries = (
                 await fetchSeries({
                   operationName: 'get_transaction_failure_rate',
-                  documentType: ApmDocumentType.TransactionMetric,
-                  rollupInterval: RollupInterval.OneMinute,
+                  ...transactionParams,
+                  unit: '%',
                   aggs: {
-                    ...getOutcomeAggregation(
-                      ApmDocumentType.ServiceTransactionMetric
-                    ),
+                    ...getOutcomeAggregation(transactionParams.documentType),
                     value: {
                       bucket_script: {
                         buckets_path: {
-                          successful_or_failed: 'successful_or_failed',
-                          successful: 'successful',
+                          successful_or_failed: 'successful_or_failed>_count',
+                          successful: 'successful>_count',
                         },
                         script:
-                          'params.successful / params.successful_or_failed',
+                          '100 * (1 - (params.successful / params.successful_or_failed))',
                       },
                     },
                   },
@@ -324,13 +379,30 @@ export async function getAssistantApmChart({
             fetchedSeries = (
               await fetchSeries({
                 operationName: 'get_exit_span_throughput',
-                documentType: ApmDocumentType.ServiceDestinationMetric,
-                rollupInterval: RollupInterval.OneMinute,
+                ...spanParams,
+                unit: 'rpm',
                 aggs: {
+                  ...(useMetrics
+                    ? {
+                        count: {
+                          sum: {
+                            field: SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
+                          },
+                        },
+                      }
+                    : {}),
                   value: {
-                    rate: {
-                      field: SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
-                      unit: 'minute',
+                    bucket_script: {
+                      buckets_path: {
+                        count: useMetrics ? 'count' : '_count',
+                      },
+                      script: {
+                        lang: 'painless',
+                        params: {
+                          bucketSizeInMinutes,
+                        },
+                        source: 'params.count / params.bucketSizeInMinutes',
+                      },
                     },
                   },
                 },
@@ -338,6 +410,10 @@ export async function getAssistantApmChart({
             ).map((fetchedSerie) => {
               return {
                 ...fetchedSerie,
+                value:
+                  fetchedSerie.value !== null
+                    ? fetchedSerie.value / rangeInMinutes
+                    : null,
                 data: fetchedSerie.data.map((bucket) => {
                   return {
                     x: bucket.key,
@@ -353,26 +429,33 @@ export async function getAssistantApmChart({
               fetchedSeries = (
                 await fetchSeries({
                   operationName: 'get_exit_span_latency',
-                  documentType: ApmDocumentType.ServiceDestinationMetric,
-                  rollupInterval: RollupInterval.OneMinute,
+                  ...spanParams,
+                  unit: 'ms',
                   aggs: {
-                    count: {
-                      sum: {
-                        field: SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
-                      },
-                    },
+                    ...(useMetrics
+                      ? {
+                          count: {
+                            sum: {
+                              field:
+                                SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
+                            },
+                          },
+                        }
+                      : {}),
                     latency: {
                       sum: {
-                        field: SPAN_DESTINATION_SERVICE_RESPONSE_TIME_SUM,
+                        field: useMetrics
+                          ? SPAN_DESTINATION_SERVICE_RESPONSE_TIME_SUM
+                          : SPAN_DURATION,
                       },
                     },
                     value: {
                       bucket_script: {
                         buckets_path: {
-                          total_latency: 'latency',
-                          total_count: 'count',
+                          latency: 'latency',
+                          count: useMetrics ? 'count' : '_count',
                         },
-                        script: 'params.latency / params.count',
+                        script: '(params.latency / params.count) / 1000',
                       },
                     },
                   },
@@ -395,20 +478,58 @@ export async function getAssistantApmChart({
               fetchedSeries = (
                 await fetchSeries({
                   operationName: 'exit_span_failure_rate',
-                  documentType: ApmDocumentType.ServiceDestinationMetric,
-                  rollupInterval: RollupInterval.OneMinute,
+                  ...spanParams,
+                  unit: '%',
                   aggs: {
-                    ...getOutcomeAggregation(
-                      ApmDocumentType.ServiceDestinationMetric
-                    ),
+                    successful: {
+                      filter: {
+                        terms: {
+                          [EVENT_OUTCOME]: [EventOutcome.success],
+                        },
+                      },
+                      aggs: useMetrics
+                        ? {
+                            count: {
+                              sum: {
+                                field:
+                                  SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
+                              },
+                            },
+                          }
+                        : {},
+                    },
+                    successful_or_failed: {
+                      filter: {
+                        terms: {
+                          [EVENT_OUTCOME]: [
+                            EventOutcome.success,
+                            EventOutcome.failure,
+                          ],
+                        },
+                      },
+                      aggs: useMetrics
+                        ? {
+                            count: {
+                              sum: {
+                                field:
+                                  SPAN_DESTINATION_SERVICE_RESPONSE_TIME_COUNT,
+                              },
+                            },
+                          }
+                        : {},
+                    },
                     value: {
                       bucket_script: {
                         buckets_path: {
-                          successful_or_failed: 'successful_or_failed>_count',
-                          successful: 'successful>_count',
+                          successful_or_failed: `successful_or_failed>${
+                            useMetrics ? 'count' : '_count'
+                          }`,
+                          successful: `successful>${
+                            useMetrics ? 'count' : '_count'
+                          }`,
                         },
                         script:
-                          'params.successful / params.successful_or_failed',
+                          '100 * (1 - (params.successful / params.successful_or_failed))',
                       },
                     },
                   },
@@ -426,6 +547,49 @@ export async function getAssistantApmChart({
               });
             }
             break;
+
+          case ApmChartMetricType.errorEventRate:
+            {
+              fetchedSeries = (
+                await fetchSeries({
+                  operationName: 'get_error_throughput',
+                  documentType: ApmDocumentType.ErrorEvent,
+                  rollupInterval: RollupInterval.None,
+                  unit: 'rpm',
+                  aggs: {
+                    value: {
+                      bucket_script: {
+                        buckets_path: {
+                          count: '_count',
+                        },
+                        script: {
+                          lang: 'painless',
+                          params: {
+                            bucketSizeInMinutes,
+                          },
+                          source: 'params.count / params.bucketSizeInMinutes',
+                        },
+                      },
+                    },
+                  },
+                })
+              ).map((fetchedSerie) => {
+                return {
+                  ...fetchedSerie,
+                  value:
+                    fetchedSerie.value !== null
+                      ? fetchedSerie.value / rangeInMinutes
+                      : null,
+                  data: fetchedSerie.data.map((bucket) => {
+                    return {
+                      x: bucket.key,
+                      y: bucket.value?.value as number,
+                    };
+                  }),
+                };
+              });
+            }
+            break;
         }
 
         return fetchedSeries.map((fetchedSerie) => {
@@ -433,16 +597,16 @@ export async function getAssistantApmChart({
             fetchedSerie.change_point?.type ?? {}
           )?.[0];
 
-          console.log(fetchedSerie.change_point);
-
           return {
-            label: Mustache.render(stat.label, {
-              groupBy: fetchedSerie.groupBy,
-            }),
+            groupBy: fetchedSerie.groupBy,
             data: fetchedSerie.data,
             value: fetchedSerie.value,
             start,
             end,
+            unit: fetchedSerie.unit,
+            label: Mustache.render(stat.label, {
+              groupBy: fetchedSerie.groupBy,
+            }),
             changes: [
               ...(changePointType && changePointType !== 'indeterminable'
                 ? [
@@ -472,7 +636,7 @@ export async function getAssistantApmChart({
       })
     ),
     data: {
-      charts: [{ title: args.title, series: allSeries }],
+      charts: [{ series: allSeries }],
     },
   };
 }

@@ -20,6 +20,11 @@ import {
   downstreamDependenciesRouteRt,
   getAssistantDownstreamDependencies,
 } from './assistant_downstream_dependencies_route';
+import {
+  correlationValuesRouteRt,
+  getAssistantCorrelationValues,
+} from './assistant_get_correlation_values';
+import { errorRouteRt, getAssistantError } from './assistant_get_error';
 
 const assistantGetApmChartRoute = createApmServerRoute({
   endpoint: 'POST /internal/apm/assistant/get_apm_chart',
@@ -127,8 +132,66 @@ const assistantDownstreamDependenciesRoute = createApmServerRoute({
   },
 });
 
+const assistantCorrelationsRoute = createApmServerRoute({
+  endpoint: 'POST /internal/apm/assistant/get_correlation_values',
+  params: t.type({
+    body: t.type({
+      now: toNumberRt,
+      args: correlationValuesRouteRt,
+    }),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (resources): Promise<{}> => {
+    const { params } = resources;
+    const apmEventClient = await getApmEventClient(resources);
+    const {
+      body: { now, args },
+    } = params;
+
+    return {
+      content: await getAssistantCorrelationValues({
+        now,
+        args,
+        apmEventClient,
+      }),
+    };
+  },
+});
+
+const assistantGetErrorRoute = createApmServerRoute({
+  endpoint: 'POST /internal/apm/assistant/get_error',
+  params: t.type({
+    body: t.type({
+      now: toNumberRt,
+      args: errorRouteRt,
+    }),
+  }),
+  options: {
+    tags: ['access:apm'],
+  },
+  handler: async (resources): Promise<{}> => {
+    const { params } = resources;
+    const apmEventClient = await getApmEventClient(resources);
+    const {
+      body: { now, args },
+    } = params;
+
+    return {
+      content: await getAssistantError({
+        now,
+        args,
+        apmEventClient,
+      }),
+    };
+  },
+});
+
 export const assistantRouteRepository = {
   ...assistantGetApmChartRoute,
   ...assistantServiceSummaryRoute,
   ...assistantDownstreamDependenciesRoute,
+  ...assistantCorrelationsRoute,
+  ...assistantGetErrorRoute,
 };
