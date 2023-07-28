@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useKibana } from '@kbn/kibana-react-plugin/public';
 import type { Message } from '../../../common/types';
 import { useChat } from '../../hooks/use_chat';
@@ -18,7 +18,13 @@ import { StopGeneratingButton } from '../stop_generating_button';
 import { RegenerateResponseButton } from '../regenerate_response_button';
 
 function ChatContent({ messages, connectorId }: { messages: Message[]; connectorId: string }) {
-  const chat = useChat({ messages, connectorId });
+  const chat = useChat();
+
+  const { generate } = chat;
+
+  useEffect(() => {
+    generate({ messages, connectorId });
+  }, [generate, messages, connectorId]);
 
   return (
     <MessagePanel
@@ -34,7 +40,7 @@ function ChatContent({ messages, connectorId }: { messages: Message[]; connector
         ) : (
           <RegenerateResponseButton
             onClick={() => {
-              chat.regenerate();
+              generate({ messages, connectorId });
             }}
           />
         )

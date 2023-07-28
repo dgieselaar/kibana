@@ -10,6 +10,7 @@ import { euiThemeVars } from '@kbn/ui-theme';
 import React, { useState } from 'react';
 import { ConversationCreateRequest } from '../../../common/types';
 import { UseGenAIConnectorsResult } from '../../hooks/use_genai_connectors';
+import { getTimelineItemsfromConversation } from '../../utils/get_timeline_items_from_conversation';
 import { ChatHeader } from './chat_header';
 import { ChatPromptEditor } from './chat_prompt_editor';
 import { ChatTimeline } from './chat_timeline';
@@ -22,12 +23,11 @@ export interface ChatFlyoutProps {
 export function ChatFlyout({ conversation, connectors }: ChatFlyoutProps) {
   const {
     conversation: { title },
-    messages,
   } = conversation;
 
   const [isOpen, setIsOpen] = useState(true);
 
-  const handleSubmit = (prompt: string) => {};
+  const items = getTimelineItemsfromConversation({ conversation });
 
   return isOpen ? (
     <EuiFlyout onClose={() => setIsOpen(false)} size="m">
@@ -36,13 +36,19 @@ export function ChatFlyout({ conversation, connectors }: ChatFlyoutProps) {
       </EuiFlyoutHeader>
 
       <EuiFlyoutBody>
-        <ChatTimeline messages={messages} />
+        <ChatTimeline
+          items={items}
+          onEdit={() => {}}
+          onRegenerate={() => {}}
+          onFeedback={() => {}}
+          onStopGenerating={() => {}}
+        />
       </EuiFlyoutBody>
 
       <EuiFlyoutFooter
         css={{ borderTop: `solid 1px ${euiThemeVars.euiBorderColor}`, background: '#fff' }}
       >
-        <ChatPromptEditor onSubmitPrompt={handleSubmit} />
+        <ChatPromptEditor loading={false} onSubmit={async () => {}} />
       </EuiFlyoutFooter>
     </EuiFlyout>
   ) : null;

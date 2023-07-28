@@ -24,8 +24,17 @@ const mockUseObservabilityAIAssistant = useObservabilityAIAssistant as jest.Mock
   typeof useObservabilityAIAssistant
 >;
 
+const mockChat = jest.fn();
+
+mockUseObservabilityAIAssistant.mockImplementation(
+  () =>
+    ({
+      chat: mockChat,
+    } as unknown as ObservabilityAIAssistantService)
+);
+
 function mockDeltas(deltas: Array<Partial<ChatCompletionResponseMessage>>) {
-  return mockResponse(
+  mockResponse(
     Promise.resolve(
       new Observable((subscriber) => {
         async function simulateDelays() {
@@ -54,11 +63,7 @@ function mockDeltas(deltas: Array<Partial<ChatCompletionResponseMessage>>) {
 }
 
 function mockResponse(response: Promise<any>) {
-  mockUseObservabilityAIAssistant.mockReturnValue({
-    chat: jest.fn().mockImplementation(() => {
-      return response;
-    }),
-  } as unknown as ObservabilityAIAssistantService);
+  mockChat.mockReturnValueOnce(response);
 }
 
 describe('useChat', () => {
@@ -70,10 +75,11 @@ describe('useChat', () => {
 
   it('returns the result of the chat API', async () => {
     mockDeltas([{ content: 'testContent' }]);
-    const { result, waitFor } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitFor } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     expect(result.current.loading).toBeTruthy();
     expect(result.current.error).toBeUndefined();
@@ -87,10 +93,11 @@ describe('useChat', () => {
 
   it('handles 4xx and 5xx', async () => {
     mockResponse(Promise.reject(new Error()));
-    const { result, waitFor } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitFor } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
 
@@ -112,10 +119,11 @@ describe('useChat', () => {
       )
     );
 
-    const { result, waitFor } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitFor } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
 
@@ -135,10 +143,11 @@ describe('useChat', () => {
       )
     );
 
-    const { result, waitFor, unmount } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitFor, unmount } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitFor(() => result.current.content === 'foo', WAIT_OPTIONS);
 
@@ -156,18 +165,21 @@ describe('useChat', () => {
       )
     );
 
-    const { result, waitFor, rerender } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitFor } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitFor(() => result.current.content === 'foo', WAIT_OPTIONS);
 
     mockDeltas([{ content: 'bar' }]);
 
-    rerender({ messages: [], connectorId: 'bar' });
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
-    await waitFor(() => result.current.loading === false);
+    await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
 
     expect(mockUseKibana().services.notifications?.showErrorDialog).not.toHaveBeenCalled();
 
@@ -187,10 +199,11 @@ describe('useChat', () => {
       },
     ]);
 
-    const { result, waitForNextUpdate } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitForNextUpdate } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitForNextUpdate(WAIT_OPTIONS);
 
@@ -214,10 +227,11 @@ describe('useChat', () => {
       )
     );
 
-    const { result, waitForNextUpdate } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitForNextUpdate } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitForNextUpdate(WAIT_OPTIONS);
 
@@ -241,16 +255,17 @@ describe('useChat', () => {
       )
     );
 
-    const { result, waitForNextUpdate } = renderHook(
-      ({ messages, connectorId }) => useChat({ messages, connectorId }),
-      { initialProps: { messages: [], connectorId: 'myConnectorId' } }
-    );
+    const { result, waitForNextUpdate } = renderHook(() => useChat());
+
+    act(() => {
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+    });
 
     await waitForNextUpdate(WAIT_OPTIONS);
 
     act(() => {
       mockDeltas([{ content: 'bar' }]);
-      result.current.regenerate();
+      result.current.generate({ messages: [], connectorId: 'mySecondConnectorId' });
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);

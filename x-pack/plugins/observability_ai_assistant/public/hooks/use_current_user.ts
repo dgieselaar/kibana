@@ -10,7 +10,11 @@ import { AuthenticatedUser } from '@kbn/security-plugin/common/model';
 import { useKibana } from './use_kibana';
 
 export function useCurrentUser() {
-  const { security } = useKibana().services;
+  const {
+    plugins: {
+      start: { security },
+    },
+  } = useKibana().services;
 
   const [user, setUser] = useState<AuthenticatedUser>();
 

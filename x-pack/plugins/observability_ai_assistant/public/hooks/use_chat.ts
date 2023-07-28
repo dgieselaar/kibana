@@ -11,6 +11,7 @@ import { concatMap, delay, of } from 'rxjs';
 import { useKibana } from '@kbn/kibana-react-plugin/public';
 import { i18n } from '@kbn/i18n';
 import { AbortError } from '@kbn/kibana-utils-plugin/common';
+import { Serializable } from '@kbn/utility-types';
 import type { Message } from '../../common/types';
 import { useObservabilityAIAssistant } from './use_observability_ai_assistant';
 
@@ -22,7 +23,7 @@ interface MessageResponse {
   };
 }
 
-export function useChat({ messages, connectorId }: { messages: Message[]; connectorId: string }): {
+export function useChat(): {
   content?: string;
   function_call?: {
     name?: string;
@@ -31,7 +32,10 @@ export function useChat({ messages, connectorId }: { messages: Message[]; connec
   loading: boolean;
   error?: Error;
   abort: () => void;
-  regenerate: () => void;
+  generate: (options: {
+    messages: Message[];
+    connectorId: string;
+  }) => Promise<{ content?: string; function_call?: { name: string; args?: Serializable } }>;
 } {
   const assistant = useObservabilityAIAssistant();
 
@@ -47,82 +51,97 @@ export function useChat({ messages, connectorId }: { messages: Message[]; connec
 
   const controllerRef = useRef(new AbortController());
 
-  const regenerate = useCallback(() => {
-    controllerRef.current.abort();
+  const generate = useCallback(
+    ({ messages, connectorId }: { messages: Message[]; connectorId: string }) => {
+      controllerRef.current.abort();
 
-    const controller = (controllerRef.current = new AbortController());
+      const controller = (controllerRef.current = new AbortController());
 
-    setResponse(undefined);
-    setError(undefined);
-    setLoading(true);
+      setResponse(undefined);
+      setError(undefined);
+      setLoading(true);
 
-    const partialResponse = {
-      content: '',
-      function_call: {
-        name: '',
-        args: '',
-      },
-    };
+      const partialResponse = {
+        content: '',
+        function_call: {
+          name: '',
+          args: '',
+        },
+      };
 
-    assistant
-      .chat({ messages, connectorId, signal: controller.signal })
-      .then((response$) => {
-        return new Promise<void>((resolve, reject) => {
-          const subscription = response$
-            .pipe(concatMap((value) => of(value).pipe(delay(50))))
-            .subscribe({
-              next: (chunk) => {
-                if (controller.signal.aborted) {
-                  return;
-                }
-                partialResponse.content += chunk.choices[0].delta.content ?? '';
-                partialResponse.function_call.name +=
-                  chunk.choices[0].delta.function_call?.name ?? '';
-                partialResponse.function_call.args +=
-                  chunk.choices[0].delta.function_call?.args ?? '';
-                setResponse(clone(partialResponse));
-              },
-              error: (err) => {
-                reject(err);
-              },
-              complete: () => {
-                resolve();
-              },
+      return assistant
+        .chat({ messages, connectorId, signal: controller.signal })
+        .then((response$) => {
+          return new Promise<void>((resolve, reject) => {
+            const subscription = response$
+              .pipe(concatMap((value) => of(value).pipe(delay(50))))
+              .subscribe({
+                next: (chunk) => {
+                  if (controller.signal.aborted) {
+                    return;
+                  }
+                  partialResponse.content += chunk.choices[0].delta.content ?? '';
+                  partialResponse.function_call.name +=
+                    chunk.choices[0].delta.function_call?.name ?? '';
+                  partialResponse.function_call.args +=
+                    chunk.choices[0].delta.function_call?.args ?? '';
+                  setResponse(clone(partialResponse));
+                },
+                error: (err) => {
+                  reject(err);
+                },
+                complete: () => {
+                  resolve();
+                },
+              });
+
+            controller.signal.addEventListener('abort', () => {
+              subscription.unsubscribe();
+              reject(new AbortError());
             });
-
-          controllerRef.current.signal.addEventListener('abort', () => {
-            subscription.unsubscribe();
-            reject(new AbortError());
           });
+        })
+        .then(() => {
+          return Promise.resolve({
+            ...partialResponse,
+            ...(partialResponse.function_call
+              ? {
+                  function_call: {
+                    ...partialResponse.function_call,
+                    args: partialResponse.function_call.args
+                      ? JSON.parse(partialResponse.function_call.args)
+                      : undefined,
+                  },
+                }
+              : {}),
+          });
+        })
+        .catch((err) => {
+          if (controller.signal.aborted) {
+            throw err;
+          }
+          notifications?.showErrorDialog({
+            title: i18n.translate('xpack.observabilityAiAssistant.failedToLoadChatTitle', {
+              defaultMessage: 'Failed to load chat',
+            }),
+            error: err,
+          });
+          setError(err);
+          throw err;
+        })
+        .finally(() => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          setLoading(false);
         });
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        notifications?.showErrorDialog({
-          title: i18n.translate('xpack.observabilityAiAssistant.failedToLoadChatTitle', {
-            defaultMessage: 'Failed to load chat',
-          }),
-          error: err,
-        });
-        setError(err);
-      })
-      .finally(() => {
-        if (controller.signal.aborted) {
-          return;
-        }
-        setLoading(false);
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [messages, connectorId, assistant, notifications]);
+    },
+    [assistant, notifications]
+  );
 
   useEffect(() => {
-    return regenerate();
-  }, [regenerate]);
+    controllerRef.current.abort();
+  }, []);
 
   return {
     ...response,
@@ -133,6 +152,6 @@ export function useChat({ messages, connectorId }: { messages: Message[]; connec
       setError(new AbortError());
       controllerRef.current.abort();
     },
-    regenerate,
+    generate,
   };
 }

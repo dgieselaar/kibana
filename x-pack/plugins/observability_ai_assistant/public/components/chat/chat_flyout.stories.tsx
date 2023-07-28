@@ -5,15 +5,13 @@
  * 2.0.
  */
 
-import React from 'react';
 import { ComponentStory } from '@storybook/react';
+import React from 'react';
 import { ChatFlyout as Component, ChatFlyoutProps } from './chat_flyout';
-import { buildConversation } from '../../utils/builders';
 
 export default {
   component: Component,
   title: 'app/Organisms/ChatFlyout',
-  argTypes: {},
 };
 
 const Template: ComponentStory<typeof Component> = (props: ChatFlyoutProps) => {
@@ -21,7 +19,15 @@ const Template: ComponentStory<typeof Component> = (props: ChatFlyoutProps) => {
 };
 
 const defaultProps = {
-  conversation: buildConversation(),
+  conversation: {
+    '@timestamp': new Date().toISOString(),
+    conversation: {
+      title: 'My conversation',
+    },
+    labels: {},
+    numeric_labels: {},
+    messages: [],
+  },
   connectors: {
     connectors: [
       {
