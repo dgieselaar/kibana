@@ -14,9 +14,11 @@ import type { ChatTimelineItem } from '../components/chat/chat_timeline';
 export function getTimelineItemsfromConversation({
   currentUser,
   conversation,
+  hasConnector,
 }: {
   currentUser?: Pick<AuthenticatedUser, 'username' | 'full_name'>;
   conversation: ConversationCreateRequest;
+  hasConnector: boolean;
 }): ChatTimelineItem[] {
   return [
     {
@@ -37,9 +39,11 @@ export function getTimelineItemsfromConversation({
       title: '',
       content: message.message.content,
       canEdit:
-        message.message.role === MessageRole.User || message.message.role === MessageRole.Function,
+        hasConnector &&
+        (message.message.role === MessageRole.User ||
+          message.message.role === MessageRole.Function),
       canGiveFeedback: message.message.role === MessageRole.Assistant,
-      canRegenerate: message.message.role === MessageRole.Assistant,
+      canRegenerate: hasConnector && message.message.role === MessageRole.Assistant,
       loading: false,
       currentUser,
     })),

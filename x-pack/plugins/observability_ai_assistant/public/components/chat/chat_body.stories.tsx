@@ -7,19 +7,25 @@
 
 import { ComponentStory } from '@storybook/react';
 import React from 'react';
-import { ChatFlyout as Component, ChatFlyoutProps } from './chat_flyout';
+import { ChatBody as Component } from './chat_body';
 
 export default {
   component: Component,
-  title: 'app/Organisms/ChatFlyout',
+  title: 'app/Organisms/ChatBody',
 };
 
-const Template: ComponentStory<typeof Component> = (props: ChatFlyoutProps) => {
-  return <Component {...props} />;
+type ChatBodyProps = React.ComponentProps<typeof Component>;
+
+const Template: ComponentStory<typeof Component> = (props: ChatBodyProps) => {
+  return (
+    <div style={{ minHeight: 800, display: 'flex' }}>
+      <Component {...props} />
+    </div>
+  );
 };
 
-const defaultProps = {
-  conversation: {
+const defaultProps: ChatBodyProps = {
+  initialConversation: {
     '@timestamp': new Date().toISOString(),
     conversation: {
       title: 'My conversation',
@@ -45,7 +51,17 @@ const defaultProps = {
     selectedConnector: 'foo',
     selectConnector: () => {},
   },
+  currentUser: {
+    username: 'elastic',
+  },
+  chat: {
+    loading: false,
+    abort: () => {},
+    generate: async () => {
+      return {} as any;
+    },
+  },
 };
 
-export const ChatFlyout = Template.bind({});
-ChatFlyout.args = defaultProps;
+export const ChatBody = Template.bind({});
+ChatBody.args = defaultProps;

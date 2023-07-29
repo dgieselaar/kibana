@@ -23,7 +23,7 @@ interface MessageResponse {
   };
 }
 
-export function useChat(): {
+export interface UseChatResult {
   content?: string;
   function_call?: {
     name?: string;
@@ -36,7 +36,9 @@ export function useChat(): {
     messages: Message[];
     connectorId: string;
   }) => Promise<{ content?: string; function_call?: { name: string; args?: Serializable } }>;
-} {
+}
+
+export function useChat(): UseChatResult {
   const assistant = useObservabilityAIAssistant();
 
   const {

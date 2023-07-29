@@ -19,6 +19,7 @@ import { i18n } from '@kbn/i18n';
 import { useFunctions, Func } from '../../hooks/use_functions';
 
 export interface ChatPromptEditorProps {
+  disabled: boolean;
   loading: boolean;
   onSubmit: (message: {
     content?: string;
@@ -26,7 +27,7 @@ export interface ChatPromptEditorProps {
   }) => Promise<void>;
 }
 
-export function ChatPromptEditor({ onSubmit, loading }: ChatPromptEditorProps) {
+export function ChatPromptEditor({ onSubmit, disabled, loading }: ChatPromptEditorProps) {
   const functions = useFunctions();
 
   const [prompt, setPrompt] = useState('');
@@ -97,7 +98,7 @@ export function ChatPromptEditor({ onSubmit, loading }: ChatPromptEditorProps) {
       <EuiFlexItem grow={false}>
         <EuiButtonIcon
           isLoading={loading}
-          disabled={!prompt || loading}
+          disabled={!prompt || loading || disabled}
           display={prompt ? 'fill' : 'base'}
           iconType="kqlFunction"
           size="m"
