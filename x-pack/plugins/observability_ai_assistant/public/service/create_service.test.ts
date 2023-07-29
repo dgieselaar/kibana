@@ -4,9 +4,9 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { CoreSetup } from '@kbn/core/public';
+import type { CoreStart } from '@kbn/core/public';
 import { ReadableStream } from 'stream/web';
-import { ObservabilityAIAssistantService } from '../types';
+import type { ObservabilityAIAssistantService } from '../types';
 import { createService } from './create_service';
 
 describe('createService', () => {
@@ -44,7 +44,7 @@ describe('createService', () => {
         http: {
           post: httpPostSpy,
         },
-      } as unknown as CoreSetup);
+      } as unknown as CoreStart);
     });
 
     afterEach(() => {

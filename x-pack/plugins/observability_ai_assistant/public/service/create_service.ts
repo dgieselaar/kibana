@@ -5,15 +5,15 @@
  * 2.0.
  */
 
-import type { CoreSetup, HttpResponse } from '@kbn/core/public';
+import type { CoreStart, HttpResponse } from '@kbn/core/public';
 import { filter, map } from 'rxjs';
 import type { Message } from '../../common';
 import { createCallObservabilityAIAssistantAPI } from '../api';
 import type { CreateChatCompletionResponseChunk, ObservabilityAIAssistantService } from '../types';
 import { readableStreamReaderIntoObservable } from '../utils/readable_stream_reader_into_observable';
 
-export function createService(coreSetup: CoreSetup): ObservabilityAIAssistantService {
-  const client = createCallObservabilityAIAssistantAPI(coreSetup);
+export function createService(coreStart: CoreStart): ObservabilityAIAssistantService {
+  const client = createCallObservabilityAIAssistantAPI(coreStart);
 
   return {
     isEnabled: () => {

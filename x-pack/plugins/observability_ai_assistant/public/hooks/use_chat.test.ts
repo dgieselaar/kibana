@@ -95,11 +95,15 @@ describe('useChat', () => {
     mockResponse(Promise.reject(new Error()));
     const { result, waitFor } = renderHook(() => useChat());
 
+    const catchMock = jest.fn();
+
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(catchMock);
     });
 
     await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
+
+    expect(catchMock).toHaveBeenCalled();
 
     expect(result.current.error).toBeInstanceOf(Error);
     expect(result.current.content).toBeUndefined();
@@ -122,7 +126,7 @@ describe('useChat', () => {
     const { result, waitFor } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
     });
 
     await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
@@ -168,7 +172,7 @@ describe('useChat', () => {
     const { result, waitFor } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
     });
 
     await waitFor(() => result.current.content === 'foo', WAIT_OPTIONS);
@@ -176,7 +180,7 @@ describe('useChat', () => {
     mockDeltas([{ content: 'bar' }]);
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
     });
 
     await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
@@ -230,7 +234,7 @@ describe('useChat', () => {
     const { result, waitForNextUpdate } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);
@@ -258,14 +262,14 @@ describe('useChat', () => {
     const { result, waitForNextUpdate } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);
 
     act(() => {
       mockDeltas([{ content: 'bar' }]);
-      result.current.generate({ messages: [], connectorId: 'mySecondConnectorId' });
+      result.current.generate({ messages: [], connectorId: 'mySecondConnectorId' }).catch(() => {});
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);
