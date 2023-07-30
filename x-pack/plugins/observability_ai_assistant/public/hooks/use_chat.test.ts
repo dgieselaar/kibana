@@ -172,7 +172,7 @@ describe('useChat', () => {
     const { result, waitFor } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
     });
 
     await waitFor(() => result.current.content === 'foo', WAIT_OPTIONS);
@@ -180,7 +180,7 @@ describe('useChat', () => {
     mockDeltas([{ content: 'bar' }]);
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
     });
 
     await waitFor(() => result.current.loading === false, WAIT_OPTIONS);
@@ -223,6 +223,9 @@ describe('useChat', () => {
   });
 
   it('handles user aborts', async () => {
+    const thenMock = jest.fn();
+    const catchMock = jest.fn();
+
     mockResponse(
       Promise.resolve(
         new Observable((subscriber) => {
@@ -231,10 +234,12 @@ describe('useChat', () => {
       )
     );
 
-    const { result, waitForNextUpdate } = renderHook(() => useChat());
+    const { result, waitForNextUpdate, waitFor } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
+      result.current
+        .generate({ messages: [], connectorId: 'myConnectorId' })
+        .then(thenMock, catchMock);
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);
@@ -243,11 +248,24 @@ describe('useChat', () => {
       result.current.abort();
     });
 
+    await waitFor(() => thenMock.mock.calls.length > 0);
+
     expect(mockUseKibana().services.notifications?.showErrorDialog).not.toHaveBeenCalled();
 
     expect(result.current.content).toBe('foo');
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeInstanceOf(AbortError);
+
+    expect(thenMock).toHaveBeenCalledWith({
+      aborted: true,
+      content: 'foo',
+      function_call: {
+        args: '',
+        name: '',
+      },
+    });
+
+    expect(catchMock).not.toHaveBeenCalled();
   });
 
   it('handles user regenerations', async () => {
@@ -262,14 +280,14 @@ describe('useChat', () => {
     const { result, waitForNextUpdate } = renderHook(() => useChat());
 
     act(() => {
-      result.current.generate({ messages: [], connectorId: 'myConnectorId' }).catch(() => {});
+      result.current.generate({ messages: [], connectorId: 'myConnectorId' });
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);
 
     act(() => {
       mockDeltas([{ content: 'bar' }]);
-      result.current.generate({ messages: [], connectorId: 'mySecondConnectorId' }).catch(() => {});
+      result.current.generate({ messages: [], connectorId: 'mySecondConnectorId' });
     });
 
     await waitForNextUpdate(WAIT_OPTIONS);

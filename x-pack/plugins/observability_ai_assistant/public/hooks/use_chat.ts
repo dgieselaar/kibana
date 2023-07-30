@@ -5,20 +5,19 @@
  * 2.0.
  */
 
+import { i18n } from '@kbn/i18n';
+import { useKibana } from '@kbn/kibana-react-plugin/public';
+import { AbortError } from '@kbn/kibana-utils-plugin/common';
 import { clone } from 'lodash';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { concatMap, delay, of } from 'rxjs';
-import { useKibana } from '@kbn/kibana-react-plugin/public';
-import { i18n } from '@kbn/i18n';
-import { AbortError } from '@kbn/kibana-utils-plugin/common';
-import { Serializable } from '@kbn/utility-types';
 import type { Message } from '../../common/types';
 import { useObservabilityAIAssistant } from './use_observability_ai_assistant';
 
 interface MessageResponse {
   content?: string;
   function_call?: {
-    name?: string;
+    name: string;
     args?: string;
   };
 }
@@ -26,16 +25,17 @@ interface MessageResponse {
 export interface UseChatResult {
   content?: string;
   function_call?: {
-    name?: string;
+    name: string;
     args?: string;
   };
   loading: boolean;
   error?: Error;
   abort: () => void;
-  generate: (options: {
-    messages: Message[];
-    connectorId: string;
-  }) => Promise<{ content?: string; function_call?: { name: string; args?: Serializable } }>;
+  generate: (options: { messages: Message[]; connectorId: string }) => Promise<{
+    content?: string;
+    function_call?: { name: string; args?: string };
+    aborted?: boolean;
+  }>;
 }
 
 export function useChat(): UseChatResult {
@@ -104,23 +104,14 @@ export function useChat(): UseChatResult {
           });
         })
         .then(() => {
-          return Promise.resolve({
-            ...partialResponse,
-            ...(partialResponse.function_call
-              ? {
-                  function_call: {
-                    ...partialResponse.function_call,
-                    args: partialResponse.function_call.args
-                      ? JSON.parse(partialResponse.function_call.args)
-                      : undefined,
-                  },
-                }
-              : {}),
-          });
+          return Promise.resolve(partialResponse);
         })
         .catch((err) => {
           if (controller.signal.aborted) {
-            throw err;
+            return Promise.resolve({
+              ...partialResponse,
+              aborted: true,
+            });
           }
           notifications?.showErrorDialog({
             title: i18n.translate('xpack.observabilityAiAssistant.failedToLoadChatTitle', {

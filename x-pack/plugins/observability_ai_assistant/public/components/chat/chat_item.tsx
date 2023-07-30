@@ -146,10 +146,12 @@ export function ChatItem({
       timelineAvatar={<ChatItemAvatar currentUser={currentUser} role={role} />}
       username={getRoleTranslation(role)}
     >
-      {content || error || loading ? (
+      {content !== undefined || error || loading ? (
         <MessagePanel
           body={
-            content || loading ? <MessageText content={content || ''} loading={loading} /> : null
+            content !== undefined || loading ? (
+              <MessageText content={content || ''} loading={loading} />
+            ) : null
           }
           error={error}
           controls={controls}

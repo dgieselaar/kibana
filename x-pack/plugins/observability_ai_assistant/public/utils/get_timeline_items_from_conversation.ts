@@ -36,8 +36,9 @@ export function getTimelineItemsfromConversation({
     ...conversation.messages.map((message) => ({
       id: v4(),
       role: message.message.role,
-      title: '',
-      content: message.message.content,
+      title: message.message.role === MessageRole.System ? 'added a system prompt' : '',
+      content:
+        message.message.role === MessageRole.System ? undefined : message.message.content || '',
       canEdit:
         hasConnector &&
         (message.message.role === MessageRole.User ||
