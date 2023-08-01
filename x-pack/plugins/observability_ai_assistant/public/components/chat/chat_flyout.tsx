@@ -7,9 +7,9 @@
 import { EuiFlyout } from '@elastic/eui';
 import React from 'react';
 import type { ConversationCreateRequest } from '../../../common/types';
-import { useChat } from '../../hooks/use_chat';
 import { useCurrentUser } from '../../hooks/use_current_user';
 import { useGenAIConnectors } from '../../hooks/use_genai_connectors';
+import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
 import { ChatBody } from './chat_body';
 
 export function ChatFlyout({
@@ -21,19 +21,19 @@ export function ChatFlyout({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const chat = useChat();
-
   const connectors = useGenAIConnectors();
 
   const currentUser = useCurrentUser();
 
+  const service = useObservabilityAIAssistant();
+
   return isOpen ? (
     <EuiFlyout onClose={onClose}>
       <ChatBody
-        chat={chat}
         connectors={connectors}
         initialConversation={initialConversation}
         currentUser={currentUser}
+        service={service}
       />
     </EuiFlyout>
   ) : null;

@@ -8,20 +8,14 @@
 import { EuiCommentList } from '@elastic/eui';
 import type { AuthenticatedUser } from '@kbn/security-plugin/common';
 import React from 'react';
-import { MessageRole } from '../../../common/types';
+import type { Message } from '../../../common';
 import type { Feedback } from '../feedback_buttons';
 import { ChatItem } from './chat_item';
 
-export interface ChatTimelineItem {
+export interface ChatTimelineItem
+  extends Pick<Message['message'], 'role' | 'content' | 'function_call'> {
   id: string;
   title: string;
-  role: MessageRole;
-  content?: string;
-  function_call?: {
-    name: string;
-    args?: string;
-    trigger?: MessageRole;
-  };
   loading: boolean;
   error?: any;
   canEdit: boolean;
