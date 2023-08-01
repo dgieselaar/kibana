@@ -6,10 +6,10 @@
  */
 import { EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
 import { useKibana } from '@kbn/kibana-react-plugin/public';
+import { AbortError } from '@kbn/kibana-utils-plugin/common';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Subscription } from 'rxjs';
-import { AbortError } from '@kbn/kibana-utils-plugin/common';
-import { type Message, MessageRole } from '../../../common/types';
+import { MessageRole, type Message } from '../../../common/types';
 import { useGenAIConnectors } from '../../hooks/use_genai_connectors';
 import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
 import type { PendingMessage } from '../../types';
@@ -17,9 +17,9 @@ import { ChatFlyout } from '../chat/chat_flyout';
 import { ConnectorSelectorBase } from '../connector_selector/connector_selector_base';
 import { MessagePanel } from '../message_panel/message_panel';
 import { MessageText } from '../message_panel/message_text';
-import { RegenerateResponseButton } from '../regenerate_response_button';
-import { StartChatButton } from '../start_chat_button';
-import { StopGeneratingButton } from '../stop_generating_button';
+import { RegenerateResponseButton } from '../buttons/regenerate_response_button';
+import { StartChatButton } from '../buttons/start_chat_button';
+import { StopGeneratingButton } from '../buttons/stop_generating_button';
 import { InsightBase } from './insight_base';
 import { InsightMissingCredentials } from './insight_missing_credentials';
 
