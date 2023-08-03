@@ -58,6 +58,14 @@ export type ConversationRequestBase = Omit<Conversation, 'user' | 'conversation'
 export type ConversationCreateRequest = ConversationRequestBase;
 export type ConversationUpdateRequest = ConversationRequestBase & { conversation: { id: string } };
 
+export interface KnowledgeBaseEntry {
+  '@timestamp': string;
+  id: string;
+  text: string;
+  confidence: 'low' | 'medium' | 'high';
+  is_correction: boolean;
+}
+
 type CompatibleJSONSchema = Exclude<JSONSchema, boolean>;
 
 export interface ContextDefinition {

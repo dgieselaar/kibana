@@ -15,6 +15,7 @@ import type { ChatTimelineProps } from '../components/chat/chat_timeline';
 import type { ObservabilityAIAssistantService, PendingMessage } from '../types';
 import { getTimelineItemsfromConversation } from '../utils/get_timeline_items_from_conversation';
 import type { UseGenAIConnectorsResult } from './use_genai_connectors';
+import { getSystemMessage } from '../service/get_system_message';
 
 export function createNewConversation(): ConversationCreateRequest {
   return {
@@ -78,7 +79,7 @@ export function useTimeline({
         messages,
       }));
 
-      const response$ = service.chat({ messages, connectorId });
+      const response$ = service.chat({ messages: [getSystemMessage(), ...messages], connectorId });
 
       let pendingMessageLocal = pendingMessage;
 
