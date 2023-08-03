@@ -48,6 +48,9 @@ export const kbComponentTemplate: ClusterComponentTemplate['component_template']
       is_correction: {
         type: 'boolean',
       },
+      public: {
+        type: 'boolean',
+      },
     },
   },
 };

@@ -61,8 +61,20 @@ export class ObservabilityAIAssistantClient implements IObservabilityAIAssistant
         bool: {
           filter: [
             {
-              term: {
-                'user.name': this.dependencies.user.name,
+              bool: {
+                should: [
+                  {
+                    term: {
+                      'user.name': this.dependencies.user.name,
+                    },
+                  },
+                  {
+                    term: {
+                      public: true,
+                    },
+                  },
+                ],
+                minimum_should_match: 1,
               },
             },
             {
@@ -335,8 +347,9 @@ export class ObservabilityAIAssistantClient implements IObservabilityAIAssistant
       return;
     } catch (error) {
       if (
-        error instanceof errors.ResponseError &&
-        error.body.error.type === 'resource_not_found_exception'
+        (error instanceof errors.ResponseError &&
+          error.body.error.type === 'resource_not_found_exception') ||
+        error.body.error.type === 'status_exception'
       ) {
         throwKnowledgeBaseNotReady(error.body);
       }

@@ -43,11 +43,25 @@ export function registerSummarisationFunction({
             description: 'How confident you are about this being a correct and useful learning',
             enum: ['low' as const, 'medium' as const, 'high' as const],
           },
+          public: {
+            type: 'boolean',
+            description:
+              'Whether this information is specific to the user, or generally applicable to any user of the product',
+          },
         },
-        required: ['id' as const, 'text' as const, 'is_correction' as const, 'confidence' as const],
+        required: [
+          'id' as const,
+          'text' as const,
+          'is_correction' as const,
+          'confidence' as const,
+          'public' as const,
+        ],
       },
     },
-    ({ arguments: { id, text, is_correction: isCorrection, confidence } }, signal) => {
+    (
+      { arguments: { id, text, is_correction: isCorrection, confidence, public: isPublic } },
+      signal
+    ) => {
       return service
         .callApi('POST /internal/observability_ai_assistant/functions/summarise', {
           params: {
@@ -56,6 +70,7 @@ export function registerSummarisationFunction({
               text,
               is_correction: isCorrection,
               confidence,
+              public: isPublic,
             },
           },
           signal,

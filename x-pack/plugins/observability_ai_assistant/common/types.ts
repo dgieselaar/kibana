@@ -49,6 +49,7 @@ export interface Conversation {
   labels: Record<string, string>;
   numeric_labels: Record<string, number>;
   namespace: string;
+  public: boolean;
 }
 
 export type ConversationRequestBase = Omit<Conversation, 'user' | 'conversation' | 'namespace'> & {
@@ -64,6 +65,7 @@ export interface KnowledgeBaseEntry {
   text: string;
   confidence: 'low' | 'medium' | 'high';
   is_correction: boolean;
+  public: boolean;
 }
 
 type CompatibleJSONSchema = Exclude<JSONSchema, boolean>;

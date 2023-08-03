@@ -76,6 +76,7 @@ const functionSummariseRoute = createObservabilityAIAssistantServerRoute({
       text: nonEmptyStringRt,
       confidence: t.union([t.literal('low'), t.literal('medium'), t.literal('high')]),
       is_correction: toBooleanRt,
+      public: toBooleanRt,
     }),
   }),
   options: {
@@ -88,7 +89,13 @@ const functionSummariseRoute = createObservabilityAIAssistantServerRoute({
       throw notImplemented();
     }
 
-    const { confidence, id, is_correction: isCorrection, text } = resources.params.body;
+    const {
+      confidence,
+      id,
+      is_correction: isCorrection,
+      text,
+      public: isPublic,
+    } = resources.params.body;
 
     return client.summarise({
       entry: {
@@ -96,6 +103,7 @@ const functionSummariseRoute = createObservabilityAIAssistantServerRoute({
         id,
         is_correction: isCorrection,
         text,
+        public: isPublic,
       },
     });
   },
