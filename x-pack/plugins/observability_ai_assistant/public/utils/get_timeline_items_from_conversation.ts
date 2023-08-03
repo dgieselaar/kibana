@@ -54,7 +54,7 @@ export function getTimelineItemsfromConversation({
         and return its results for me to look at.`);
       } else if (isSystemPrompt) {
         title = i18n.translate('xpack.observabilityAiAssistant.addedSystemPromptEvent', {
-          defaultMessage: 'returned data',
+          defaultMessage: 'added a prompt',
         });
         content = '';
       } else {
