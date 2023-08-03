@@ -58,7 +58,7 @@ export function getTimelineItemsfromConversation({
         canGiveFeedback: message.message.role === MessageRole.Assistant,
         loading: false,
         title,
-        content: message.message.content,
+        content: isSystemPrompt ? '' : message.message.content,
         currentUser,
       };
 

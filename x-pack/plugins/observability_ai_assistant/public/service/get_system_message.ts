@@ -12,7 +12,7 @@ export function getSystemMessage() {
   return {
     '@timestamp': new Date().toISOString(),
     message: {
-      role: MessageRole.Assistant as const,
+      role: MessageRole.System as const,
       content:
         dedent(`You are a helpful assistant for Elastic Observability. Your goal is to help the Elastic Observability users to quickly assess what is happening in their observed systems. You can help them visualise and analyze data, investigate their systems, perform root cause analysis or identify optimisation opportunities.
 
