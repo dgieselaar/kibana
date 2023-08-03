@@ -245,26 +245,40 @@ export class ObservabilityAIAssistantClient implements IObservabilityAIAssistant
   };
 
   recall = async (query: string): Promise<{ entries: KnowledgeBaseEntry[] }> => {
-    const response = await this.dependencies.esClient.search<KnowledgeBaseEntry>({
-      index: this.dependencies.resources.aliases.kb,
-      query: {
-        bool: {
-          should: [
-            {
-              text_expansion: {
-                'ml.tokens': {
-                  model_text: query,
-                  model_id: '.elser_model_1',
-                },
-              } as unknown as QueryDslTextExpansionQuery,
-            },
-          ],
-          filter: [...this.getAccessQuery()],
+    try {
+      const response = await this.dependencies.esClient.search<KnowledgeBaseEntry>({
+        index: this.dependencies.resources.aliases.kb,
+        query: {
+          bool: {
+            should: [
+              {
+                text_expansion: {
+                  'ml.tokens': {
+                    model_text: query,
+                    model_id: '.elser_model_1',
+                  },
+                } as unknown as QueryDslTextExpansionQuery,
+              },
+            ],
+            filter: [...this.getAccessQuery()],
+          },
         },
-      },
-    });
+        _source: {
+          excludes: ['ml.tokens'],
+        },
+      });
 
-    return { entries: response.hits.hits.map((hit) => hit._source!) };
+      return { entries: response.hits.hits.map((hit) => hit._source!) };
+    } catch (error) {
+      if (
+        (error instanceof errors.ResponseError &&
+          error.body.error.type === 'resource_not_found_exception') ||
+        error.body.error.type === 'status_exception'
+      ) {
+        throwKnowledgeBaseNotReady(error.body);
+      }
+      throw error;
+    }
   };
 
   summarise = async ({

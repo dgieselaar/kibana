@@ -9,6 +9,7 @@ import type { RegisterContextDefinition, RegisterFunctionDefinition } from '../.
 import type { ObservabilityAIAssistantService } from '../types';
 import { registerElasticsearchFunction } from './elasticsearch';
 import { registerRecallFunction } from './recall';
+import { registerSetupKbFunction } from './setup_kb';
 import { registerSummarisationFunction } from './summarise';
 
 export function registerFunctions({
@@ -29,4 +30,5 @@ export function registerFunctions({
   registerElasticsearchFunction({ service, registerFunction });
   registerSummarisationFunction({ service, registerFunction });
   registerRecallFunction({ service, registerFunction });
+  registerSetupKbFunction({ service, registerFunction });
 }
