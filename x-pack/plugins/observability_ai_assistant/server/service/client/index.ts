@@ -236,7 +236,7 @@ export class ObservabilityAIAssistantClient implements IObservabilityAIAssistant
       id: document._id,
       index: document._index,
       doc: updatedConversation,
-      refresh: false,
+      refresh: 'wait_for',
     });
 
     return updatedConversation;
