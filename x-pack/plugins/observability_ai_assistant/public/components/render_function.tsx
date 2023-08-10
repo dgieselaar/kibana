@@ -16,5 +16,10 @@ interface Props {
 
 export function RenderFunction(props: Props) {
   const chatService = useObservabilityAIAssistantChatService();
+
+  if (!chatService.getFunctions().find((fn) => fn.options.name === props.name)) {
+    return null;
+  }
+
   return <>{chatService.renderFunction(props.name, props.arguments, props.response)}</>;
 }

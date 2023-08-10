@@ -4,25 +4,25 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import React, { useMemo, useState } from 'react';
 import { EuiCallOut, EuiFlexGroup, EuiFlexItem, EuiLoadingSpinner, EuiSpacer } from '@elastic/eui';
 import { css } from '@emotion/css';
 import { i18n } from '@kbn/i18n';
+import React, { useMemo, useState } from 'react';
 import { ChatBody } from '../../components/chat/chat_body';
-import { useKibana } from '../../hooks/use_kibana';
 import { ConversationList } from '../../components/chat/conversation_list';
+import { ObservabilityAIAssistantChatServiceProvider } from '../../context/observability_ai_assistant_chat_service_provider';
 import { useAbortableAsync } from '../../hooks/use_abortable_async';
 import { useConfirmModal } from '../../hooks/use_confirm_modal';
 import { useConversation } from '../../hooks/use_conversation';
 import { useCurrentUser } from '../../hooks/use_current_user';
 import { useGenAIConnectors } from '../../hooks/use_genai_connectors';
+import { useKibana } from '../../hooks/use_kibana';
+import { useKnowledgeBase } from '../../hooks/use_knowledge_base';
 import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
 import { useObservabilityAIAssistantParams } from '../../hooks/use_observability_ai_assistant_params';
 import { useObservabilityAIAssistantRouter } from '../../hooks/use_observability_ai_assistant_router';
 import { EMPTY_CONVERSATION_TITLE } from '../../i18n';
 import { getConnectorsManagementHref } from '../../utils/get_connectors_management_href';
-import { useKnowledgeBase } from '../../hooks/use_knowledge_base';
-import { ObservabilityAIAssistantChatServiceProvider } from '../../context/observability_ai_assistant_chat_service_provider';
 
 const containerClassName = css`
   max-width: 100%;
@@ -210,7 +210,14 @@ export function ConversationView() {
               })}
             </EuiCallOut>
           ) : null}
-          {chatService.loading || conversation.loading ? <EuiLoadingSpinner /> : null}
+          {chatService.loading || conversation.loading ? (
+            <EuiFlexGroup direction="column" alignItems="center" gutterSize="l">
+              <EuiFlexItem grow={false}>
+                <EuiSpacer size="xl" />
+                <EuiLoadingSpinner size="l" />
+              </EuiFlexItem>
+            </EuiFlexGroup>
+          ) : null}
           {!conversation.error && conversation.value && chatService.value ? (
             <ObservabilityAIAssistantChatServiceProvider value={chatService.value}>
               <ChatBody

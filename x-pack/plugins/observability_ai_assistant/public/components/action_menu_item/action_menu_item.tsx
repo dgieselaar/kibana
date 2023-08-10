@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { EuiFlexGroup, EuiFlexItem, EuiHeaderLink } from '@elastic/eui';
+import { EuiFlexGroup, EuiFlexItem, EuiHeaderLink, EuiLoadingSpinner } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import React, { useState } from 'react';
 import { ObservabilityAIAssistantChatServiceProvider } from '../../context/observability_ai_assistant_chat_service_provider';
@@ -50,7 +50,11 @@ export function ObservabilityAIAssistantActionMenuItem() {
       >
         <EuiFlexGroup gutterSize="s" alignItems="center">
           <EuiFlexItem grow={false}>
-            <AssistantAvatar size="xs" />
+            {!isOpen || chatService.value ? (
+              <AssistantAvatar size="xs" />
+            ) : (
+              <EuiLoadingSpinner size="s" />
+            )}
           </EuiFlexItem>
           <EuiFlexItem grow={false}>
             {i18n.translate('xpack.observabilityAiAssistant.actionMenuItemLabel', {
