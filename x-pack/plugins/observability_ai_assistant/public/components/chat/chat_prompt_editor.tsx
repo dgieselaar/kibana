@@ -5,22 +5,21 @@
  * 2.0.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  EuiButtonIcon,
   EuiButtonEmpty,
-  EuiTextArea,
+  EuiButtonIcon,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiSpacer,
   EuiPanel,
+  EuiSpacer,
+  EuiTextArea,
   keys,
 } from '@elastic/eui';
-import { CodeEditor } from '@kbn/kibana-react-plugin/public';
 import { i18n } from '@kbn/i18n';
-import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
+import { CodeEditor } from '@kbn/kibana-react-plugin/public';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MessageRole, type Message } from '../../../common';
 import { useJsonEditorModel } from '../../hooks/use_json_editor_model';
-import { type Message, MessageRole } from '../../../common';
 import { FunctionListPopover } from './function_list_popover';
 
 export interface ChatPromptEditorProps {
@@ -40,9 +39,6 @@ export function ChatPromptEditor({
   initialFunctionPayload,
   onSubmit,
 }: ChatPromptEditorProps) {
-  const { getFunctions } = useObservabilityAIAssistant();
-  const functions = getFunctions();
-
   const [prompt, setPrompt] = useState(initialPrompt);
 
   const [selectedFunctionName, setSelectedFunctionName] = useState<string | undefined>(
@@ -159,7 +155,6 @@ export function ChatPromptEditor({
             <EuiFlexGroup responsive={false}>
               <EuiFlexItem grow>
                 <FunctionListPopover
-                  functions={functions}
                   selectedFunctionName={selectedFunctionName}
                   onSelectFunction={handleSelectFunction}
                 />

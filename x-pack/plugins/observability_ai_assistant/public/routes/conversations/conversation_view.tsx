@@ -22,6 +22,7 @@ import { useObservabilityAIAssistantRouter } from '../../hooks/use_observability
 import { EMPTY_CONVERSATION_TITLE } from '../../i18n';
 import { getConnectorsManagementHref } from '../../utils/get_connectors_management_href';
 import { useKnowledgeBase } from '../../hooks/use_knowledge_base';
+import { ObservabilityAIAssistantChatServiceProvider } from '../../context/observability_ai_assistant_chat_service_provider';
 
 const containerClassName = css`
   max-width: 100%;
@@ -72,6 +73,13 @@ export function ConversationView() {
       return service.callApi('POST /internal/observability_ai_assistant/conversations', {
         signal,
       });
+    },
+    [service]
+  );
+
+  const chatService = useAbortableAsync(
+    ({ signal }) => {
+      return service.start({ signal });
     },
     [service]
   );
@@ -200,30 +208,31 @@ export function ConversationView() {
               })}
             </EuiCallOut>
           ) : null}
-          {conversation.loading ? <EuiLoadingSpinner /> : null}
-          {!conversation.error && conversation.value ? (
-            <ChatBody
-              currentUser={currentUser}
-              connectors={connectors}
-              knowledgeBase={knowledgeBase}
-              title={conversation.value.conversation.title}
-              connectorsManagementHref={getConnectorsManagementHref(http)}
-              service={service}
-              messages={displayedMessages}
-              onChatComplete={(messages) => {
-                save(messages)
-                  .then((nextConversation) => {
-                    conversations.refresh();
-                    if (!conversationId) {
-                      navigateToConversation(nextConversation.conversation.id);
-                    }
-                  })
-                  .catch(() => {});
-              }}
-              onChatUpdate={(messages) => {
-                setDisplayedMessages(messages);
-              }}
-            />
+          {chatService.loading || conversation.loading ? <EuiLoadingSpinner /> : null}
+          {!conversation.error && conversation.value && chatService.value ? (
+            <ObservabilityAIAssistantChatServiceProvider value={chatService.value}>
+              <ChatBody
+                currentUser={currentUser}
+                connectors={connectors}
+                knowledgeBase={knowledgeBase}
+                title={conversation.value.conversation.title}
+                connectorsManagementHref={getConnectorsManagementHref(http)}
+                messages={displayedMessages}
+                onChatComplete={(messages) => {
+                  save(messages)
+                    .then((nextConversation) => {
+                      conversations.refresh();
+                      if (!conversationId) {
+                        navigateToConversation(nextConversation.conversation.id);
+                      }
+                    })
+                    .catch(() => {});
+                }}
+                onChatUpdate={(messages) => {
+                  setDisplayedMessages(messages);
+                }}
+              />
+            </ObservabilityAIAssistantChatServiceProvider>
           ) : null}
           <EuiSpacer size="m" />
         </EuiFlexItem>

@@ -11,7 +11,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Subscription } from 'rxjs';
 import { MessageRole, type Message } from '../../../common/types';
 import { useGenAIConnectors } from '../../hooks/use_genai_connectors';
-import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
 import type { PendingMessage } from '../../types';
 import { ChatFlyout } from '../chat/chat_flyout';
 import { ConnectorSelectorBase } from '../connector_selector/connector_selector_base';
@@ -23,6 +22,7 @@ import { StopGeneratingButton } from '../buttons/stop_generating_button';
 import { InsightBase } from './insight_base';
 import { MissingCredentialsCallout } from '../missing_credentials_callout';
 import { getConnectorsManagementHref } from '../../utils/get_connectors_management_href';
+import { useObservabilityAIAssistantChatService } from '../../hooks/use_observability_ai_assistant_chat_service';
 
 function ChatContent({
   title,
@@ -33,7 +33,7 @@ function ChatContent({
   messages: Message[];
   connectorId: string;
 }) {
-  const service = useObservabilityAIAssistant();
+  const chatService = useObservabilityAIAssistantChatService();
 
   const [pendingMessage, setPendingMessage] = useState<PendingMessage | undefined>();
   const [loading, setLoading] = useState(false);
@@ -42,19 +42,17 @@ function ChatContent({
   const reloadReply = useCallback(() => {
     setLoading(true);
 
-    const nextSubscription = service
-      .chat({ messages, connectorId, knowledgeBaseAvailable: false })
-      .subscribe({
-        next: (msg) => {
-          setPendingMessage(() => msg);
-        },
-        complete: () => {
-          setLoading(false);
-        },
-      });
+    const nextSubscription = chatService.chat({ messages, connectorId }).subscribe({
+      next: (msg) => {
+        setPendingMessage(() => msg);
+      },
+      complete: () => {
+        setLoading(false);
+      },
+    });
 
     setSubscription(nextSubscription);
-  }, [messages, connectorId, service]);
+  }, [messages, connectorId, chatService]);
 
   useEffect(() => {
     reloadReply();

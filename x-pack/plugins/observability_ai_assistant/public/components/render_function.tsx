@@ -5,7 +5,7 @@
  * 2.0.
  */
 import React from 'react';
-import { useObservabilityAIAssistant } from '../hooks/use_observability_ai_assistant';
+import { useObservabilityAIAssistantChatService } from '../hooks/use_observability_ai_assistant_chat_service';
 
 interface Props {
   name: string;
@@ -14,7 +14,6 @@ interface Props {
 }
 
 export function RenderFunction(props: Props) {
-  const service = useObservabilityAIAssistant();
-
-  return <>{service.renderFunction(props.name, props.arguments, props.response)}</>;
+  const chatService = useObservabilityAIAssistantChatService();
+  return <>{chatService.renderFunction(props.name, props.arguments, props.response)}</>;
 }

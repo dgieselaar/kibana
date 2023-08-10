@@ -13,10 +13,10 @@ import { MessageRole, type ConversationCreateRequest, type Message } from '../..
 import type { ChatPromptEditorProps } from '../components/chat/chat_prompt_editor';
 import type { ChatTimelineProps } from '../components/chat/chat_timeline';
 import { EMPTY_CONVERSATION_TITLE } from '../i18n';
-import type { ObservabilityAIAssistantService, PendingMessage } from '../types';
+import { getAssistantSetupMessage } from '../service/get_assistant_setup_message';
+import type { ObservabilityAIAssistantChatService, PendingMessage } from '../types';
 import { getTimelineItemsfromConversation } from '../utils/get_timeline_items_from_conversation';
 import type { UseGenAIConnectorsResult } from './use_genai_connectors';
-import { getAssistantSetupMessage } from '../service/get_assistant_setup_message';
 
 export function createNewConversation(): ConversationCreateRequest {
   return {
@@ -41,18 +41,16 @@ export function useTimeline({
   messages,
   connectors,
   currentUser,
-  service,
+  chatService,
   onChatUpdate,
   onChatComplete,
-  knowledgeBaseAvailable,
 }: {
   messages: Message[];
   connectors: UseGenAIConnectorsResult;
   currentUser?: Pick<AuthenticatedUser, 'full_name' | 'username'>;
-  service: ObservabilityAIAssistantService;
+  chatService: ObservabilityAIAssistantChatService;
   onChatUpdate: (messages: Message[]) => void;
   onChatComplete: (messages: Message[]) => void;
-  knowledgeBaseAvailable: boolean;
 }): UseTimelineResult {
   const connectorId = connectors.selectedConnector;
 
@@ -85,10 +83,9 @@ export function useTimeline({
 
       onChatUpdate(nextMessages);
 
-      const response$ = service.chat({
+      const response$ = chatService!.chat({
         messages: nextMessages,
         connectorId,
-        knowledgeBaseAvailable,
       });
 
       let pendingMessageLocal = pendingMessage;
@@ -131,7 +128,7 @@ export function useTimeline({
         const name = reply.message.function_call.name;
 
         try {
-          const message = await service.executeFunction(
+          const message = await chatService!.executeFunction(
             name,
             reply.message.function_call.arguments,
             controller.signal
@@ -173,7 +170,6 @@ export function useTimeline({
     if (pendingMessage) {
       return conversationItems.concat({
         id: '',
-        '@timestamp': new Date().toISOString(),
         canCopy: true,
         canEdit: false,
         canGiveFeedback: false,
@@ -202,7 +198,7 @@ export function useTimeline({
   return {
     items,
     onEdit: async (item, newMessage) => {
-      const index = messages.findIndex((message) => message['@timestamp'] === item['@timestamp']);
+      const index = items.indexOf(item);
       const sliced = messages.slice(0, index);
       const nextMessages = await chat(sliced.concat(newMessage));
       onChatComplete(nextMessages);
