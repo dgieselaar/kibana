@@ -4,26 +4,39 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import React from 'react';
-import { CoreStart } from '@kbn/core/public';
-import { groupBy } from 'lodash';
 import { EuiFlexGroup, EuiFlexItem, EuiText } from '@elastic/eui';
-import { ApmPluginStartDeps } from '../../plugin';
+import type { RegisterFunctionDefinition } from '@kbn/observability-ai-assistant-plugin/common/types';
+import { groupBy } from 'lodash';
+import React from 'react';
+import { useKibana } from '@kbn/kibana-react-plugin/public';
+import { FETCH_STATUS } from '../../hooks/use_fetcher';
+import { callApmApi } from '../../services/rest/create_call_apm_api';
+import { getTimeZone } from '../shared/charts/helper/timezone';
+import { TimeseriesChart } from '../shared/charts/timeseries_chart';
+import { ChartPointerEventContextProvider } from '../../context/chart_pointer_event/chart_pointer_event_context';
+import { ApmThemeProvider } from '../routing/app_root';
+import { Coordinate, TimeSeries } from '../../../typings/timeseries';
 import {
-  callApmApi,
-  createCallApmApi,
-} from '../../services/rest/create_call_apm_api';
+  ChartType,
+  getTimeSeriesColor,
+} from '../shared/charts/helper/get_timeseries_color';
+import { LatencyAggregationType } from '../../../common/latency_aggregation_types';
+import {
+  asPercent,
+  asTransactionRate,
+  getDurationFormatter,
+} from '../../../common/utils/formatters';
+import {
+  getMaxY,
+  getResponseTimeTickFormatter,
+} from '../shared/charts/transaction_charts/helper';
 
 export function registerGetApmTimeseriesFunction({
-  pluginsStart,
-  coreStart,
+  registerFunction,
 }: {
-  pluginsStart: ApmPluginStartDeps;
-  coreStart: CoreStart;
+  registerFunction: RegisterFunctionDefinition;
 }) {
-  createCallApmApi(coreStart);
-
-  pluginsStart.observabilityAIAssistant.registerFunction(
+  registerFunction(
     {
       contexts: ['apm'],
       name: 'get_apm_timeseries',
@@ -121,7 +134,8 @@ export function registerGetApmTimeseriesFunction({
                 },
                 'service.environment': {
                   type: 'string',
-                  description: 'The environment that the service is running in',
+                  description:
+                    "The environment that the service is running in. If you don't know this, use ENVIRONMENT_ALL.",
                 },
                 filter: {
                   type: 'string',
@@ -167,22 +181,114 @@ export function registerGetApmTimeseriesFunction({
     ({ arguments: args, response }) => {
       const groupedSeries = groupBy(response.data, (series) => series.group);
 
-      return (
-        <EuiFlexGroup direction="column">
-          {Object.values(groupedSeries).map((groupSeries) => {
-            const groupId = groupSeries[0].group;
+      const {
+        services: { uiSettings },
+      } = useKibana();
 
-            return (
-              <EuiFlexItem grow={false} key={groupId}>
-                <EuiFlexGroup direction="column" gutterSize="s">
-                  <EuiFlexItem>
-                    <EuiText size="m">{groupId}</EuiText>
+      const timeZone = getTimeZone(uiSettings);
+
+      return (
+        <ChartPointerEventContextProvider>
+          <ApmThemeProvider>
+            <EuiFlexGroup direction="column">
+              {Object.values(groupedSeries).map((groupSeries) => {
+                const groupId = groupSeries[0].group;
+
+                const maxY = getMaxY(groupSeries);
+                const latencyFormatter = getDurationFormatter(maxY);
+
+                let yLabelFormat: (value: number) => string;
+
+                const firstStat = groupSeries[0].stat;
+
+                switch (firstStat.timeseries.name) {
+                  case 'transaction_throughput':
+                  case 'exit_span_throughput':
+                  case 'error_event_rate':
+                    yLabelFormat = asTransactionRate;
+                    break;
+
+                  case 'transaction_latency':
+                  case 'exit_span_latency':
+                    yLabelFormat =
+                      getResponseTimeTickFormatter(latencyFormatter);
+                    break;
+
+                  case 'transaction_failure_rate':
+                  case 'exit_span_failure_rate':
+                    yLabelFormat = (y) => asPercent(y || 0, 100);
+                    break;
+                }
+
+                const timeseries: Array<TimeSeries<Coordinate>> =
+                  groupSeries.map((series): TimeSeries<Coordinate> => {
+                    let chartType: ChartType;
+
+                    switch (series.stat.timeseries.name) {
+                      case 'transaction_throughput':
+                      case 'exit_span_throughput':
+                        chartType = ChartType.THROUGHPUT;
+                        break;
+
+                      case 'transaction_failure_rate':
+                      case 'exit_span_failure_rate':
+                        chartType = ChartType.FAILED_TRANSACTION_RATE;
+                        break;
+
+                      case 'transaction_latency':
+                        if (
+                          series.stat.timeseries.function ===
+                          LatencyAggregationType.p99
+                        ) {
+                          chartType = ChartType.LATENCY_P99;
+                        } else if (
+                          series.stat.timeseries.function ===
+                          LatencyAggregationType.p95
+                        ) {
+                          chartType = ChartType.LATENCY_P95;
+                        } else {
+                          chartType = ChartType.LATENCY_AVG;
+                        }
+                        break;
+
+                      case 'exit_span_latency':
+                        chartType = ChartType.LATENCY_AVG;
+                        break;
+
+                      case 'error_event_rate':
+                        chartType = ChartType.ERROR_OCCURRENCES;
+                        break;
+                    }
+
+                    return {
+                      title: series.id,
+                      type: 'line',
+                      color: getTimeSeriesColor(chartType!).currentPeriodColor,
+                      data: series.data,
+                    };
+                  });
+
+                return (
+                  <EuiFlexItem grow={false} key={groupId}>
+                    <EuiFlexGroup direction="column" gutterSize="s">
+                      <EuiFlexItem>
+                        <EuiText size="m">{groupId}</EuiText>
+                        <TimeseriesChart
+                          comparisonEnabled={false}
+                          fetchStatus={FETCH_STATUS.SUCCESS}
+                          id={groupId}
+                          timeZone={timeZone}
+                          timeseries={timeseries}
+                          yLabelFormat={yLabelFormat!}
+                        />
+                      </EuiFlexItem>
+                    </EuiFlexGroup>
                   </EuiFlexItem>
-                </EuiFlexGroup>
-              </EuiFlexItem>
-            );
-          })}
-        </EuiFlexGroup>
+                );
+              })}
+            </EuiFlexGroup>
+          </ApmThemeProvider>
+        </ChartPointerEventContextProvider>
       );
     }
   );

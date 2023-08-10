@@ -73,7 +73,7 @@ import { from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import type { ConfigSchema } from '.';
 import { registerApmRuleTypes } from './components/alerting/rule_types/register_apm_rule_types';
-import { registerGetApmTimeseriesFunction } from './components/assistant_functions/get_apm_timeseries';
+import { registerAssistantFunctions } from './components/assistant_functions';
 import {
   getApmEnrollmentFlyoutData,
   LazyApmCustomAssetsExtension,
@@ -415,9 +415,9 @@ export class ApmPlugin implements Plugin<ApmPluginSetup, ApmPluginStart> {
   public start(core: CoreStart, plugins: ApmPluginStartDeps) {
     const { fleet } = plugins;
 
-    registerGetApmTimeseriesFunction({
-      pluginsStart: plugins,
+    registerAssistantFunctions({
       coreStart: core,
+      pluginsStart: plugins,
     });
 
     if (fleet) {

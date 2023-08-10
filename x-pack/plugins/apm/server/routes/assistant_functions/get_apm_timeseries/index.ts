@@ -23,7 +23,7 @@ import { getTransactionFailureRate } from './get_transaction_failure_rate';
 import { getTransactionLatency } from './get_transaction_latency';
 import { getTransactionThroughput } from './get_transaction_throughput';
 
-enum ApmTimeseriesType {
+export enum ApmTimeseriesType {
   transactionThroughput = 'transaction_throughput',
   transactionLatency = 'transaction_latency',
   transactionFailureRate = 'transaction_failure_rate',
@@ -92,7 +92,10 @@ export const getApmTimeseriesRt = t.type({
   end: t.string,
 });
 
+type ApmTimeseriesArgs = t.TypeOf<typeof getApmTimeseriesRt>;
+
 export interface ApmTimeseries {
+  stat: ApmTimeseriesArgs['stats'][number];
   group: string;
   id: string;
   data: Array<{ x: number; y: number | null }>;
@@ -206,6 +209,7 @@ export async function getApmTimeseries({
       )?.[0];
 
       return {
+        stat: statResult.stat,
         group: statResult.stat.title,
         id: statResult.groupBy,
         data: statResult.data,

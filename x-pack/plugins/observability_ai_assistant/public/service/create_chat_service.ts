@@ -106,9 +106,14 @@ export async function createChatService({
 
       const parsedArguments = args ? JSON.parse(args) : {};
 
+      const parsedResponse = {
+        content: JSON.parse(response.content ?? '{}'),
+        data: JSON.parse(response.data ?? '{}'),
+      };
+
       // validate
 
-      return fn.render?.({ response, arguments: parsedArguments });
+      return fn.render?.({ response: parsedResponse, arguments: parsedArguments });
     },
     getContexts,
     getFunctions,

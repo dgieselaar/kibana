@@ -61,7 +61,7 @@ export interface ObservabilityAIAssistantChatService {
   renderFunction: (
     name: string,
     args: string | undefined,
-    response: { data?: Serializable; content?: Serializable }
+    response: { data?: string; content?: string }
   ) => React.ReactNode;
 }
 

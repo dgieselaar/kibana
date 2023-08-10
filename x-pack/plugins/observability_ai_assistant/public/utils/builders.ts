@@ -95,7 +95,7 @@ export function buildConversation(params?: Partial<Conversation>) {
       title: '',
       last_updated: '',
     },
-    messages: [getAssistantSetupMessage()],
+    messages: [getAssistantSetupMessage({ contexts: [] })],
     labels: {},
     numeric_labels: {},
     namespace: '',

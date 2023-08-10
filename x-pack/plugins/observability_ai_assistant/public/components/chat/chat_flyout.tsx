@@ -6,22 +6,23 @@
  */
 import { EuiFlexGroup, EuiFlexItem, EuiFlyout, EuiLink, EuiPanel, useEuiTheme } from '@elastic/eui';
 import { css } from '@emotion/css';
-import React, { useEffect } from 'react';
 import { i18n } from '@kbn/i18n';
+import React, { useEffect } from 'react';
 import type { Message } from '../../../common/types';
 import { useCurrentUser } from '../../hooks/use_current_user';
 import { useGenAIConnectors } from '../../hooks/use_genai_connectors';
 import { useKibana } from '../../hooks/use_kibana';
-import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
+import { useKnowledgeBase } from '../../hooks/use_knowledge_base';
 import { useObservabilityAIAssistantRouter } from '../../hooks/use_observability_ai_assistant_router';
 import { getConnectorsManagementHref } from '../../utils/get_connectors_management_href';
 import { ChatBody } from './chat_body';
-import { useKnowledgeBase } from '../../hooks/use_knowledge_base';
-import { useAbortableAsync } from '../../hooks/use_abortable_async';
-import { ObservabilityAIAssistantChatServiceProvider } from '../../context/observability_ai_assistant_chat_service_provider';
 
 const containerClassName = css`
   max-height: 100%;
+`;
+
+const bodyClassName = css`
+  overflow-y: auto;
 `;
 
 export function ChatFlyout({
@@ -48,15 +49,6 @@ export function ChatFlyout({
   const {
     services: { http },
   } = useKibana();
-
-  const service = useObservabilityAIAssistant();
-
-  const chatService = useAbortableAsync(
-    ({ signal }) => {
-      return service.start({ signal });
-    },
-    [service]
-  );
 
   const { euiTheme } = useEuiTheme();
 
@@ -100,29 +92,25 @@ export function ChatFlyout({
             )}
           </EuiPanel>
         </EuiFlexItem>
-        <EuiFlexItem>
-          {chatService.value ? (
-            <ObservabilityAIAssistantChatServiceProvider value={chatService.value}>
-              <ChatBody
-                connectors={connectors}
-                title={title}
-                messages={messages}
-                currentUser={currentUser}
-                connectorsManagementHref={getConnectorsManagementHref(http)}
-                knowledgeBase={knowledgeBase}
-                onChatUpdate={(nextMessages) => {
-                  if (onChatUpdate) {
-                    onChatUpdate(nextMessages);
-                  }
-                }}
-                onChatComplete={(nextMessages) => {
-                  if (onChatComplete) {
-                    onChatComplete(nextMessages);
-                  }
-                }}
-              />
-            </ObservabilityAIAssistantChatServiceProvider>
-          ) : null}
+        <EuiFlexItem grow className={bodyClassName}>
+          <ChatBody
+            connectors={connectors}
+            title={title}
+            messages={messages}
+            currentUser={currentUser}
+            connectorsManagementHref={getConnectorsManagementHref(http)}
+            knowledgeBase={knowledgeBase}
+            onChatUpdate={(nextMessages) => {
+              if (onChatUpdate) {
+                onChatUpdate(nextMessages);
+              }
+            }}
+            onChatComplete={(nextMessages) => {
+              if (onChatComplete) {
+                onChatComplete(nextMessages);
+              }
+            }}
+          />
         </EuiFlexItem>
       </EuiFlexGroup>
     </EuiFlyout>

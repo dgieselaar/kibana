@@ -23,7 +23,7 @@ const defaultProps: ComponentStoryObj<typeof Component> = {
   args: {
     title: 'My Conversation',
     messages: [
-      getAssistantSetupMessage(),
+      getAssistantSetupMessage({ contexts: [] }),
       {
         '@timestamp': new Date().toISOString(),
         message: {

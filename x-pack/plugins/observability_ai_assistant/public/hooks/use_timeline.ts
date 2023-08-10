@@ -9,7 +9,12 @@ import { AbortError } from '@kbn/kibana-utils-plugin/common';
 import type { AuthenticatedUser } from '@kbn/security-plugin/common';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Subscription } from 'rxjs';
-import { MessageRole, type ConversationCreateRequest, type Message } from '../../common/types';
+import {
+  ContextDefinition,
+  MessageRole,
+  type ConversationCreateRequest,
+  type Message,
+} from '../../common/types';
 import type { ChatPromptEditorProps } from '../components/chat/chat_prompt_editor';
 import type { ChatTimelineProps } from '../components/chat/chat_timeline';
 import { EMPTY_CONVERSATION_TITLE } from '../i18n';
@@ -18,10 +23,14 @@ import type { ObservabilityAIAssistantChatService, PendingMessage } from '../typ
 import { getTimelineItemsfromConversation } from '../utils/get_timeline_items_from_conversation';
 import type { UseGenAIConnectorsResult } from './use_genai_connectors';
 
-export function createNewConversation(): ConversationCreateRequest {
+export function createNewConversation({
+  contexts,
+}: {
+  contexts: ContextDefinition[];
+}): ConversationCreateRequest {
   return {
     '@timestamp': new Date().toISOString(),
-    messages: [getAssistantSetupMessage()],
+    messages: [getAssistantSetupMessage({ contexts })],
     conversation: {
       title: EMPTY_CONVERSATION_TITLE,
     },
@@ -198,8 +207,8 @@ export function useTimeline({
   return {
     items,
     onEdit: async (item, newMessage) => {
-      const index = items.indexOf(item);
-      const sliced = messages.slice(0, index);
+      const indexOf = items.indexOf(item);
+      const sliced = messages.slice(0, indexOf - 1);
       const nextMessages = await chat(sliced.concat(newMessage));
       onChatComplete(nextMessages);
     },

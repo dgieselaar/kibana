@@ -63,23 +63,25 @@ export function ConversationView() {
 
   const [isUpdatingList, setIsUpdatingList] = useState(false);
 
+  const chatService = useAbortableAsync(
+    ({ signal }) => {
+      return service.start({ signal });
+    },
+    [service]
+  );
+
   const conversationId = 'conversationId' in path ? path.conversationId : undefined;
 
-  const { conversation, displayedMessages, setDisplayedMessages, save } =
-    useConversation(conversationId);
+  const { conversation, displayedMessages, setDisplayedMessages, save } = useConversation({
+    conversationId,
+    chatService: chatService.value,
+  });
 
   const conversations = useAbortableAsync(
     ({ signal }) => {
       return service.callApi('POST /internal/observability_ai_assistant/conversations', {
         signal,
       });
-    },
-    [service]
-  );
-
-  const chatService = useAbortableAsync(
-    ({ signal }) => {
-      return service.start({ signal });
     },
     [service]
   );

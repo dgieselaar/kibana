@@ -23,6 +23,9 @@ import { InsightBase } from './insight_base';
 import { MissingCredentialsCallout } from '../missing_credentials_callout';
 import { getConnectorsManagementHref } from '../../utils/get_connectors_management_href';
 import { useObservabilityAIAssistantChatService } from '../../hooks/use_observability_ai_assistant_chat_service';
+import { useObservabilityAIAssistant } from '../../hooks/use_observability_ai_assistant';
+import { useAbortableAsync } from '../../hooks/use_abortable_async';
+import { ObservabilityAIAssistantChatServiceProvider } from '../../context/observability_ai_assistant_chat_service_provider';
 
 function ChatContent({
   title,
@@ -129,6 +132,15 @@ export function Insight({ messages, title }: { messages: Message[]; title: strin
 
   const connectors = useGenAIConnectors();
 
+  const service = useObservabilityAIAssistant();
+
+  const chatService = useAbortableAsync(
+    ({ signal }) => {
+      return service.start({ signal });
+    },
+    [service]
+  );
+
   const {
     services: { http },
   } = useKibana();
@@ -152,9 +164,13 @@ export function Insight({ messages, title }: { messages: Message[]; title: strin
         setHasOpened((prevHasOpened) => prevHasOpened || isOpen);
       }}
       controls={<ConnectorSelectorBase {...connectors} />}
-      loading={connectors.loading}
+      loading={connectors.loading || chatService.loading}
     >
-      {children}
+      {chatService.value ? (
+        <ObservabilityAIAssistantChatServiceProvider value={chatService.value}>
+          {children}
+        </ObservabilityAIAssistantChatServiceProvider>
+      ) : null}
     </InsightBase>
   );
 }

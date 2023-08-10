@@ -5,12 +5,13 @@
  * 2.0.
  */
 import React from 'react';
+import { Message } from '../../common';
 import { useObservabilityAIAssistantChatService } from '../hooks/use_observability_ai_assistant_chat_service';
 
 interface Props {
   name: string;
   arguments: string | undefined;
-  response: { content?: string; data?: string };
+  response: Message['message'];
 }
 
 export function RenderFunction(props: Props) {
