@@ -1,8 +1,9 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
  * or more contributor license agreements. Licensed under the Elastic License
- * 2.0; you may not use this file except in compliance with the Elastic License
- * 2.0.
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 import type { SavedObjectReference } from '@kbn/core/server';
@@ -13,9 +14,9 @@ import type {
   MetricVisualizationState,
   PersistedIndexPatternLayer,
 } from '@kbn/lens-plugin/public';
-import type { ChartColumn, ChartLayer, FormulaConfig } from '../../../types';
+import type { ChartColumn, ChartLayer, FormulaConfig } from '../../types';
 import { getDefaultReferences, getHistogramColumn } from '../../utils';
-import { FormulaColumn } from './column/formula';
+import { FormulaColumn } from './columns/formula';
 
 const HISTOGRAM_COLUMN_NAME = 'x_date_histogram';
 
@@ -29,19 +30,19 @@ export interface MetricLayerOptions {
 interface MetricLayerConfig {
   data: FormulaConfig;
   options?: MetricLayerOptions;
-  formulaAPI: FormulaPublicApi;
 }
 
 export class MetricLayer implements ChartLayer<MetricVisualizationState> {
   private column: ChartColumn;
   constructor(private layerConfig: MetricLayerConfig) {
-    this.column = new FormulaColumn(layerConfig.data, layerConfig.formulaAPI);
+    this.column = new FormulaColumn(layerConfig.data);
   }
 
   getLayer(
     layerId: string,
     accessorId: string,
-    dataView: DataView
+    dataView: DataView,
+    formulaAPI: FormulaPublicApi
   ): FormBasedPersistedState['layers'] {
     const baseLayer: PersistedIndexPatternLayer = {
       columnOrder: [HISTOGRAM_COLUMN_NAME],
@@ -66,14 +67,15 @@ export class MetricLayer implements ChartLayer<MetricVisualizationState> {
             columnOrder: [],
             columns: {},
           },
-          dataView
+          dataView,
+          formulaAPI
         ),
       },
       ...(this.layerConfig.options?.showTrendLine
         ? {
             [`${layerId}_trendline`]: {
               linkToLayers: [layerId],
-              ...this.column.getData(`${accessorId}_trendline`, baseLayer, dataView),
+              ...this.column.getData(`${accessorId}_trendline`, baseLayer, dataView, formulaAPI),
             },
           }
         : {}),

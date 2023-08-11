@@ -6,13 +6,11 @@
  */
 
 import { i18n } from '@kbn/i18n';
+import type { FormulaConfig, MetricLayerOptions } from '@kbn/lens-embeddable-utils';
 import type { TypedLensByValueInput } from '@kbn/lens-plugin/public';
 import type { Layer } from '../../../../../hooks/use_lens_attributes';
 import { hostLensFormulas } from '../../../constants';
 import { TOOLTIP } from './translations';
-
-import type { FormulaConfig } from '../../../types';
-import type { MetricLayerOptions } from '../../visualization_types';
 
 export const KPI_CHART_HEIGHT = 150;
 export const AVERAGE_SUBTITLE = i18n.translate(

@@ -1,11 +1,13 @@
 
-# Lens Attributes Builder
+# @kbn/lens-embeddable-utils
+
+## Lens Attributes Builder
 
 The Lens Attributes Builder is a utility for creating JSON objects used to render charts with Lens. It simplifies the process of configuring and building the necessary attributes for different chart types.
 
-## Usage
+### Usage
 
-### Creating a Metric Chart
+#### Creating a Metric Chart
 
 To create a metric chart, use the `MetricChart` class and provide the required configuration. Here's an example:
 
@@ -22,13 +24,13 @@ const metricChart = new MetricChart({
         },
       },
     },
-    formulaAPI,
   }),
   dataView,
+  formulaAPI
 });
 ```
 
-### Creating an XY Chart
+#### Creating an XY Chart
 
 To create an XY chart, use the `XYChart` class and provide the required configuration. Here's an example:
 
@@ -45,13 +47,67 @@ const xyChart = new XYChart({
         },
       },
     }],
-    formulaAPI,
   })],
   dataView,
+  formulaAPI
 });
 ```
 
-### Adding Multiple Layers to an XY Chart
+#### Variations of the XY Chart
+
+XYChart has different series type variations. Here is an example of how to build a line (default) and area charts
+
+#### Line chart
+
+```ts
+const xyChart = new XYChart({
+  layers: [new XYDataLayer({
+    data: [{
+      label: 'Inbound (RX)',
+      value: "average(system.load.1) / max(system.load.cores)",
+      format: {
+        id: 'percent',
+        params: {
+          decimals: 1,
+        },
+      },
+      
+    }],
+    options: {
+      seriesType: 'line' // default. it doesn't need to be informed.
+    }
+  })],
+  dataView,
+  formulaAPI
+});
+```
+
+#### Area chart
+
+```ts
+const xyChart = new XYChart({
+  layers: [new XYDataLayer({
+    data: [{
+      label: 'Inbound (RX)',
+      value: "average(system.load.1) / max(system.load.cores)",
+      format: {
+        id: 'percent',
+        params: {
+          decimals: 1,
+        },
+      },
+      
+    }],
+    options: {
+      seriesType: 'area'
+    }
+  })],
+  dataView,
+  formulaAPI
+});
+```
+
+#### Adding Multiple Layers to an XY Chart
 
 An XY chart can have multiple layers. Here's an example of containing a Reference Line Layer:
 
@@ -69,7 +125,6 @@ const xyChart = new XYChart({
           },
         },
       }],
-      formulaAPI,
     }),
     new XYReferenceLineLayer({
       data: [{
@@ -84,10 +139,11 @@ const xyChart = new XYChart({
     }),
   ],
   dataView,
+  formulaAPI
 });
 ```
 
-### Adding Multiple Data Sources in the Same Layer
+#### Adding Multiple Data Sources in the Same Layer
 
 In an XY chart, it's possible to define multiple data sources within the same layer.
 
@@ -114,14 +170,14 @@ const xyChart = new XYChart({
           decimals: 1,
         },
       },
-    }],
-    formulaAPI,
+    }]
   }),
   dataView,
+  formulaAPI
 });
 ```
 
-### Building Lens Chart Attributes
+#### Building Lens Chart Attributes
 
 The `LensAttributesBuilder` is responsible for creating the full JSON object that combines the attributes returned by the chart classes. Here's an example:
 
@@ -150,10 +206,10 @@ const builder = new LensAttributesBuilder({
           },
         },
       },
-      formulaAPI,
     }),
     dataView,
-  })
+    formulaAPI
+  }),
 });
 
 const lensAttributes = builder.build();

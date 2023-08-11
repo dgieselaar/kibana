@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import type { FormulaConfig } from '../../../types';
+import type { FormulaConfig } from '@kbn/lens-embeddable-utils';
 
 export const cpuUsage: FormulaConfig = {
   label: 'CPU Usage',

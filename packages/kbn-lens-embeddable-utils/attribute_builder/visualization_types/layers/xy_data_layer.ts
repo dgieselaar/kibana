@@ -1,8 +1,9 @@
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
  * or more contributor license agreements. Licensed under the Elastic License
- * 2.0; you may not use this file except in compliance with the Elastic License
- * 2.0.
+ * 2.0 and the Server Side Public License, v 1; you may not use this file except
+ * in compliance with, at your election, the Elastic License 2.0 or the Server
+ * Side Public License, v 1.
  */
 
 import type { SavedObjectReference } from '@kbn/core/server';
@@ -14,9 +15,9 @@ import type {
   XYDataLayerConfig,
   SeriesType,
 } from '@kbn/lens-plugin/public';
-import type { ChartColumn, ChartLayer, FormulaConfig } from '../../../types';
+import type { ChartColumn, ChartLayer, FormulaConfig } from '../../types';
 import { getDefaultReferences, getHistogramColumn, getTopValuesColumn } from '../../utils';
-import { FormulaColumn } from './column/formula';
+import { FormulaColumn } from './columns/formula';
 
 const BREAKDOWN_COLUMN_NAME = 'aggs_breakdown';
 const HISTOGRAM_COLUMN_NAME = 'x_date_histogram';
@@ -32,13 +33,12 @@ export interface XYLayerOptions {
 interface XYLayerConfig {
   data: FormulaConfig[];
   options?: XYLayerOptions;
-  formulaAPI: FormulaPublicApi;
 }
 
 export class XYDataLayer implements ChartLayer<XYDataLayerConfig> {
   private column: ChartColumn[];
   constructor(private layerConfig: XYLayerConfig) {
-    this.column = layerConfig.data.map((p) => new FormulaColumn(p, layerConfig.formulaAPI));
+    this.column = layerConfig.data.map((dataItem) => new FormulaColumn(dataItem));
   }
 
   getName(): string | undefined {
@@ -70,7 +70,8 @@ export class XYDataLayer implements ChartLayer<XYDataLayerConfig> {
   getLayer(
     layerId: string,
     accessorId: string,
-    dataView: DataView
+    dataView: DataView,
+    formulaAPI: FormulaPublicApi
   ): FormBasedPersistedState['layers'] {
     const baseLayer: PersistedIndexPatternLayer = {
       columnOrder: [BREAKDOWN_COLUMN_NAME, HISTOGRAM_COLUMN_NAME],
@@ -83,7 +84,7 @@ export class XYDataLayer implements ChartLayer<XYDataLayerConfig> {
       [layerId]: this.column.reduce(
         (acc, curr, index) => ({
           ...acc,
-          ...curr.getData(`${accessorId}_${index}`, acc, dataView),
+          ...curr.getData(`${accessorId}_${index}`, acc, dataView, formulaAPI),
         }),
         baseLayer
       ),

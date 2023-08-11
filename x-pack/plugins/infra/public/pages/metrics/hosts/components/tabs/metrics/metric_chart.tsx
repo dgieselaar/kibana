@@ -6,11 +6,11 @@
  */
 import React, { useMemo } from 'react';
 import type { TypedLensByValueInput } from '@kbn/lens-plugin/public';
+import type { FormulaConfig, XYLayerOptions } from '@kbn/lens-embeddable-utils';
 import { LensChart } from '../../../../../../components/lens';
 import type { Layer } from '../../../../../../hooks/use_lens_attributes';
 import { useMetricsDataViewContext } from '../../../hooks/use_data_view';
 import { useUnifiedSearchContext } from '../../../hooks/use_unified_search';
-import type { FormulaConfig, XYLayerOptions } from '../../../../../../common/visualizations';
 import { useHostsViewContext } from '../../../hooks/use_hosts_view';
 import { buildCombinedHostsFilter } from '../../../../../../utils/filters/build';
 import { useHostsTableContext } from '../../../hooks/use_hosts_table';

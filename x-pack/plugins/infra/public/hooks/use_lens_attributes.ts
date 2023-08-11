@@ -13,7 +13,6 @@ import type { Action, ActionExecutionContext } from '@kbn/ui-actions-plugin/publ
 import { i18n } from '@kbn/i18n';
 import useAsync from 'react-use/lib/useAsync';
 import { FormulaPublicApi, LayerType as LensLayerType } from '@kbn/lens-plugin/public';
-import { InfraClientSetupDeps } from '../types';
 import {
   type XYLayerOptions,
   type MetricLayerOptions,
@@ -27,7 +26,9 @@ import {
   XYReferenceLinesLayer,
   Chart,
   LensVisualizationState,
-} from '../common/visualizations';
+} from '@kbn/lens-embeddable-utils';
+
+import { InfraClientSetupDeps } from '../types';
 import { useLazyRef } from './use_lazy_ref';
 
 type Options = XYLayerOptions | MetricLayerOptions;
@@ -212,11 +213,11 @@ const chartFactory = <
 
       return new XYChart({
         dataView,
+        formulaAPI,
         layers: layers.map((layerItem) => {
           const Layer = getLayerClass(layerItem.layerType);
           return new Layer({
             data: layerItem.data,
-            formulaAPI,
             options: layerItem.options,
           });
         }),
@@ -230,9 +231,9 @@ const chartFactory = <
 
       return new MetricChart({
         dataView,
+        formulaAPI,
         layers: new MetricLayer({
           data: layers.data,
-          formulaAPI,
           options: layers.options,
         }),
         title,
