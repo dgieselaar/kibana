@@ -23,6 +23,7 @@ import { ChatTimelineItem } from './chat_timeline';
 import { getRoleTranslation } from '../../utils/get_role_translation';
 import type { Feedback } from '../feedback_buttons';
 import { Message } from '../../../common';
+import { FailedToLoadResponse } from '../message_panel/failed_to_load_response';
 
 export interface ChatItemProps extends ChatTimelineItem {
   onEditSubmit: (message: Message) => Promise<void>;
@@ -67,11 +68,8 @@ const accordionButtonClassName = css`
 `;
 
 export function ChatItem({
-  canCopy,
-  canEdit,
-  canGiveFeedback,
-  canRegenerate,
-  collapsed,
+  actions: { canCopy, canEdit, canGiveFeedback, canRegenerate },
+  display: { collapsed },
   content,
   currentUser,
   element,
@@ -128,16 +126,15 @@ export function ChatItem({
     navigator.clipboard.writeText(content || '');
   };
 
-  let contentElement: React.ReactNode =
-    content || error ? (
-      <ChatItemContentInlinePromptEditor
-        content={content}
-        editing={editing}
-        functionCall={functionCall}
-        loading={loading}
-        onSubmit={handleInlineEditSubmit}
-      />
-    ) : null;
+  let contentElement: React.ReactNode = content ? (
+    <ChatItemContentInlinePromptEditor
+      content={content}
+      editing={editing}
+      functionCall={functionCall}
+      loading={loading}
+      onSubmit={handleInlineEditSubmit}
+    />
+  ) : null;
 
   if (collapsed) {
     contentElement = (
@@ -182,8 +179,8 @@ export function ChatItem({
     >
       <EuiPanel hasShadow={false} paddingSize="s">
         {element ? <EuiErrorBoundary>{element}</EuiErrorBoundary> : null}
-
         {contentElement}
+        {error ? <FailedToLoadResponse /> : null}
       </EuiPanel>
 
       <ChatItemControls
