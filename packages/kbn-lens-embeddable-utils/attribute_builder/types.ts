@@ -27,11 +27,11 @@ export interface VisualizationAttributesBuilder {
 }
 
 // Column
-export interface BaseChartColumn {
-  getFormulaConfig(): FormulaConfig;
+export interface BaseChartColumn<TValueConfig extends StaticValueConfig | FormulaValueConfig> {
+  getValueConfig(): TValueConfig;
 }
 
-export interface ChartColumn extends BaseChartColumn {
+export interface ChartColumn extends BaseChartColumn<FormulaValueConfig> {
   getData(
     id: string,
     baseLayer: PersistedIndexPatternLayer,
@@ -40,7 +40,7 @@ export interface ChartColumn extends BaseChartColumn {
   ): PersistedIndexPatternLayer;
 }
 
-export interface StaticChartColumn extends BaseChartColumn {
+export interface StaticChartColumn extends BaseChartColumn<StaticValueConfig> {
   getData(id: string, baseLayer: PersistedIndexPatternLayer): PersistedIndexPatternLayer;
 }
 
@@ -57,6 +57,7 @@ export interface ChartLayer<TLayerConfig extends LensLayerConfig> {
   ): FormBasedPersistedState['layers'];
   getReference(layerId: string, dataView: DataView): SavedObjectReference[];
   getLayerConfig(layerId: string, acessorId: string): TLayerConfig;
+  getDataView(): DataView | undefined;
 }
 
 // Chart
@@ -66,7 +67,7 @@ export interface Chart<TVisualizationState extends LensVisualizationState> {
   getLayers(): FormBasedPersistedState['layers'];
   getVisualizationState(): TVisualizationState;
   getReferences(): SavedObjectReference[];
-  getDataView(): DataView;
+  getDataViews(): DataView[];
 }
 export interface ChartConfig<
   TLayer extends ChartLayer<LensLayerConfig> | Array<ChartLayer<LensLayerConfig>>
@@ -79,8 +80,14 @@ export interface ChartConfig<
 
 // Formula
 type LensFormula = Parameters<FormulaPublicApi['insertOrReplaceFormulaColumn']>[1];
-export type FormulaConfig = Omit<LensFormula, 'format' | 'formula'> & {
+export type FormulaValueConfig = Omit<LensFormula, 'formula'> & {
+  type: 'formula';
   color?: string;
-  format: NonNullable<LensFormula['format']>;
+  value: string;
+};
+
+export type StaticValueConfig = Omit<LensFormula, 'formula'> & {
+  type: 'static_value';
+  color?: string;
   value: string;
 };

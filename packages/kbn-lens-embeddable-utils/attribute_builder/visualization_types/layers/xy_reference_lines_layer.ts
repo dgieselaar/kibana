@@ -13,22 +13,26 @@ import type {
   PersistedIndexPatternLayer,
   XYReferenceLineLayerConfig,
 } from '@kbn/lens-plugin/public';
-import type { StaticChartColumn, ChartLayer, FormulaConfig } from '../../types';
+import type { ChartLayer, StaticValueConfig, StaticChartColumn } from '../../types';
 import { getDefaultReferences } from '../../utils';
 import { ReferenceLineColumn } from './columns/reference_line';
 
 interface XYReferenceLinesLayerConfig {
-  data: FormulaConfig[];
+  data: StaticValueConfig[];
+  /**
+   * It is possible to define a specific dataView for the layer. It will override the global chart one
+   **/
+  dataView?: DataView;
 }
 
 export class XYReferenceLinesLayer implements ChartLayer<XYReferenceLineLayerConfig> {
   private column: StaticChartColumn[];
-  constructor(layerConfig: XYReferenceLinesLayerConfig) {
+  constructor(private layerConfig: XYReferenceLinesLayerConfig) {
     this.column = layerConfig.data.map((p) => new ReferenceLineColumn(p));
   }
 
   getName(): string | undefined {
-    return this.column[0].getFormulaConfig().label;
+    return this.column[0].getValueConfig().label;
   }
 
   getLayer(layerId: string, accessorId: string): FormBasedPersistedState['layers'] {
@@ -43,8 +47,8 @@ export class XYReferenceLinesLayer implements ChartLayer<XYReferenceLineLayerCon
     };
   }
 
-  getReference(layerId: string, dataView: DataView): SavedObjectReference[] {
-    return getDefaultReferences(dataView, `${layerId}_reference`);
+  getReference(layerId: string, chartDataView: DataView): SavedObjectReference[] {
+    return getDefaultReferences(this.layerConfig.dataView ?? chartDataView, `${layerId}_reference`);
   }
 
   getLayerConfig(layerId: string, accessorId: string): XYReferenceLineLayerConfig {
@@ -53,10 +57,14 @@ export class XYReferenceLinesLayer implements ChartLayer<XYReferenceLineLayerCon
       layerType: 'referenceLine',
       accessors: this.column.map((_, index) => `${accessorId}_${index}_reference_column`),
       yConfig: this.column.map((layer, index) => ({
-        color: layer.getFormulaConfig().color,
+        color: layer.getValueConfig().color,
         forAccessor: `${accessorId}_${index}_reference_column`,
         axisMode: 'left',
       })),
     };
+  }
+
+  getDataView(): DataView | undefined {
+    return this.layerConfig.dataView;
   }
 }
