@@ -51,9 +51,9 @@ function mergeWithEditedMessage(
   );
 }
 
-export function emitWithConcatenatedMessage<T extends ChatEvent>(
+export function emitWithConcatenatedMessage<TChatEvent extends ChatEvent, TResponseType>(
   callback?: ConcatenateMessageCallback
-): OperatorFunction<T, T | MessageAddEvent> {
+): OperatorFunction<TChatEvent, TChatEvent | MessageAddEvent> {
   return (source$) => {
     const shared = source$.pipe(shareReplay());
 

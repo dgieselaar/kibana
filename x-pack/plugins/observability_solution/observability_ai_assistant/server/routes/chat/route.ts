@@ -34,12 +34,6 @@ const chatCompleteBaseRt = t.type({
       conversationId: t.string,
       title: t.string,
       responseLanguage: t.string,
-      disableFunctions: t.union([
-        toBooleanRt,
-        t.type({
-          except: t.array(t.string),
-        }),
-      ]),
       instructions: t.array(
         t.union([
           t.string,
@@ -63,6 +57,12 @@ const chatCompleteInternalRt = t.intersection([
   t.type({
     body: t.type({
       screenContexts: t.array(screenContextRt),
+      disableFunctions: t.union([
+        toBooleanRt,
+        t.type({
+          except: t.array(t.string),
+        }),
+      ]),
     }),
   }),
 ]);
@@ -138,6 +138,7 @@ const chatRoute = createObservabilityAIAssistantServerRoute({
       }),
       t.partial({
         functionCall: t.string,
+        validate: toBooleanRt,
       }),
     ]),
   }),
@@ -145,7 +146,7 @@ const chatRoute = createObservabilityAIAssistantServerRoute({
     const { params } = resources;
 
     const {
-      body: { name, messages, connectorId, functions, functionCall },
+      body: { name, messages, connectorId, functions, functionCall, validate },
     } = params;
 
     const { client, simulateFunctionCalling, signal, isCloudEnabled } = await initializeChatRequest(
@@ -163,6 +164,7 @@ const chatRoute = createObservabilityAIAssistantServerRoute({
           }
         : {}),
       simulateFunctionCalling,
+      validate,
       tracer: new LangTracer(otelContext.active()),
     });
 

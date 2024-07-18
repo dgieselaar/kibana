@@ -426,6 +426,7 @@ export function registerVisualizeQueryRenderFunction({
       let preferredChartType: ChartType | undefined;
 
       switch (intention) {
+        default:
         case VisualizeESQLUserIntention.executeAndReturnResults:
         case VisualizeESQLUserIntention.generateQueryOnly:
         case VisualizeESQLUserIntention.visualizeAuto:

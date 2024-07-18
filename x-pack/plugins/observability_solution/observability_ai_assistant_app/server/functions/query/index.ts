@@ -6,12 +6,17 @@
  */
 
 import Fs from 'fs';
-import { keyBy, mapValues, once, pick } from 'lodash';
+import { cloneDeepWith, keyBy, mapValues, once, pick } from 'lodash';
 import pLimit from 'p-limit';
 import Path from 'path';
 import { lastValueFrom, startWith } from 'rxjs';
 import { promisify } from 'util';
-import { FunctionVisibility, MessageRole } from '@kbn/observability-ai-assistant-plugin/common';
+import {
+  correctCommonEsqlMistakes,
+  FunctionVisibility,
+  INLINE_ESQL_QUERY_REGEX,
+  MessageRole,
+} from '@kbn/observability-ai-assistant-plugin/common';
 import {
   VisualizeESQLUserIntention,
   VISUALIZE_ESQL_USER_INTENTIONS,
@@ -22,10 +27,11 @@ import {
 } from '@kbn/observability-ai-assistant-plugin/common/utils/concatenate_chat_completion_chunks';
 import { emitWithConcatenatedMessage } from '@kbn/observability-ai-assistant-plugin/common/utils/emit_with_concatenated_message';
 import { createFunctionResponseMessage } from '@kbn/observability-ai-assistant-plugin/common/utils/create_function_response_message';
+import { GENERAL_SYSTEM_INSTRUCTIONS } from '@kbn/observability-ai-assistant-plugin/server';
 import type { FunctionRegistrationParameters } from '..';
-import { correctCommonEsqlMistakes } from './correct_common_esql_mistakes';
 import { runAndValidateEsqlQuery } from './validate_esql_query';
-import { INLINE_ESQL_QUERY_REGEX } from './constants';
+import { queryResultToKeyValue } from './query_result_to_key_value';
+import { CREATE_RULE_FUNCTION_NAME } from '../rule';
 
 export const QUERY_FUNCTION_NAME = 'query';
 
@@ -79,6 +85,7 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
   - breakdown or filter ES|QL queries that are displayed on the current page
   - convert queries from another language to ES|QL
   - asks general questions about ES|QL
+  - create a rule (where ES|QL is suitable)
 
   DO NOT UNDER ANY CIRCUMSTANCES generate ES|QL queries or explain anything about the ES|QL query language yourself.
   DO NOT UNDER ANY CIRCUMSTANCES try to correct an ES|QL query yourself - always use the "${QUERY_FUNCTION_NAME}" function for this.
@@ -97,7 +104,9 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
     {
       name: 'execute_query',
       visibility: FunctionVisibility.UserOnly,
-      description: 'Display the results of an ES|QL query.',
+      description:
+        "Execute the results of an ES|QL query. Use this when the user doesn't want to see anything, but only wants you to summarize or act on it.",
+      descriptionForUser: 'Execute the results of an ES|QL query.',
       parameters: {
         type: 'object',
         properties: {
@@ -127,8 +136,9 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
 
       return {
         content: {
-          columns,
-          rows,
+          result: rows && columns ? queryResultToKeyValue({ rows, columns }) : [],
+          description:
+            "Do not regurgitate these results back to the user unless explicitly requested. Instead, use the information here to answer the user's question",
         },
       };
     }
@@ -145,7 +155,10 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
       const withEsqlSystemMessage = (message?: string) => [
         {
           '@timestamp': new Date().toISOString(),
-          message: { role: MessageRole.System, content: `${systemMessage}\n${message ?? ''}` },
+          message: {
+            role: MessageRole.System,
+            content: `${GENERAL_SYSTEM_INSTRUCTIONS}\n\n${systemMessage}\n${message ?? ''}`,
+          },
         },
         // remove the query function request
         ...messages.filter((msg) => msg.message.role !== MessageRole.System),
@@ -177,6 +190,7 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
               Examples for functions and commands:
               Do you need to group data? Request \`STATS\`.
               Extract data? Request \`DISSECT\` AND \`GROK\`.
+<<<<<<< Updated upstream
               Convert a column based on a set of conditionals? Request \`EVAL\` and \`CASE\`.
 
               ONLY use ${VisualizeESQLUserIntention.executeAndReturnResults} if you are absolutely sure
@@ -224,6 +238,9 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
               "I want a bar chart of ... " => ${VisualizeESQLUserIntention.visualizeBar}
               "I want to see a heat map of ..." => ${VisualizeESQLUserIntention.visualizeHeatmap}
               `,
+=======
+              Convert a column based on a set of conditionals? Request \`EVAL\` and \`CASE\`.`,
+>>>>>>> Stashed changes
               },
             }
           ),
@@ -300,22 +317,6 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
 
       const messagesToInclude = mapValues(pick(esqlDocs, keywords), ({ data }) => data);
 
-      let userIntentionMessage: string;
-
-      switch (args.intention) {
-        case VisualizeESQLUserIntention.executeAndReturnResults:
-          userIntentionMessage = `When you generate a query, it will automatically be executed and its results returned to you. The user does not need to do anything for this.`;
-          break;
-
-        case VisualizeESQLUserIntention.generateQueryOnly:
-          userIntentionMessage = `Any generated query will not be executed automatically, the user needs to do this themselves.`;
-          break;
-
-        default:
-          userIntentionMessage = `The generated query will automatically be visualized to the user, displayed below your message. The user does not need to do anything for this.`;
-          break;
-      }
-
       const queryFunctionResponseMessage = createFunctionResponseMessage({
         name: QUERY_FUNCTION_NAME,
         content: {},
@@ -328,6 +329,18 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
           },
         },
       });
+
+      const availableFunctionsInContext = functions.getActions().concat(
+        functions
+          .getFunctions()
+          .filter(
+            (fn) =>
+              fn.definition.name === CREATE_RULE_FUNCTION_NAME ||
+              fn.definition.name === 'visualize_query' ||
+              fn.definition.name === 'execute_query'
+          )
+          .map((fn) => pick(fn.definition, 'name', 'description', 'parameters'))
+      );
 
       const esqlResponse$ = await chat('answer_esql_question', {
         messages: [
@@ -365,73 +378,75 @@ export function registerQueryFunction({ functions, resources }: FunctionRegistra
             '@timestamp': new Date().toISOString(),
             message: {
               role: MessageRole.User,
-              content: `Answer the user's question that was previously asked ("${abbreviatedUserQuestion}...") using the attached documentation. Take into account any previous errors from the \`execute_query\` or \`visualize_query\` function.
+              content: `Answer the user's question that was previously asked ("${abbreviatedUserQuestion}...") using the attached documentation.
+                Take into account any previous errors for generating a query.
 
                 Format any ES|QL query as follows:
                 \`\`\`esql
                 <query>
                 \`\`\`
 
-                Respond in plain text. Do not attempt to use a function.
-  
-                You must use commands and functions for which you have requested documentation.
-  
-                ${
-                  args.intention !== VisualizeESQLUserIntention.generateQueryOnly
-                    ? `DO NOT UNDER ANY CIRCUMSTANCES generate more than a single query.
-                    If multiple queries are needed, do it as a follow-up step. Make this clear to the user. For example:
-                    
-                    Human: plot both yesterday's and today's data.
-                    
-                    Assistant: Here's how you can plot yesterday's data:
-                    \`\`\`esql
-                    <query>
-                    \`\`\`
-  
-                    Let's see that first. We'll look at today's data next.
-  
-                    Human: <response from yesterday's data>
-  
-                    Assistant: Let's look at today's data:
-  
-                    \`\`\`esql
-                    <query>
-                    \`\`\`
-                    `
-                    : ''
-                }
-  
-                ${userIntentionMessage}
+
+
+                When using GROK or DISSECT, DO NOT UNDER ANY CIRCUMSTANCES use identical field names for field
+                extraction as the original column. This will result in an error.
+                YOU MUST use a different name than the column for extracted fields.
   
                 DO NOT UNDER ANY CIRCUMSTANCES use commands or functions that are not a capability of ES|QL
                 as mentioned in the system message and documentation. When converting queries from one language
                 to ES|QL, make sure that the functions are available and documented in ES|QL.
                 E.g., for SPL's LEN, use LENGTH. For IF, use CASE.
-                
+
+                If you want to call one of the functions, make sure you generate the query in plain text first,
+                and then call the function. This improves quality of output. Prefer "visualize_query" over
+                "execute_query".
                 `,
             },
           },
         ],
         signal,
-        functions: functions.getActions(),
+        functions: availableFunctionsInContext,
       });
 
       return esqlResponse$.pipe(
         emitWithConcatenatedMessage(async (msg) => {
+          function correctEsql(query: string) {
+            const correction = correctCommonEsqlMistakes(query);
+            if (correction.isCorrection) {
+              resources.logger.debug(
+                `Corrected query, from: \n${correction.input}\nto:\n${correction.output}`
+              );
+            }
+            return correction.output;
+          }
+
           msg.message.content = msg.message.content.replaceAll(
             INLINE_ESQL_QUERY_REGEX,
             (_match, query) => {
-              const correction = correctCommonEsqlMistakes(query);
-              if (correction.isCorrection) {
-                resources.logger.debug(
-                  `Corrected query, from: \n${correction.input}\nto:\n${correction.output}`
-                );
-              }
-              return '```esql\n' + correction.output + '\n```';
+              const correction = correctEsql(query);
+              return '```esql\n' + correction + '\n```';
             }
           );
 
           if (msg.message.function_call.name) {
+            const parsedArguments = JSON.parse(msg.message.function_call.arguments);
+            const correctedArguments = cloneDeepWith(parsedArguments, (value, key) => {
+              if (typeof value !== 'string') {
+                return value;
+              }
+              if (INLINE_ESQL_QUERY_REGEX.test(value)) {
+                return value.replaceAll(INLINE_ESQL_QUERY_REGEX, (_match, query) =>
+                  correctEsql(query)
+                );
+              }
+
+              if (key === 'esql') {
+                return correctEsql(value);
+              }
+
+              return value;
+            });
+            msg.message.function_call.arguments = JSON.stringify(correctedArguments);
             return msg;
           }
 

@@ -16,6 +16,7 @@ import type { LogLevelId } from './log_level';
  *
  * @public
  */
+
 export interface Logger {
   /**
    * Log messages at the most detailed log level

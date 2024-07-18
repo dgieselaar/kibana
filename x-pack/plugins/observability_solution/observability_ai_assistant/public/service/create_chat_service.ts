@@ -46,6 +46,7 @@ import type {
   RenderFunction,
 } from '../types';
 import { readableStreamReaderIntoObservable } from '../utils/readable_stream_reader_into_observable';
+import { chatToTask } from './chat_to_task';
 import { complete } from './complete';
 
 const MIN_DELAY = 10;
@@ -186,16 +187,17 @@ export async function createChatService({
     ).pipe(serialize(options.signal));
   }
 
-  const client: Pick<ObservabilityAIAssistantChatService, 'chat' | 'complete'> = {
-    chat(name: string, { connectorId, messages, functionCall, functions, signal }) {
+  const client: Pick<ObservabilityAIAssistantChatService, 'chat' | 'complete' | 'task'> = {
+    chat(id: string, { connectorId, validate, messages, functionCall, functions, signal }) {
       return callStreamingApi('POST /internal/observability_ai_assistant/chat', {
         params: {
           body: {
-            name,
+            name: id,
             messages,
             connectorId,
             functionCall,
             functions: functions ?? [],
+            validate,
           },
         },
         signal,
@@ -205,6 +207,48 @@ export async function createChatService({
             line.type === StreamingChatResponseEventType.ChatCompletionChunk
         )
       );
+    },
+    task(name, { input, system, schema, connectorId, signal }) {
+      return client
+        .chat(name, {
+          connectorId,
+          signal,
+          messages: [
+            {
+              '@timestamp': new Date().toISOString(),
+              message: {
+                role: MessageRole.System,
+                content: system,
+              },
+            },
+            {
+              '@timestamp': new Date().toISOString(),
+              message: {
+                role: MessageRole.User,
+                content: input,
+              },
+            },
+          ],
+          validate: true,
+          ...(schema
+            ? {
+                functionCall: 'output',
+                functions: [
+                  {
+                    name: 'output',
+                    description: 'Output the response according to this schema',
+                    parameters: schema,
+                  },
+                ],
+              }
+            : {}),
+        })
+        .pipe(
+          chatToTask({
+            id: name,
+            schema,
+          })
+        );
     },
     complete({
       getScreenContexts,

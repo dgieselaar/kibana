@@ -27,11 +27,9 @@ export interface ObservabilityAIAssistantElasticsearchClient {
 
 export function createElasticsearchClient({
   client,
-  inspect,
   logger,
 }: {
   client: ElasticsearchClient;
-  inspect: boolean;
   logger: Logger;
 }): ObservabilityAIAssistantElasticsearchClient {
   return {
@@ -39,8 +37,8 @@ export function createElasticsearchClient({
       TDocument = unknown,
       TSearchRequest extends AIAssistantSearchRequest = AIAssistantSearchRequest
     >(operationName: string, parameters: AIAssistantSearchRequest) {
-      if (inspect) {
-        logger.info(`Request (${operationName}):\n${JSON.stringify(parameters, null, 2)}`);
+      if (logger.isLevelEnabled('trace')) {
+        logger.trace(`Request (${operationName}):\n${JSON.stringify(parameters, null, 2)}`);
       }
       return withSpan(
         {
@@ -55,8 +53,8 @@ export function createElasticsearchClient({
           >;
         }
       ).then((response) => {
-        if (inspect) {
-          logger.info(`Response (${operationName}):\n${JSON.stringify(response, null, 2)}`);
+        if (logger.isLevelEnabled('trace')) {
+          logger.trace(`Response (${operationName}):\n${JSON.stringify(response, null, 2)}`);
         }
         return response;
       });

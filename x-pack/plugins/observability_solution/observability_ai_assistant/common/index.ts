@@ -15,6 +15,9 @@ export {
   VisualizeESQLUserIntention,
 } from './functions/visualize_esql';
 
+export { correctCommonEsqlMistakes, splitIntoCommands } from './esql/correct_common_esql_mistakes';
+export { INLINE_ESQL_QUERY_REGEX } from './esql/constants';
+
 export type {
   ChatCompletionChunkEvent,
   ConversationCreateEvent,
@@ -25,6 +28,9 @@ export type {
   StreamingChatResponseEvent,
   StreamingChatResponseEventWithoutError,
 } from './conversation_complete';
+
+export { type InferenceTaskEvent, InferenceTaskEventType } from './tasks';
+
 export {
   StreamingChatResponseEventType,
   ChatCompletionErrorCode,
@@ -45,9 +51,12 @@ export {
 } from './ui_settings/settings_keys';
 
 export { concatenateChatCompletionChunks } from './utils/concatenate_chat_completion_chunks';
+export { concatenateTaskUpdateEvents } from './utils/concatenate_task_update_events';
 
 export { DEFAULT_LANGUAGE_OPTION, LANGUAGE_OPTIONS } from './ui_settings/language_options';
 
 export { isSupportedConnectorType } from './connectors';
 
 export { ShortIdTable } from './utils/short_id_table';
+
+export { truncateList } from './utils/truncate_list';

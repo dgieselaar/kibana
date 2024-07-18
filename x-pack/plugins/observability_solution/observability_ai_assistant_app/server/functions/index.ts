@@ -12,6 +12,9 @@ import { registerLensFunction } from './lens';
 import { registerVisualizeESQLFunction } from './visualize_esql';
 import { ObservabilityAIAssistantAppPluginStartDependencies } from '../types';
 import { registerChangesFunction } from './changes';
+import { registerCreateRuleFunction } from './rule';
+import { registerCreateSloFunction } from './slo';
+import { registerCreateAnomalyDetectionJobFunction } from './anomaly_detection';
 
 export type FunctionRegistrationParameters = Omit<
   Parameters<RegistrationCallback>[0],
@@ -24,4 +27,10 @@ export const registerFunctions = async (registrationParameters: FunctionRegistra
   registerVisualizeESQLFunction(registrationParameters);
   registerAlertsFunction(registrationParameters);
   registerChangesFunction(registrationParameters);
+
+  registerCreateRuleFunction(registrationParameters);
+
+  registerCreateSloFunction(registrationParameters);
+
+  registerCreateAnomalyDetectionJobFunction(registrationParameters);
 };

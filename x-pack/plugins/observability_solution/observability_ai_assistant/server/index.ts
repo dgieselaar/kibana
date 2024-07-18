@@ -25,6 +25,8 @@ export {
   aiAssistantSearchConnectorIndexPattern,
 } from '../common';
 
+export { GENERAL_SYSTEM_INSTRUCTIONS } from './functions/general_system_instructions';
+
 export { streamIntoObservable } from './service/util/stream_into_observable';
 
 export const config: PluginConfigDescriptor<ObservabilityAIAssistantConfig> = {

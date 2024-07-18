@@ -5,9 +5,10 @@
  * 2.0.
  */
 import datemath from '@elastic/datemath';
-import type { ElasticsearchClient, SavedObjectsClientContract } from '@kbn/core/server';
+import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/typesWithBodyKey';
+import type { IScopedClusterClient, SavedObjectsClientContract } from '@kbn/core/server';
 import type { DataViewsServerPluginStart } from '@kbn/data-views-plugin/server';
-import { castArray, chunk, groupBy, uniq } from 'lodash';
+import { castArray, chunk, groupBy, shuffle, uniq } from 'lodash';
 import { lastValueFrom } from 'rxjs';
 import { MessageRole, ShortIdTable, type Message } from '../../../common';
 import { concatenateChatCompletionChunks } from '../../../common/utils/concatenate_chat_completion_chunks';
@@ -17,30 +18,47 @@ export async function getRelevantFieldNames({
   index,
   start,
   end,
+  analyzeContent,
   dataViews,
   esClient,
   savedObjectsClient,
   chat,
   messages,
   signal,
+  filter,
+  nonEmptyFields,
 }: {
-  index: string | string[];
+  index: string[];
   start?: string;
   end?: string;
+  analyzeContent?: boolean;
   dataViews: DataViewsServerPluginStart;
-  esClient: ElasticsearchClient;
+  esClient: IScopedClusterClient;
   savedObjectsClient: SavedObjectsClientContract;
   messages: Message[];
   chat: FunctionCallChatFunction;
   signal: AbortSignal;
-}): Promise<{ fields: string[]; stats: { analyzed: number; total: number } }> {
-  const dataViewsService = await dataViews.dataViewsServiceFactory(savedObjectsClient, esClient);
+  filter?: QueryDslQueryContainer[];
+  nonEmptyFields?: string[];
+}): Promise<{
+  fields: Array<{ name: string; types: string[]; empty: boolean }>;
+  stats: { analyzed: number; total: number };
+}> {
+  const dataViewsService = await dataViews.dataViewsServiceFactory(
+    savedObjectsClient,
+    esClient.asCurrentUser
+  );
 
-  const hasAnyHitsResponse = await esClient.search({
+  const hasAnyHitsResponse = await esClient.asCurrentUser.search({
     index,
     _source: false,
     track_total_hits: 1,
     terminate_after: 1,
+    query: {
+      bool: {
+        filter,
+      },
+    },
   });
 
   const hitCount =
@@ -58,15 +76,24 @@ export async function getRelevantFieldNames({
     indexFilter:
       start && end
         ? {
-            range: {
-              '@timestamp': {
-                gte: datemath.parse(start)!.toISOString(),
-                lt: datemath.parse(end)!.toISOString(),
-              },
+            bool: {
+              filter: [
+                ...(filter ?? []),
+                {
+                  range: {
+                    '@timestamp': {
+                      gte: datemath.parse(start)!.toISOString(),
+                      lt: datemath.parse(end)!.toISOString(),
+                    },
+                  },
+                },
+              ],
             },
           }
         : undefined,
   });
+
+  const isNotEmptySet = nonEmptyFields?.length ? new Set(nonEmptyFields) : undefined;
 
   // else get all the fields for the found dataview
   const response = {
@@ -92,7 +119,9 @@ export async function getRelevantFieldNames({
   const MAX_CHUNKS = 5;
   const FIELD_NAMES_PER_CHUNK = 250;
 
-  const fieldNamesToAnalyze = fieldNames.slice(0, MAX_CHUNKS * FIELD_NAMES_PER_CHUNK);
+  const fieldNamesToAnalyze = shuffle(fieldNames).slice(0, MAX_CHUNKS * FIELD_NAMES_PER_CHUNK);
+
+  const nonEmptyFieldsSet = nonEmptyFields?.length ? new Set(nonEmptyFields) : undefined;
 
   const relevantFields = await Promise.all(
     chunk(fieldNamesToAnalyze, FIELD_NAMES_PER_CHUNK).map(async (fieldsInChunk) => {
@@ -107,7 +136,15 @@ export async function getRelevantFieldNames({
                 content: `You are a helpful assistant for Elastic Observability.
             Your task is to create a list of field names that are relevant
             to the conversation, using ONLY the list of fields and
-            types provided in the last user message. DO NOT UNDER ANY
+            types provided in the last user message. Select 5 to 20 fields.
+            
+            ${
+              analyzeContent
+                ? `The fields you specify will be analyzed for cardinality, stability and specific values.`
+                : ''
+            }
+            
+            DO NOT UNDER ANY
             CIRCUMSTANCES include fields not mentioned in this list.`,
               },
             },
@@ -120,7 +157,13 @@ export async function getRelevantFieldNames({
                 content: `This is the list:
 
             ${fieldsInChunk
-              .map((field) => JSON.stringify({ field, id: shortIdTable.take(field) }))
+              .map((field) =>
+                JSON.stringify({
+                  field,
+                  id: shortIdTable.take(field),
+                  ...(nonEmptyFieldsSet ? { possiblyEmpty: !nonEmptyFieldsSet.has(field) } : {}),
+                })
+              )
               .join('\n')}`,
               },
             },
@@ -164,9 +207,13 @@ export async function getRelevantFieldNames({
             })
             .map((field) => {
               const fieldDescriptors = groupedFields[field];
-              return `${field}:${fieldDescriptors.map((descriptor) => descriptor.type).join(',')}`;
+              return {
+                name: field,
+                types: fieldDescriptors.map((descriptor) => descriptor.type),
+                empty: !!(isNotEmptySet && isNotEmptySet.has(field) === false),
+              };
             })
-        : [chunkResponse.message?.content ?? ''];
+        : [];
     })
   );
 

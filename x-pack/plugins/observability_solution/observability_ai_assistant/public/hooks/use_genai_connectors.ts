@@ -5,10 +5,11 @@
  * 2.0.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FindActionResult } from '@kbn/actions-plugin/server';
-import useLocalStorage from 'react-use/lib/useLocalStorage';
+import { useEffect } from 'react';
+import useObservable from 'react-use/lib/useObservable';
 import type { ObservabilityAIAssistantService } from '../types';
+import { useAbortableAsync } from './use_abortable_async';
 import { useObservabilityAIAssistant } from './use_observability_ai_assistant';
 
 export interface UseGenAIConnectorsResult {
@@ -29,63 +30,37 @@ export function useGenAIConnectors(): UseGenAIConnectorsResult {
 export function useGenAIConnectorsWithoutContext(
   assistant: ObservabilityAIAssistantService
 ): UseGenAIConnectorsResult {
-  const [connectors, setConnectors] = useState<FindActionResult[] | undefined>(undefined);
+  const selectedConnector = useObservable(assistant.lastUsedConnector$);
 
-  const [selectedConnector, setSelectedConnector] = useLocalStorage(
-    `xpack.observabilityAiAssistant.lastUsedConnector`,
-    ''
+  const connectors = useAbortableAsync(
+    ({ signal }) => {
+      return assistant.callApi('GET /internal/observability_ai_assistant/connectors', {
+        signal,
+      });
+    },
+    [assistant]
   );
 
-  const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState<Error | undefined>(undefined);
-
-  const controller = useMemo(() => new AbortController(), []);
-  const fetchConnectors = useCallback(async () => {
-    setLoading(true);
-
-    assistant
-      .callApi('GET /internal/observability_ai_assistant/connectors', {
-        signal: controller.signal,
-      })
-      .then((results) => {
-        setConnectors(results);
-        setSelectedConnector((connectorId) => {
-          if (connectorId && results.findIndex((result) => result.id === connectorId) === -1) {
-            return '';
-          }
-          return connectorId;
-        });
-
-        setError(undefined);
-      })
-      .catch((err) => {
-        setError(err);
-        setConnectors(undefined);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [assistant, controller.signal, setSelectedConnector]);
-
   useEffect(() => {
-    fetchConnectors();
+    if (!connectors.value) {
+      return;
+    }
 
-    return () => {
-      controller.abort();
-    };
-  }, [assistant, controller, fetchConnectors, setSelectedConnector]);
+    if (!connectors.value.find((connector) => connector.id === selectedConnector)) {
+      assistant.setLastUsedConnector(connectors.value[0]?.id);
+    }
+  }, [connectors.value, selectedConnector, assistant]);
 
   return {
-    connectors,
-    loading,
-    error,
-    selectedConnector: selectedConnector || connectors?.[0]?.id,
+    connectors: connectors.value,
+    loading: connectors.loading,
+    error: connectors.error,
+    selectedConnector,
     selectConnector: (id: string) => {
-      setSelectedConnector(id);
+      assistant.setLastUsedConnector(id);
     },
     reloadConnectors: () => {
-      fetchConnectors();
+      connectors.refresh();
     },
   };
 }

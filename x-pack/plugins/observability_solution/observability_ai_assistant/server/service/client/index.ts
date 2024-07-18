@@ -17,6 +17,7 @@ import {
   combineLatest,
   defer,
   filter,
+  finalize,
   forkJoin,
   from,
   map,
@@ -66,9 +67,9 @@ import { getSystemMessageFromInstructions } from '../util/get_system_message_fro
 import { replaceSystemMessage } from '../util/replace_system_message';
 import { withAssistantSpan } from '../util/with_assistant_span';
 import { createBedrockClaudeAdapter } from './adapters/bedrock/bedrock_claude_adapter';
-import { failOnNonExistingFunctionCall } from './adapters/fail_on_non_existing_function_call';
 import { createOpenAiAdapter } from './adapters/openai_adapter';
 import { LlmApiAdapter } from './adapters/types';
+import { validateFunctionCall } from './adapters/validate_function_call';
 import { getContextFunctionRequestIfNeeded } from './get_context_function_request_if_needed';
 import { LangTracer } from './instrumentation/lang_tracer';
 import { continueConversation } from './operators/continue_conversation';
@@ -81,7 +82,7 @@ import {
   withLangtraceChatCompleteSpan,
 } from './operators/with_langtrace_chat_complete_span';
 
-const MAX_FUNCTION_CALLS = 8;
+const MAX_FUNCTION_CALLS = 20;
 
 export class ObservabilityAIAssistantClient {
   constructor(
@@ -472,6 +473,7 @@ export class ObservabilityAIAssistantClient {
       signal,
       simulateFunctionCalling,
       tracer,
+      validate,
     }: {
       messages: Message[];
       connectorId: string;
@@ -480,6 +482,7 @@ export class ObservabilityAIAssistantClient {
       signal: AbortSignal;
       simulateFunctionCalling?: boolean;
       tracer: LangTracer;
+      validate?: boolean;
     }
   ): Observable<ChatCompletionChunkEvent | TokenCountEvent> => {
     return defer(() =>
@@ -579,7 +582,7 @@ export class ObservabilityAIAssistantClient {
         );
       }),
       instrumentAndCountTokens(name),
-      failOnNonExistingFunctionCall({ functions }),
+      validateFunctionCall({ functions, functionCall, validate }),
       tap((event) => {
         if (
           event.type === StreamingChatResponseEventType.ChatCompletionChunk &&
@@ -587,6 +590,9 @@ export class ObservabilityAIAssistantClient {
         ) {
           this.dependencies.logger.trace(`Received chunk: ${JSON.stringify(event.message)}`);
         }
+      }),
+      finalize(() => {
+        this.dependencies.logger.info(`Response is done`);
       }),
       shareReplay()
     );

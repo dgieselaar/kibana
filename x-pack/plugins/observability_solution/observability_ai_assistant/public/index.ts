@@ -18,6 +18,7 @@ import type {
   RegisterRenderFunctionDefinition,
   RenderFunction,
   DiscoveredDataset,
+  RunInferenceAPI,
 } from './types';
 
 export type {
@@ -28,6 +29,7 @@ export type {
   RegisterRenderFunctionDefinition,
   RenderFunction,
   DiscoveredDataset,
+  RunInferenceAPI,
 };
 
 export { aiAssistantCapabilities } from '../common/capabilities';
@@ -67,6 +69,8 @@ export {
   KnowledgeBaseEntryRole,
   concatenateChatCompletionChunks,
   StreamingChatResponseEventType,
+  ShortIdTable,
+  correctCommonEsqlMistakes,
 } from '../common';
 export type {
   CompatibleJSONSchema,
@@ -75,7 +79,7 @@ export type {
   KnowledgeBaseEntry,
   FunctionDefinition,
   ChatCompletionChunkEvent,
-  ShortIdTable,
+  MessageAddEvent,
 } from '../common';
 
 export type { TelemetryEventTypeWithPayload } from './analytics';
@@ -94,11 +98,24 @@ export type { UseChatResult } from './hooks/use_chat';
 export { LANGUAGE_OPTIONS, DEFAULT_LANGUAGE_OPTION } from '../common/ui_settings/language_options';
 
 export {
+  InferenceTaskEventType,
+  type InferenceTaskEvent,
+  type InferenceTaskCompleteEvent,
+  type InferenceTaskUpdateEvent,
+  createTaskCompleteEvent,
+} from '../common/tasks';
+
+export { onlyTaskCompleteEvents } from './service/only_task_complete_events';
+export { concatenateTaskUpdateEvents } from '../common';
+
+export {
   aiAssistantResponseLanguage,
   aiAssistantLogsIndexPattern,
   aiAssistantSimulatedFunctionCalling,
   aiAssistantSearchConnectorIndexPattern,
 } from '../common/ui_settings/settings_keys';
+
+export { truncateList } from '../common/utils/truncate_list';
 
 export const plugin: PluginInitializer<
   ObservabilityAIAssistantPublicSetup,

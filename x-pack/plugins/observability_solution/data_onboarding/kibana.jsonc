@@ -1,0 +1,22 @@
+{
+  "type": "plugin",
+  "id": "@kbn/data-onboarding-plugin",
+  "owner": "@elastic/obs-ai-assistant",
+  "plugin": {
+    "id": "dataOnboarding",
+    "server": true,
+    "browser": true,
+    "configPath": ["xpack", "dataOnboarding"],
+    "requiredPlugins": [
+      "data",
+      "dataViews",
+      "observabilityAIAssistant",
+      "observabilityShared"
+    ],
+    "requiredBundles": [
+      "kibanaReact",
+    ],
+    "optionalPlugins": [],
+    "extraPublicDirs": []
+  }
+}

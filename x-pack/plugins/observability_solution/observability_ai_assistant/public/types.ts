@@ -7,13 +7,19 @@
 
 import type { LicensingPluginStart } from '@kbn/licensing-plugin/public';
 import type { SecurityPluginSetup, SecurityPluginStart } from '@kbn/security-plugin/public';
+import { FromSchema } from 'json-schema-to-ts';
 import type { Observable } from 'rxjs';
 import type {
   ChatCompletionChunkEvent,
   MessageAddEvent,
   StreamingChatResponseEventWithoutError,
 } from '../common/conversation_complete';
-import type { FunctionDefinition, FunctionResponse } from '../common/functions/types';
+import type {
+  CompatibleJSONSchema,
+  FunctionDefinition,
+  FunctionResponse,
+} from '../common/functions/types';
+import type { InferenceTaskEvent } from '../common/tasks';
 import type {
   Message,
   ObservabilityAIAssistantScreenContext,
@@ -43,8 +49,7 @@ export interface DiscoveredDataset {
   columns: unknown[];
 }
 
-export interface ObservabilityAIAssistantChatService {
-  sendAnalyticsEvent: (event: TelemetryEventTypeWithPayload) => void;
+export interface RunInferenceAPI {
   chat: (
     name: string,
     options: {
@@ -53,8 +58,19 @@ export interface ObservabilityAIAssistantChatService {
       functions?: Array<Pick<FunctionDefinition, 'name' | 'description' | 'parameters'>>;
       functionCall?: string;
       signal: AbortSignal;
+      validate?: boolean;
     }
   ) => Observable<ChatCompletionChunkEvent>;
+  task: <TOutputSchema extends CompatibleJSONSchema>(
+    name: string,
+    task: {
+      system: string;
+      input: string;
+      schema?: TOutputSchema;
+      signal: AbortSignal;
+      connectorId: string;
+    }
+  ) => Observable<InferenceTaskEvent<FromSchema<TOutputSchema>>>;
   complete: (options: {
     getScreenContexts: () => ObservabilityAIAssistantScreenContext[];
     conversationId?: string;
@@ -70,6 +86,10 @@ export interface ObservabilityAIAssistantChatService {
     responseLanguage?: string;
     instructions?: UserInstructionOrPlainText[];
   }) => Observable<StreamingChatResponseEventWithoutError>;
+}
+
+export interface ObservabilityAIAssistantChatService extends RunInferenceAPI {
+  sendAnalyticsEvent: (event: TelemetryEventTypeWithPayload) => void;
   getFunctions: (options?: { contexts?: string[]; filter?: string }) => FunctionDefinition[];
   hasFunction: (name: string) => boolean;
   getSystemMessage: () => Message;
@@ -96,6 +116,8 @@ export interface ObservabilityAIAssistantService {
   getScreenContexts: () => ObservabilityAIAssistantScreenContext[];
   conversations: ObservabilityAIAssistantConversationService;
   navigate: (callback: () => void) => Promise<Observable<MessageAddEvent>>;
+  lastUsedConnector$: Observable<string | undefined>;
+  setLastUsedConnector: (connectorId: string) => void;
 }
 
 export type RenderFunction<TArguments, TResponse extends FunctionResponse> = (options: {

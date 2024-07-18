@@ -13,7 +13,7 @@ import type { DatatableColumn } from '@kbn/expressions-plugin/common';
 export const visualizeESQLFunction = {
   name: 'visualize_query',
   visibility: FunctionVisibility.UserOnly,
-  description: 'Use this function to visualize charts for ES|QL queries.',
+  description: 'Use this function to visualize charts or a table for the user using ES|QL queries.',
   descriptionForUser: 'Use this function to visualize charts for ES|QL queries.',
   parameters: {
     type: 'object',
@@ -26,7 +26,7 @@ export const visualizeESQLFunction = {
         enum: VISUALIZE_ESQL_USER_INTENTIONS,
       },
     },
-    required: ['query', 'intention'],
+    required: ['query'],
   } as const,
   contexts: ['core'],
 };
@@ -46,7 +46,23 @@ export interface VisualizeQueryResponsev1 {
     errorMessages: string[];
   };
 }
+export interface VisualizeQueryResponsev2 {
+  data: {
+    columns: DatatableColumn[];
+    rows: ESQLRow[];
+    userOverrides?: unknown;
+  };
+  content: {
+    errorMessages: string[];
+    instructions?: string;
+    results?: Array<Record<string, unknown> | string>;
+    totalRows?: number;
+  };
+}
 
-export type VisualizeQueryResponse = VisualizeQueryResponsev0 | VisualizeQueryResponsev1;
+export type VisualizeQueryResponse =
+  | VisualizeQueryResponsev0
+  | VisualizeQueryResponsev1
+  | VisualizeQueryResponsev2;
 
 export type VisualizeESQLFunctionArguments = FromSchema<typeof visualizeESQLFunction['parameters']>;

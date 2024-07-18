@@ -4,7 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-import { omit, orderBy } from 'lodash';
+import { orderBy } from 'lodash';
 import { fromKueryExpression, toElasticsearchQuery } from '@kbn/es-query';
 import type { AggregationsAutoDateHistogramAggregation } from '@elastic/elasticsearch/lib/api/types';
 import { aiAssistantLogsIndexPattern } from '@kbn/observability-ai-assistant-plugin/server';
@@ -18,6 +18,18 @@ import { getMetricChanges } from './get_metric_changes';
 import { getLogChanges } from './get_log_changes';
 
 export const CHANGES_FUNCTION_NAME = 'changes';
+
+function getImpactFromPValue(pValue: number) {
+  if (pValue < 1e-6) {
+    return 'high';
+  }
+
+  if (pValue < 0.001) {
+    return 'medium';
+  }
+
+  return 'low';
+}
 
 export function registerChangesFunction({
   functions,
@@ -46,7 +58,6 @@ export function registerChangesFunction({
       const client = createElasticsearchClient({
         client: core.elasticsearch.client.asCurrentUser,
         logger,
-        inspect: logger.isLevelEnabled('debug'),
       });
 
       const commonFilters = [
@@ -113,26 +124,53 @@ export function registerChangesFunction({
 
       const allMetricChanges = orderBy(metricChanges.flat(), [
         (item) => ('p_value' in item.changes ? item.changes.p_value : Number.POSITIVE_INFINITY),
-      ]).slice(0, 25);
+      ]);
 
-      const allMetricChangesWithoutTimeseries = allMetricChanges.flat().map((metricChange) => {
-        return omit(metricChange, 'over_time');
-      });
+      function formatChangeForLlm(change: typeof allMetricChanges[0] | typeof allLogChanges[0]) {
+        return {
+          name: change.name,
+          key: change.key,
+          changes: {
+            ...('p_value' in change.changes && change.changes.p_value
+              ? { impact: getImpactFromPValue(change.changes.p_value) }
+              : {}),
+            type: change.changes.type,
+            ...('time' in change.changes ? { time: change.changes.time } : {}),
+          },
+        };
+      }
+
+      const allMetricChangesWithoutTimeseries = allMetricChanges
+        .flat()
+        .map(formatChangeForLlm)
+        .filter((change) => change.changes.type !== 'indeterminable')
+        .slice(0, 15);
 
       const allLogChanges = orderBy(logChanges.flat(), [
         (item) => ('p_value' in item.changes ? item.changes.p_value : Number.POSITIVE_INFINITY),
-      ]).slice(0, 25);
+      ])
+        .filter((change) => change.changes.type !== 'indeterminable')
+        .slice(0, 15);
 
-      const allLogChangesWithoutTimeseries = allLogChanges.flat().map((logChange) => {
-        return omit(logChange, 'over_time');
+      const allLogChangesWithoutTimeseries = allLogChanges.flat().map((change) => {
+        return {
+          ...formatChangeForLlm(change),
+          pattern: change.pattern,
+        };
       });
 
       return {
         content: {
-          description: `For each item, the user can see the type of change, the impact, the timestamp, the trend, and the label.
-            Do not regurgitate these results back to the user.
-            Instead, focus on the interesting changes, mention possible correlations or root causes, and suggest next steps to the user.
-            "indeterminate" means that the system could not detect any changes.`,
+          instructions: `The user is looking at a component that displays each change. For each change,
+          they can see the type of change, the impact, the timestamp, the trend, and the label. When a
+          change is marked as "indeterminate", it means the system could not identify any changes.
+        
+          Look carefully at the changes, and analyze them thoughtfully. Keep in mind that the user is
+          already looking at a table that displays the results, so you don't need to regurgitate the
+          results back to the user. Instead, focus on possible correlations, root cause analysis,
+          and remediations.
+
+          When listing changes, DO NOT mention \`changes.time\`.`,
           changes: {
             metrics: allMetricChangesWithoutTimeseries,
             logs: allLogChangesWithoutTimeseries,

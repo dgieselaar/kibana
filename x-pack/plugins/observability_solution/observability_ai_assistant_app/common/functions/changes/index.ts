@@ -7,6 +7,7 @@
 
 import { FromSchema } from 'json-schema-to-ts';
 import { ChangePointType } from '@kbn/es-types/src';
+import { Assign } from 'utility-types';
 
 export const changesFunctionParameters = {
   type: 'object',
@@ -48,46 +49,46 @@ export const changesFunctionParameters = {
         required: ['name'],
       },
     },
-    metrics: {
-      description:
-        'Analyze changes in metrics. DO NOT UNDER ANY CIRCUMSTANCES use date or metric fields for groupBy, leave empty unless needed.',
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string',
-            description: 'The name of this set of metrics',
-          },
-          index: {
-            type: 'string',
-            description: 'The index or index pattern where to find the metrics',
-          },
-          kqlFilter: {
-            type: 'string',
-            description: 'A KQL filter to filter the log documents by, e.g. my_field:foo',
-          },
-          field: {
-            type: 'string',
-            description:
-              'Metric field that contains the metric. Only use if the metric aggregation type is not count.',
-          },
-          type: {
-            type: 'string',
-            description: 'The type of metric aggregation to perform. Defaults to count',
-            enum: ['count', 'avg', 'sum', 'min', 'max', 'p95', 'p99'],
-          },
-          groupBy: {
-            type: 'array',
-            description: 'Optional keyword fields to group metrics by.',
-            items: {
-              type: 'string',
-            },
-          },
-        },
-        required: ['index', 'name'],
-      },
-    },
+    // metrics: {
+    //   description:
+    //     'Analyze changes in metrics. DO NOT UNDER ANY CIRCUMSTANCES use date or metric fields for groupBy, leave empty unless needed.',
+    //   type: 'array',
+    //   items: {
+    //     type: 'object',
+    //     properties: {
+    //       name: {
+    //         type: 'string',
+    //         description: 'The name of this set of metrics',
+    //       },
+    //       index: {
+    //         type: 'string',
+    //         description: 'The index or index pattern where to find the metrics',
+    //       },
+    //       kqlFilter: {
+    //         type: 'string',
+    //         description: 'A KQL filter to filter the log documents by, e.g. my_field:foo',
+    //       },
+    //       field: {
+    //         type: 'string',
+    //         description:
+    //           'Metric field that contains the metric. Only use if the metric aggregation type is not count.',
+    //       },
+    //       type: {
+    //         type: 'string',
+    //         description: 'The type of metric aggregation to perform. Defaults to count',
+    //         enum: ['count', 'avg', 'sum', 'min', 'max', 'p95', 'p99'],
+    //       },
+    //       groupBy: {
+    //         type: 'array',
+    //         description: 'Optional keyword fields to group metrics by.',
+    //         items: {
+    //           type: 'string',
+    //         },
+    //       },
+    //     },
+    //     required: ['index', 'name'],
+    //   },
+    // },
   },
   required: ['start', 'end'],
 } as const;
@@ -108,6 +109,8 @@ interface LogChange extends Change {
   pattern: string;
 }
 
+type FormatForLlm<TChange extends Change> = Assign<TChange, { changes: { impact?: string } }>;
+
 export interface LogChangeWithTimeseries extends LogChange {
   over_time: Array<{ x: number; y: number | null }>;
 }
@@ -120,10 +123,10 @@ export type ChangesArguments = FromSchema<typeof changesFunctionParameters>;
 
 export interface ChangesFunctionResponse {
   content: {
-    description: string;
+    instructions: string;
     changes: {
-      logs: LogChange[];
-      metrics: MetricChange[];
+      logs: Array<FormatForLlm<LogChange>>;
+      metrics: Array<FormatForLlm<MetricChange>>;
     };
   };
   data: {

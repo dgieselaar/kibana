@@ -6,6 +6,7 @@
  */
 
 import { i18n } from '@kbn/i18n';
+import type { ValidateFunction } from 'ajv';
 import { TokenCount as TokenCountType, type Message } from './types';
 
 export enum StreamingChatResponseEventType {
@@ -120,6 +121,7 @@ export enum ChatCompletionErrorCode {
   TokenLimitReachedError = 'tokenLimitReachedError',
   FunctionNotFoundError = 'functionNotFoundError',
   FunctionLimitExceededError = 'functionLimitExceededError',
+  FunctionValidationError = 'functionValidationError',
 }
 
 interface ErrorMetaAttributes {
@@ -133,6 +135,9 @@ interface ErrorMetaAttributes {
     name: string;
   };
   [ChatCompletionErrorCode.FunctionLimitExceededError]: {};
+  [ChatCompletionErrorCode.FunctionValidationError]: {
+    errors?: ValidateFunction['errors'];
+  };
 }
 
 export class ChatCompletionError<T extends ChatCompletionErrorCode> extends Error {
@@ -188,6 +193,13 @@ export function createFunctionLimitExceededError() {
     ChatCompletionErrorCode.FunctionLimitExceededError,
     `Function limit exceeded`
   );
+}
+
+export function createFunctionValidationError(
+  message: string,
+  errors?: ValidateFunction['errors']
+) {
+  return new ChatCompletionError(ChatCompletionErrorCode.FunctionValidationError, message);
 }
 
 export function isTokenLimitReachedError(

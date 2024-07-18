@@ -15,6 +15,8 @@ import { createCallObservabilityAIAssistantAPI } from '../api';
 import type { ChatRegistrationRenderFunction, ObservabilityAIAssistantService } from '../types';
 import { defaultStarterPrompts } from './default_starter_prompts';
 
+const LAST_USED_CONNECTOR_LOCAL_STORAGE_ID = `xpack.observabilityAiAssistant.lastUsedConnector`;
+
 export function createService({
   analytics,
   coreStart,
@@ -32,6 +34,20 @@ export function createService({
     { starterPrompts: defaultStarterPrompts },
   ]);
   const predefinedConversation$ = new Subject<{ messages: Message[]; title?: string }>();
+
+  const storedLastUsedConnector = localStorage.getItem(LAST_USED_CONNECTOR_LOCAL_STORAGE_ID);
+
+  let lastUsedConnector: string | undefined;
+
+  if (storedLastUsedConnector) {
+    try {
+      lastUsedConnector = JSON.parse(storedLastUsedConnector) as string;
+    } catch (error) {
+      localStorage.removeItem(LAST_USED_CONNECTOR_LOCAL_STORAGE_ID);
+    }
+  }
+
+  const connector$ = new BehaviorSubject<string | undefined>(lastUsedConnector);
 
   return {
     isEnabled: () => {
@@ -89,5 +105,10 @@ export function createService({
       },
       predefinedConversation$: predefinedConversation$.asObservable(),
     },
+    setLastUsedConnector: (connectorId) => {
+      localStorage.setItem(LAST_USED_CONNECTOR_LOCAL_STORAGE_ID, JSON.stringify(connectorId));
+      connector$.next(connectorId);
+    },
+    lastUsedConnector$: connector$.asObservable(),
   };
 }

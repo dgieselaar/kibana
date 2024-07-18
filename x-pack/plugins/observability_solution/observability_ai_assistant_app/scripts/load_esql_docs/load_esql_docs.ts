@@ -14,7 +14,11 @@ import pLimit from 'p-limit';
 import Path from 'path';
 import git, { SimpleGitProgressEvent } from 'simple-git';
 import yargs, { Argv } from 'yargs';
-import { MessageRole } from '@kbn/observability-ai-assistant-plugin/common';
+import {
+  correctCommonEsqlMistakes,
+  INLINE_ESQL_QUERY_REGEX,
+  MessageRole,
+} from '@kbn/observability-ai-assistant-plugin/common';
 import { validateQuery } from '@kbn/esql-validation-autocomplete';
 import { EditorError, ESQLMessage, getAstAndSyntaxErrors } from '@kbn/esql-ast';
 import { connectorIdOption, elasticsearchOption, kibanaOption } from '../evaluation/cli';
@@ -22,8 +26,6 @@ import { getServiceUrls } from '../evaluation/get_service_urls';
 import { KibanaClient } from '../evaluation/kibana_client';
 import { selectConnector } from '../evaluation/select_connector';
 import { extractSections } from './extract_sections';
-import { correctCommonEsqlMistakes } from '../../server/functions/query/correct_common_esql_mistakes';
-import { INLINE_ESQL_QUERY_REGEX } from '../../server/functions/query/constants';
 
 yargs(process.argv.slice(2))
   .command(
