@@ -31,7 +31,8 @@ export function ServiceOverview() {
   const { isEntityCentricExperienceEnabled } = useEntityCentricExperienceSetting();
   const { serviceName, serviceEntitySummary, serviceEntitySummaryStatus } = useApmServiceContext();
 
-  const setScreenContext = useApmPluginContext().observabilityAIAssistant?.service.setScreenContext;
+  const setScreenContext =
+    useApmPluginContext().observabilityAIAssistant?.service.screenContext.setScreenContext;
 
   useEffect(() => {
     return setScreenContext?.({

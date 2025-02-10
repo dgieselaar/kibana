@@ -25,10 +25,6 @@ const coreStart = coreMock.createStart();
 
 export function KibanaReactStorybookDecorator(Story: ComponentType) {
   const ObservabilityAIAssistantChatServiceContext = React.createContext(mockChatService);
-  const ObservabilityAIAssistantMultipaneFlyoutContext = React.createContext({
-    container: <div />,
-    setVisibility: () => false,
-  });
 
   return (
     <KibanaContextProvider
@@ -37,12 +33,11 @@ export function KibanaReactStorybookDecorator(Story: ComponentType) {
         licensing: {
           license$: new Subject(),
         },
-        observabilityAIAssistant: {
-          ObservabilityAIAssistantChatServiceContext,
-          ObservabilityAIAssistantMultipaneFlyoutContext,
-          service: mockService,
-        },
         triggersActionsUi: { getAddRuleFlyout: {}, getAddConnectorFlyout: {} },
+        observabilityAIAssistant: {
+          service: mockService,
+          useObservabilityAIAssistantChatService: () => mockChatService,
+        },
       }}
     >
       <ObservabilityAIAssistantChatServiceContext.Provider value={mockChatService}>

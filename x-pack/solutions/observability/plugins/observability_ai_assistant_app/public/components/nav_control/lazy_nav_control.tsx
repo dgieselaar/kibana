@@ -6,7 +6,7 @@
  */
 
 import { dynamic } from '@kbn/shared-ux-utility';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CoreStart } from '@kbn/core-lifecycle-browser';
 import { AIAssistantAppService } from '@kbn/ai-assistant';
 import { useIsNavControlVisible } from '../../hooks/is_nav_control_visible';
@@ -30,6 +30,13 @@ export const NavControlInitiator = ({
   isServerless,
 }: NavControlInitiatorProps) => {
   const { isVisible } = useIsNavControlVisible({ coreStart, pluginsStart });
+
+  useEffect(() => {
+    console.log('NavControlInitiator mounted');
+    return () => {
+      console.log('NavControlInitiator unmounted');
+    };
+  }, []);
 
   if (!isVisible) {
     return null;

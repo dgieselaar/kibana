@@ -7,15 +7,14 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import { AppMenuActionPrimary, AppMenuActionId, AppMenuActionType } from '@kbn/discover-utils';
-import { omit } from 'lodash';
-import { setStateToKbnUrl } from '@kbn/kibana-utils-plugin/public';
+import { AppMenuActionId, AppMenuActionPrimary, AppMenuActionType } from '@kbn/discover-utils';
 import { i18n } from '@kbn/i18n';
-import { DiscoverStateContainer } from '../../../state_management/discover_state';
-import { getSharingData, showPublicUrlSwitch } from '../../../../../utils/get_sharing_data';
-import { DiscoverAppLocatorParams } from '../../../../../../common/app_locator';
-import { AppMenuDiscoverParams } from './types';
+import { setStateToKbnUrl } from '@kbn/kibana-utils-plugin/public';
 import { DiscoverServices } from '../../../../../build_services';
+import { getSharingData, showPublicUrlSwitch } from '../../../../../utils/get_sharing_data';
+import { DiscoverStateContainer } from '../../../state_management/discover_state';
+import { getShareOptions } from '../get_share_options';
+import { AppMenuDiscoverParams } from './types';
 
 export const getShareAppMenuItem = ({
   discoverParams,
@@ -39,7 +38,7 @@ export const getShareAppMenuItem = ({
       iconType: 'share',
       testId: 'shareTopNavButton',
       onClick: async ({ anchorElement }) => {
-        const { dataView, isEsqlMode } = discoverParams;
+        const { isEsqlMode, dataView } = discoverParams;
 
         if (!services.share) {
           return;
@@ -54,30 +53,12 @@ export const getShareAppMenuItem = ({
         );
 
         const { locator, notifications } = services;
-        const appState = stateContainer.appState.getState();
-        const { timefilter } = services.data.query.timefilter;
-        const timeRange = timefilter.getTime();
-        const refreshInterval = timefilter.getRefreshInterval();
-        const filters = services.filterManager.getFilters();
 
-        // Share -> Get links -> Snapshot
-        const params: DiscoverAppLocatorParams = {
-          ...omit(appState, 'dataSource'),
-          ...(savedSearch.id ? { savedSearchId: savedSearch.id } : {}),
-          ...(dataView?.isPersisted()
-            ? { dataViewId: dataView?.id }
-            : { dataViewSpec: dataView?.toMinimalSpec() }),
-          filters,
-          timeRange,
-          refreshInterval,
-        };
-        const relativeUrl = locator.getRedirectUrl(params);
-
-        // This logic is duplicated from `relativeToAbsolute` (for bundle size reasons). Ultimately, this should be
-        // replaced when https://github.com/elastic/kibana/issues/153323 is implemented.
-        const link = document.createElement('a');
-        link.setAttribute('href', relativeUrl);
-        const shareableUrl = link.href;
+        const { shareableUrl, params } = getShareOptions({
+          dataView,
+          services,
+          stateContainer,
+        });
 
         // Share -> Get links -> Saved object
         let shareableUrlForSavedObject = await locator.getUrl(

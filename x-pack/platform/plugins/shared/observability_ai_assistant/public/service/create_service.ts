@@ -9,7 +9,12 @@ import type { AnalyticsServiceStart, CoreStart } from '@kbn/core/public';
 import { compact, without } from 'lodash';
 import { BehaviorSubject, debounceTime, filter, lastValueFrom, of, Subject, take } from 'rxjs';
 import { type AssistantScope, filterScopes } from '@kbn/ai-assistant-common';
-import type { Message, ObservabilityAIAssistantScreenContext } from '../../common/types';
+import type {
+  Message,
+  ObservabilityAIAssistantScreenContext,
+  SnapshotImage,
+  SnapshotResult,
+} from '../../common/types';
 import { createFunctionRequestMessage } from '../../common/utils/create_function_request_message';
 import { createFunctionResponseMessage } from '../../common/utils/create_function_response_message';
 import { createCallObservabilityAIAssistantAPI } from '../api';
@@ -53,6 +58,27 @@ export function createService({
     return screenContexts;
   };
 
+  async function takeScreenshot(element: HTMLElement): Promise<SnapshotImage> {
+    const html2Canvas = (await import('html2canvas')).default;
+    const canvasElement = await html2Canvas(element);
+
+    return {
+      encoding: 'base64',
+      dataURL: canvasElement.toDataURL('image/png', 1),
+    };
+  }
+
+  async function takeSnapshotDefault(): Promise<SnapshotResult> {
+    const element = document.getElementById('kibana-body');
+    const title = document.title;
+    const href = window.location.href;
+    return {
+      title,
+      href,
+      image: element ? await takeScreenshot(element) : undefined,
+    };
+  }
+
   return {
     isEnabled: () => {
       return enabled;
@@ -71,15 +97,40 @@ export function createService({
       });
     },
     callApi: apiClient,
-    getScreenContexts,
-    setScreenContext: (context: ObservabilityAIAssistantScreenContext) => {
-      screenContexts$.next(screenContexts$.value.concat(context));
+    screenContext: {
+      setScreenContext: (context: ObservabilityAIAssistantScreenContext) => {
+        screenContexts$.next(screenContexts$.value.concat(context));
 
-      function unsubscribe() {
-        screenContexts$.next(without(screenContexts$.value, context));
-      }
+        function unsubscribe() {
+          screenContexts$.next(without(screenContexts$.value, context));
+        }
 
-      return unsubscribe;
+        return unsubscribe;
+      },
+      screenContexts$: screenContexts$.asObservable(),
+      snapshot: async () => {
+        const firstContextWithSnapshot = screenContexts$.value.find(({ snapshot }) => !!snapshot);
+        const properties = (await firstContextWithSnapshot?.snapshot?.({
+          takeScreenshot,
+        })) ?? {
+          title: document.title,
+          href: document.location.href,
+        };
+
+        if (properties.image) {
+          return properties;
+        }
+
+        const kibanaBody = document.getElementById('kibana-body');
+        if (!kibanaBody) {
+          return properties;
+        }
+
+        return {
+          ...properties,
+          image: await takeScreenshot(kibanaBody),
+        };
+      },
     },
     navigate: async (cb) => {
       cb();

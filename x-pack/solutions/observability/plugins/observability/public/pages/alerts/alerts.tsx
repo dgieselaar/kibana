@@ -93,7 +93,7 @@ function InternalAlertsPage() {
 
   const filteredRuleTypes = useGetFilteredRuleTypes();
 
-  const { setScreenContext } = observabilityAIAssistant?.service || {};
+  const { screenContext } = observabilityAIAssistant?.service || {};
 
   const ruleTypesWithDescriptions = useGetAvailableRulesWithDescriptions();
 
@@ -113,7 +113,7 @@ function InternalAlertsPage() {
   };
 
   useEffect(() => {
-    return setScreenContext?.({
+    return screenContext?.setScreenContext?.({
       data: ruleTypesWithDescriptions.map((rule) => ({
         name: rule.id,
         value: `${rule.name} ${rule.description}`,
@@ -131,7 +131,7 @@ function InternalAlertsPage() {
         },
       ],
     });
-  }, [filteredRuleTypes, ruleTypesWithDescriptions, setScreenContext]);
+  }, [filteredRuleTypes, ruleTypesWithDescriptions, screenContext]);
 
   const onBrushEnd: BrushEndListener = (brushEvent) => {
     const { x } = brushEvent as XYBrushEvent;

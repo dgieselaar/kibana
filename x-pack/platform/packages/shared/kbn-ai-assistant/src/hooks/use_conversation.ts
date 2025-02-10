@@ -6,15 +6,17 @@
  */
 import { i18n } from '@kbn/i18n';
 import { merge, omit } from 'lodash';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type {
   Conversation,
   ConversationCreateRequest,
   Message,
+  Attachment,
 } from '@kbn/observability-ai-assistant-plugin/common';
 import type { ObservabilityAIAssistantChatService } from '@kbn/observability-ai-assistant-plugin/public';
 import type { AbortableAsyncState } from '@kbn/observability-ai-assistant-plugin/public';
 import type { UseChatResult } from '@kbn/observability-ai-assistant-plugin/public';
+import { ConversationUpdateRequest } from '@kbn/observability-ai-assistant-plugin/common/types';
 import { EMPTY_CONVERSATION_TITLE } from '../i18n';
 import { useAIAssistantAppService } from './use_ai_assistant_app_service';
 import { useKibana } from './use_kibana';
@@ -34,6 +36,7 @@ function createNewConversation({
     labels: {},
     numeric_labels: {},
     public: false,
+    attachments: [],
   };
 }
 
@@ -48,7 +51,9 @@ export interface UseConversationProps {
 
 export type UseConversationResult = {
   conversation: AbortableAsyncState<ConversationCreateRequest | Conversation | undefined>;
-  saveTitle: (newTitle: string) => void;
+  saveTitle: (newTitle: string) => Promise<void>;
+  addAttachment: (attachment: Attachment) => Promise<void>;
+  removeAttachment: (attachment: Attachment) => Promise<void>;
 } & Omit<UseChatResult, 'setMessages'>;
 
 const DEFAULT_INITIAL_MESSAGES: Message[] = [];
@@ -79,7 +84,26 @@ export function useConversation({
     throw new Error('Cannot set initialMessages if initialConversationId is set');
   }
 
-  const update = (nextConversationObject: Conversation) => {
+  const [localChanges, setLocalChanges] = useState<ConversationCreateRequest>();
+
+  const update = (
+    partialOrCompleteUpdate: ConversationCreateRequest | ConversationUpdateRequest
+  ): Promise<void> => {
+    if (!partialOrCompleteUpdate.conversation?.id) {
+      setLocalChanges((prev) => {
+        const next = {
+          ...merge({ ...omit(prev, 'attachments') }, partialOrCompleteUpdate),
+          attachments: partialOrCompleteUpdate.attachments ?? prev?.attachments ?? [],
+        };
+        return next;
+      });
+      return Promise.resolve(undefined);
+    }
+
+    const nextConversationObject = partialOrCompleteUpdate as Conversation;
+
+    setLocalChanges(undefined);
+
     return service
       .callApi(`PUT /internal/observability_ai_assistant/conversation/{conversationId}`, {
         signal: null,
@@ -99,6 +123,11 @@ export function useConversation({
             ),
           },
         },
+      })
+      .then(() => {
+        conversation.refresh();
+        onConversationUpdate?.(nextConversationObject);
+        return undefined;
       })
       .catch((err) => {
         notifications!.toasts.addError(err, {
@@ -161,8 +190,15 @@ export function useConversation({
       }
     );
 
+  const conversationWithLocalChanges = useMemo(() => {
+    return {
+      ...conversation,
+      value: merge({}, conversation.value ?? {}, localChanges),
+    };
+  }, [conversation, localChanges]);
+
   return {
-    conversation,
+    conversation: conversationWithLocalChanges,
     state,
     next,
     stop,
@@ -171,16 +207,24 @@ export function useConversation({
       if (!displayedConversationId || !conversation.value) {
         throw new Error('Cannot save title if conversation is not stored');
       }
-      const nextConversation = merge({}, conversation.value as Conversation, {
+      const nextConversation = merge({}, conversationWithLocalChanges.value as Conversation, {
         conversation: { title },
       });
-      return update(nextConversation)
-        .then(() => {
-          return conversation.refresh();
-        })
-        .then(() => {
-          onConversationUpdate?.(nextConversation);
-        });
+      return update(nextConversation);
+    },
+    addAttachment: (attachment: Attachment) => {
+      return update({
+        ...(conversationWithLocalChanges.value as Conversation),
+        attachments: [...(conversationWithLocalChanges.value?.attachments ?? []), attachment],
+      });
+    },
+    removeAttachment: (attachment: Attachment) => {
+      return update({
+        ...(conversationWithLocalChanges.value as Conversation),
+        attachments: (conversationWithLocalChanges.value?.attachments ?? []).filter(
+          (attachmentAtIndex) => attachmentAtIndex.id !== attachment.id
+        ),
+      });
     },
   };
 }

@@ -57,8 +57,10 @@ export const mockService: ObservabilityAIAssistantService = {
   },
   callApi: {} as ObservabilityAIAssistantAPIClient,
   register: () => {},
-  setScreenContext: () => noop,
-  getScreenContexts: () => [],
+  screenContext: {
+    setScreenContext: () => noop,
+    screenContexts$: of([]),
+  },
   conversations: {
     openNewConversation: noop,
     predefinedConversation$: new Observable(),

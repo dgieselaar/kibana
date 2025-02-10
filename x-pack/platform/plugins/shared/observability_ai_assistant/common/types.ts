@@ -51,6 +51,13 @@ export interface TokenCount {
   total: number;
 }
 
+export interface Attachment {
+  id: string;
+  type: string;
+  '@timestamp': string;
+  payload: Record<string, unknown>;
+}
+
 export interface Conversation {
   '@timestamp': string;
   user?: {
@@ -64,6 +71,7 @@ export interface Conversation {
     token_count?: TokenCount;
   };
   messages: Message[];
+  attachments: Attachment[];
   labels: Record<string, string>;
   numeric_labels: Record<string, number>;
   namespace: string;
@@ -72,6 +80,7 @@ export interface Conversation {
 
 export type ConversationRequestBase = Omit<Conversation, 'user' | 'conversation' | 'namespace'> & {
   conversation: { title: string; token_count?: TokenCount; id?: string };
+  attachments?: Attachment[];
 };
 
 export type ConversationCreateRequest = ConversationRequestBase;
@@ -149,7 +158,7 @@ export interface StarterPrompt {
   scopes?: AssistantScope[];
 }
 
-export interface ObservabilityAIAssistantScreenContext {
+interface InternalObservabilityAIAssistantScreenContextBase {
   screenDescription?: string;
   data?: Array<{
     name: string;
@@ -158,4 +167,25 @@ export interface ObservabilityAIAssistantScreenContext {
   }>;
   actions?: Array<ScreenContextActionDefinition<any>>;
   starterPrompts?: StarterPrompt[];
+}
+
+export interface SnapshotImage {
+  encoding: 'base64';
+  dataURL: string;
+}
+
+export interface SnapshotResult {
+  title: string;
+  href: string;
+  image?: {
+    encoding: 'base64';
+    dataURL: string;
+  };
+}
+
+type TakeScreenshotAPI = (element: HTMLElement) => Promise<SnapshotImage>;
+
+export interface ObservabilityAIAssistantScreenContext
+  extends InternalObservabilityAIAssistantScreenContextBase {
+  snapshot?: (options: { takeScreenshot: TakeScreenshotAPI }) => Promise<SnapshotResult>;
 }

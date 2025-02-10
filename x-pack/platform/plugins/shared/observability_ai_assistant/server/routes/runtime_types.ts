@@ -15,7 +15,19 @@ import {
   MessageRole,
   type ObservabilityAIAssistantScreenContextRequest,
   type StarterPrompt,
+  Attachment,
 } from '../../common/types';
+
+const primitiveRt = t.union([t.string, t.boolean, t.number, t.null, t.undefined]);
+
+export const attachmentRt: t.Type<Attachment> = t.type({
+  '@timestamp': t.string,
+  payload: t.recursion('payload', (self) =>
+    t.record(t.string, t.union([primitiveRt, t.array(primitiveRt), self]))
+  ),
+  id: t.string,
+  type: t.string,
+});
 
 export const messageRt: t.Type<Message> = t.type({
   '@timestamp': t.string,
@@ -71,6 +83,7 @@ export const baseConversationRt: t.Type<ConversationRequestBase> = t.type({
   labels: t.record(t.string, t.string),
   numeric_labels: t.record(t.string, t.number),
   public: toBooleanRt,
+  attachments: t.array(attachmentRt),
 });
 
 export const assistantScopeType = t.union([

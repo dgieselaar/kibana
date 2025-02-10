@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AbortError } from '@kbn/kibana-utils-plugin/common';
 import type { NotificationsStart } from '@kbn/core/public';
 import type { AssistantScope } from '@kbn/ai-assistant-common';
+import { switchMap } from 'rxjs';
 import {
   MessageRole,
   type Message,
@@ -157,16 +158,20 @@ function useChatWithoutContext({
 
       setChatState(ChatState.Loading);
 
-      const next$ = chatService.complete({
-        getScreenContexts: () => service.getScreenContexts(),
-        connectorId,
-        messages: getWithSystemMessage(nextMessages, systemMessage),
-        persist,
-        disableFunctions: disableFunctions ?? false,
-        signal: abortControllerRef.current.signal,
-        conversationId,
-        scopes,
-      });
+      const next$ = service.screenContext.screenContexts$.pipe(
+        switchMap((screenContexts) =>
+          chatService.complete({
+            getScreenContexts: () => screenContexts,
+            connectorId,
+            messages: getWithSystemMessage(nextMessages, systemMessage),
+            persist,
+            disableFunctions: disableFunctions ?? false,
+            signal: abortControllerRef.current.signal,
+            conversationId,
+            scopes,
+          })
+        )
+      );
 
       function getPendingMessages() {
         return [

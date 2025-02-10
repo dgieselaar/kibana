@@ -150,7 +150,7 @@ export function TransactionsTable({
   ]);
 
   const { core, observabilityAIAssistant } = useApmPluginContext();
-  const setScreenContext = observabilityAIAssistant?.service.setScreenContext;
+  const setScreenContext = observabilityAIAssistant?.service.screenContext.setScreenContext;
 
   const isTableSearchBarEnabled = core.uiSettings.get<boolean>(apmEnableTableSearchBar, true);
 

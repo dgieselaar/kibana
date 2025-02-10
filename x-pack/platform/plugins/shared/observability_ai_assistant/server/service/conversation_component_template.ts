@@ -69,6 +69,18 @@ export const conversationComponentTemplate: ClusterComponentTemplate['component_
           },
         },
         namespace: keyword,
+        attachments: {
+          type: 'object',
+          properties: {
+            '@timestamp': date,
+            type: keyword,
+            id: keyword,
+            payload: {
+              type: 'object',
+              enabled: false,
+            },
+          },
+        },
         messages: {
           type: 'object',
           properties: {

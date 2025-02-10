@@ -131,6 +131,7 @@ export class ChromeService {
         mergeMap((appId) =>
           application.applications$.pipe(
             map((applications) => {
+              const app = applications.get(appId!);
               return !!appId && applications.has(appId) && !!applications.get(appId)!.chromeless;
             })
           )

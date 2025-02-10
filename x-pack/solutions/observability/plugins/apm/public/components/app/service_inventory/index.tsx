@@ -256,7 +256,8 @@ export function ServiceInventory() {
   );
 
   // TODO verify this with AI team
-  const setScreenContext = useApmPluginContext().observabilityAIAssistant?.service.setScreenContext;
+  const setScreenContext =
+    useApmPluginContext().observabilityAIAssistant?.service.screenContext.setScreenContext;
 
   useEffect(() => {
     if (!setScreenContext) {

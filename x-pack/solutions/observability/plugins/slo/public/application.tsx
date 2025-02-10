@@ -63,28 +63,29 @@ export const renderApp = ({
     usageCollection?.components.ApplicationUsageTrackingProvider ?? React.Fragment;
   const CloudProvider = plugins.cloud?.CloudContextProvider ?? React.Fragment;
 
-  const unregisterPrompts = plugins.observabilityAIAssistant?.service.setScreenContext({
-    starterPrompts: [
-      {
-        title: i18n.translate('xpack.slo.starterPrompts.whatAreSlos.title', {
-          defaultMessage: 'Getting started',
-        }),
-        prompt: i18n.translate('xpack.slo.starterPrompts.whatAreSlos.prompt', {
-          defaultMessage: 'What are SLOs?',
-        }),
-        icon: 'bullseye',
-      },
-      {
-        title: i18n.translate('xpack.slo.starterPrompts.canYouCreateAnSlo.title', {
-          defaultMessage: 'Getting started',
-        }),
-        prompt: i18n.translate('xpack.slo.starterPrompts.canYouCreateAnSlo.prompt', {
-          defaultMessage: 'Can you create an SLO?',
-        }),
-        icon: 'questionInCircle',
-      },
-    ],
-  });
+  const unregisterPrompts =
+    plugins.observabilityAIAssistant?.service.screenContext.setScreenContext({
+      starterPrompts: [
+        {
+          title: i18n.translate('xpack.slo.starterPrompts.whatAreSlos.title', {
+            defaultMessage: 'Getting started',
+          }),
+          prompt: i18n.translate('xpack.slo.starterPrompts.whatAreSlos.prompt', {
+            defaultMessage: 'What are SLOs?',
+          }),
+          icon: 'bullseye',
+        },
+        {
+          title: i18n.translate('xpack.slo.starterPrompts.canYouCreateAnSlo.title', {
+            defaultMessage: 'Getting started',
+          }),
+          prompt: i18n.translate('xpack.slo.starterPrompts.canYouCreateAnSlo.prompt', {
+            defaultMessage: 'Can you create an SLO?',
+          }),
+          icon: 'questionInCircle',
+        },
+      ],
+    });
 
   ReactDOM.render(
     <KibanaRenderContextProvider {...core}>

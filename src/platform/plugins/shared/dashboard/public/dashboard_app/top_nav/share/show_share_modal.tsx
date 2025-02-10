@@ -7,28 +7,23 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import { omit } from 'lodash';
 import moment from 'moment';
 import React, { ReactElement, useState } from 'react';
 
 import { EuiCallOut, EuiCheckboxGroup } from '@elastic/eui';
 import type { Capabilities } from '@kbn/core/public';
-import { QueryState } from '@kbn/data-plugin/common';
 import { DASHBOARD_APP_LOCATOR } from '@kbn/deeplinks-analytics';
 import { i18n } from '@kbn/i18n';
-import { getStateFromKbnUrl, setStateToKbnUrl, unhashUrl } from '@kbn/kibana-utils-plugin/public';
 
 import { FormattedMessage } from '@kbn/i18n-react';
-import { convertPanelMapToPanelsArray, DashboardPanelMap } from '../../../../common';
+import { DashboardPanelMap } from '../../../../common';
 import { DashboardLocatorParams } from '../../../dashboard_container/types';
-import {
-  getDashboardBackupService,
-  PANELS_CONTROL_GROUP_KEY,
-} from '../../../services/dashboard_backup_service';
+import { getDashboardBackupService } from '../../../services/dashboard_backup_service';
 import { coreServices, dataService, shareService } from '../../../services/kibana_services';
 import { getDashboardCapabilities } from '../../../utils/get_dashboard_capabilities';
 import { shareModalStrings } from '../../_dashboard_app_strings';
 import { dashboardUrlParams } from '../../dashboard_router';
+import { useShareableUrl } from '../hooks/use_shareable_url';
 
 const showFilterBarId = 'showFilterBar';
 
@@ -55,6 +50,11 @@ export function ShowShareModal({
   dashboardTitle,
   getPanelsState,
 }: ShowShareModalProps) {
+  const shareableUrl = useShareableUrl({
+    getPanelsState,
+    savedObjectId,
+  });
+
   if (!shareService) return;
 
   const EmbedUrlParamExtension = ({
@@ -114,63 +114,10 @@ export function ShowShareModal({
     );
   };
 
-  let unsavedStateForLocator: DashboardLocatorParams = {};
+  const unsavedStateForLocator: DashboardLocatorParams = {};
 
-  const { dashboardState: unsavedDashboardState, panels: panelModifications } =
+  const { dashboardState: unsavedDashboardState } =
     getDashboardBackupService().getState(savedObjectId) ?? {};
-
-  const allUnsavedPanels = (() => {
-    if (
-      Object.keys(unsavedDashboardState?.panels ?? {}).length === 0 &&
-      Object.keys(omit(panelModifications ?? {}, PANELS_CONTROL_GROUP_KEY)).length === 0
-    ) {
-      // if this dashboard has no modifications or unsaved panels return early. No overrides needed.
-      return;
-    }
-
-    const latestPanels = getPanelsState();
-    // apply modifications to panels.
-    const modifiedPanels = panelModifications
-      ? Object.entries(panelModifications).reduce((acc, [panelId, unsavedPanel]) => {
-          if (unsavedPanel && latestPanels?.[panelId]) {
-            acc[panelId] = {
-              ...latestPanels[panelId],
-              explicitInput: {
-                ...latestPanels?.[panelId].explicitInput,
-                ...unsavedPanel,
-                id: panelId,
-              },
-            };
-          }
-          return acc;
-        }, {} as DashboardPanelMap)
-      : {};
-
-    // The latest state of panels to share. This will overwrite panels from the saved object on Dashboard load.
-    const allUnsavedPanelsMap = {
-      ...latestPanels,
-      ...modifiedPanels,
-    };
-    return convertPanelMapToPanelsArray(allUnsavedPanelsMap);
-  })();
-
-  if (unsavedDashboardState) {
-    unsavedStateForLocator = {
-      query: unsavedDashboardState.query,
-      filters: unsavedDashboardState.filters,
-      controlGroupState: panelModifications?.[
-        PANELS_CONTROL_GROUP_KEY
-      ] as DashboardLocatorParams['controlGroupState'],
-      panels: allUnsavedPanels as DashboardLocatorParams['panels'],
-
-      // options
-      useMargins: unsavedDashboardState?.useMargins,
-      syncColors: unsavedDashboardState?.syncColors,
-      syncCursor: unsavedDashboardState?.syncCursor,
-      syncTooltips: unsavedDashboardState?.syncTooltips,
-      hidePanelTitles: unsavedDashboardState?.hidePanelTitles,
-    };
-  }
 
   const locatorParams: DashboardLocatorParams = {
     dashboardId: savedObjectId,
@@ -181,19 +128,6 @@ export function ShowShareModal({
     timeRange: dataService.query.timefilter.timefilter.getTime(),
     ...unsavedStateForLocator,
   };
-
-  let _g = getStateFromKbnUrl<QueryState>('_g', window.location.href);
-  if (_g?.filters && _g.filters.length === 0) {
-    _g = omit(_g, 'filters');
-  }
-  const baseUrl = setStateToKbnUrl('_g', _g, undefined, window.location.href);
-
-  const shareableUrl = setStateToKbnUrl(
-    '_a',
-    unsavedStateForLocator,
-    { useHash: false, storeInHashQuery: true },
-    unhashUrl(baseUrl)
-  );
 
   const allowShortUrl = getDashboardCapabilities().createShortUrl;
 

@@ -73,7 +73,7 @@ export function SloDetailsPage() {
       return;
     }
 
-    return observabilityAIAssistant.service.setScreenContext({
+    return observabilityAIAssistant.service.screenContext.setScreenContext({
       screenDescription: dedent(`
         The user is looking at the detail page for the following SLO
 

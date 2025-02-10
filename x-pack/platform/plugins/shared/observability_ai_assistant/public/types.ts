@@ -21,6 +21,7 @@ import type {
   ObservabilityAIAssistantScreenContext,
   PendingMessage,
   AdHocInstruction,
+  SnapshotResult,
 } from '../common/types';
 import type { TelemetryEventTypeWithPayload } from './analytics';
 import type { ObservabilityAIAssistantAPIClient } from './api';
@@ -90,6 +91,12 @@ export interface ObservabilityAIAssistantChatService {
   getScopes: () => AssistantScope[];
 }
 
+export interface ObservabilityAIAssistantScreenContextService {
+  setScreenContext: (screenContext: ObservabilityAIAssistantScreenContext) => () => void;
+  screenContexts$: Observable<ObservabilityAIAssistantScreenContext[]>;
+  snapshot: () => Promise<SnapshotResult>;
+}
+
 export interface ObservabilityAIAssistantConversationService {
   openNewConversation: ({}: {
     messages: Message[];
@@ -108,8 +115,7 @@ export interface ObservabilityAIAssistantService {
   isEnabled: () => boolean;
   start: ({}: { signal: AbortSignal }) => Promise<ObservabilityAIAssistantChatService>;
   register: (fn: ChatRegistrationRenderFunction) => void;
-  setScreenContext: (screenContext: ObservabilityAIAssistantScreenContext) => () => void;
-  getScreenContexts: () => ObservabilityAIAssistantScreenContext[];
+  screenContext: ObservabilityAIAssistantScreenContextService;
   conversations: ObservabilityAIAssistantConversationService;
   navigate: (callback: () => void) => Promise<Observable<MessageAddEvent>>;
   scope$: BehaviorSubject<AssistantScope[]>;

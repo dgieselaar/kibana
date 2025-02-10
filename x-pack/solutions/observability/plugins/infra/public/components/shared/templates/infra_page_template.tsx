@@ -64,7 +64,11 @@ export const InfraPageTemplate = ({
     locators: share.url.locators,
   });
 
-  const { setScreenContext } = observabilityAIAssistant?.service || {};
+  const {
+    screenContext: { setScreenContext },
+  } = observabilityAIAssistant?.service || {
+    screenContext: {},
+  };
 
   useEffect(() => {
     return setScreenContext?.({

@@ -82,7 +82,7 @@ export function ErrorSampler({ errorSampleIds, errorSamplesFetchStatus, occurren
     if (!errorData || !observabilityAIAssistant) {
       return;
     }
-    return observabilityAIAssistant.service.setScreenContext({
+    return observabilityAIAssistant.service.screenContext.setScreenContext({
       data: [
         {
           name: 'error_sample',

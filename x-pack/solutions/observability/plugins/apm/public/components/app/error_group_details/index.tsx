@@ -193,7 +193,7 @@ export function ErrorGroupDetails() {
   const showDetails = errorSamplesData.occurrencesCount !== 0;
 
   useEffect(() => {
-    return observabilityAIAssistant?.service.setScreenContext({
+    return observabilityAIAssistant?.service.screenContext.setScreenContext({
       screenDescription: `The user is looking at the error details view. The current error group name is ${groupId}. There have been ${errorSamplesData.occurrencesCount} occurrences in the currently selected time range`,
     });
   }, [observabilityAIAssistant, errorSamplesData.occurrencesCount, groupId]);

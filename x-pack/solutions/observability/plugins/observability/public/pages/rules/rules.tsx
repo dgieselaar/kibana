@@ -74,7 +74,7 @@ export function RulesPage({ activeTab = RULES_TAB_NAME }: RulesPageProps) {
     (ruleType) => ruleType.authorizedConsumers[ALERTING_FEATURE_ID]?.all
   );
 
-  const { setScreenContext } = observabilityAIAssistant?.service || {};
+  const { setScreenContext } = observabilityAIAssistant?.service.screenContext || {};
 
   const ruleTypesWithDescriptions = useGetAvailableRulesWithDescriptions();
 

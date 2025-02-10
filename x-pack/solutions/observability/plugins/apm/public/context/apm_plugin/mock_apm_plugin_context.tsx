@@ -189,7 +189,7 @@ export const mockApmPluginContextValue = {
     getTriggerCompatibleActions: () => Promise.resolve([]),
   },
   observabilityAIAssistant: {
-    service: { setScreenContext: jest.fn().mockImplementation(() => noop) },
+    service: { screenContext: { setScreenContext: jest.fn().mockImplementation(() => noop) } },
   },
 };
 

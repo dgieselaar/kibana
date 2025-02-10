@@ -24,9 +24,12 @@ import {
   type LensXYConfig,
 } from '@kbn/lens-embeddable-utils/config_builder';
 import { LensEmbeddableInput } from '@kbn/lens-plugin/public';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { firstValueFrom, of } from 'rxjs';
+import useObservable from 'react-use/lib/useObservable';
 import { DashboardApi } from '../../dashboard_api/types';
 import { dataService, observabilityAssistantService } from '../../services/kibana_services';
+import { useShareableUrl } from '../top_nav/hooks/use_shareable_url';
 
 const chartTypes = [
   'xy',
@@ -47,17 +50,43 @@ export function useObservabilityAIAssistantContext({
 }: {
   dashboardApi: DashboardApi | undefined;
 }) {
+  const savedObjectId$ = useMemo(() => {
+    return dashboardApi?.savedObjectId$ ?? of(undefined);
+  }, [dashboardApi?.savedObjectId$]);
+
+  const savedObjectId = useObservable(savedObjectId$);
+
+  const shareableUrl = useShareableUrl({
+    savedObjectId,
+    getPanelsState: () => dashboardApi?.panels$.value ?? {},
+  });
+
   useEffect(() => {
     if (!observabilityAssistantService) {
       return;
     }
 
     const {
-      service: { setScreenContext },
+      service: { screenContext },
       createScreenContextAction,
     } = observabilityAssistantService;
 
-    return setScreenContext({
+    return screenContext.setScreenContext({
+      ...(dashboardApi
+        ? {
+            snapshot: async () => {
+              console.log('taking snapshot');
+              const title = (await firstValueFrom(dashboardApi?.title$)) ?? window.document.title;
+              console.log({
+                title,
+              });
+              return {
+                title,
+                href: shareableUrl,
+              };
+            },
+          }
+        : {}),
       screenDescription:
         'The user is looking at the dashboard app. Here they can add visualizations to a dashboard and save them',
       actions: dashboardApi
@@ -377,5 +406,5 @@ export function useObservabilityAIAssistantContext({
           ]
         : [],
     });
-  }, [dashboardApi]);
+  }, [dashboardApi, shareableUrl]);
 }

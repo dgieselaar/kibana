@@ -142,7 +142,7 @@ export function AlertDetails() {
 
     const screenDescription = getScreenDescription(alertDetail);
 
-    return observabilityAIAssistant.service.setScreenContext({
+    return observabilityAIAssistant.service.screenContext.setScreenContext({
       screenDescription,
       data: [
         {

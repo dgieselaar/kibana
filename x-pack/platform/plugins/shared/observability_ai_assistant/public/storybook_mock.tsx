@@ -15,33 +15,37 @@ import type { ObservabilityAIAssistantAPIClient } from './api';
 import type { ObservabilityAIAssistantChatService, ObservabilityAIAssistantService } from './types';
 import { buildFunctionElasticsearch, buildFunctionServiceSummary } from './utils/builders';
 
-export const createStorybookChatService = (): ObservabilityAIAssistantChatService => ({
-  sendAnalyticsEvent: () => {},
-  chat: (options) => new Observable<ChatCompletionChunkEvent>(),
-  complete: (options) => new Observable<StreamingChatResponseEventWithoutError>(),
-  getFunctions: () => [buildFunctionElasticsearch(), buildFunctionServiceSummary()],
-  renderFunction: (name) => (
-    <div>
-      {i18n.translate('xpack.observabilityAiAssistant.chatService.div.helloLabel', {
-        defaultMessage: 'Hello',
-      })}
-      {name}
-    </div>
-  ),
-  hasFunction: () => true,
-  hasRenderFunction: () => true,
-  getSystemMessage: () => ({
-    '@timestamp': new Date().toISOString(),
-    message: {
-      role: MessageRole.System,
-      content: 'System',
-    },
-  }),
-  functions$: new BehaviorSubject<FunctionDefinition[]>(
-    []
-  ) as ObservabilityAIAssistantChatService['functions$'],
-  getScopes: () => ['all'],
-});
+export const createStorybookChatService = (): ObservabilityAIAssistantChatService => {
+  const service: ObservabilityAIAssistantChatService = {
+    sendAnalyticsEvent: () => {},
+    chat: (options) => new Observable<ChatCompletionChunkEvent>(),
+    complete: (options) => new Observable<StreamingChatResponseEventWithoutError>(),
+    getFunctions: () => [buildFunctionElasticsearch(), buildFunctionServiceSummary()],
+    renderFunction: (name) => (
+      <div>
+        {i18n.translate('xpack.observabilityAiAssistant.chatService.div.helloLabel', {
+          defaultMessage: 'Hello',
+        })}
+        {name}
+      </div>
+    ),
+    hasFunction: () => true,
+    hasRenderFunction: () => true,
+    getSystemMessage: () => ({
+      '@timestamp': new Date().toISOString(),
+      message: {
+        role: MessageRole.System,
+        content: 'System',
+      },
+    }),
+    functions$: new BehaviorSubject<FunctionDefinition[]>(
+      []
+    ) as ObservabilityAIAssistantChatService['functions$'],
+    getScopes: () => ['all'],
+  };
+
+  return service;
+};
 
 export const createStorybookService = (): ObservabilityAIAssistantService => ({
   isEnabled: () => true,
@@ -50,8 +54,10 @@ export const createStorybookService = (): ObservabilityAIAssistantService => ({
   },
   callApi: {} as ObservabilityAIAssistantAPIClient,
   register: () => {},
-  setScreenContext: () => noop,
-  getScreenContexts: () => [],
+  screenContext: {
+    setScreenContext: () => noop,
+    screenContexts$: of([]),
+  },
   conversations: {
     openNewConversation: noop,
     predefinedConversation$: new Observable(),

@@ -16,6 +16,7 @@ import {
 } from '@elastic/eui';
 import { css } from '@emotion/css';
 import { uniq } from 'lodash';
+import useObservable from 'react-use/lib/useObservable';
 import { useAIAssistantAppService } from '../hooks/use_ai_assistant_app_service';
 import { useGenAIConnectors } from '../hooks/use_genai_connectors';
 import { nonNullable } from '../utils/non_nullable';
@@ -33,11 +34,11 @@ export function StarterPrompts({ onSelectPrompt }: { onSelectPrompt: (prompt: st
   const service = useAIAssistantAppService();
   const { connectors } = useGenAIConnectors();
 
+  const contexts = useObservable(service.screenContext.screenContexts$) ?? [];
+
   if (!connectors || connectors.length === 0) {
     return null;
   }
-
-  const contexts = service.getScreenContexts();
 
   const starterPrompts = uniq(
     [...contexts]

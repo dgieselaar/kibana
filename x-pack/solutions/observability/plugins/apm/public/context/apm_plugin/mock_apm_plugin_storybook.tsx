@@ -162,7 +162,7 @@ const mockApmPluginContext = {
   plugins: mockPlugin,
   unifiedSearch: mockUnifiedSearchBar,
   observabilityAIAssistant: {
-    service: { setScreenContext: () => noop },
+    service: { screenContext: { setScreenContext: () => noop } },
   },
   share: {
     url: {

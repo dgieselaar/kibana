@@ -33,7 +33,7 @@ import { MountPoint } from '@kbn/core-mount-utils-browser';
 import { i18n } from '@kbn/i18n';
 import { RedirectAppLinks } from '@kbn/shared-ux-link-redirect-app';
 import { Router } from '@kbn/shared-ux-router';
-import React, { useCallback, type ComponentProps } from 'react';
+import React, { useCallback, type ComponentProps, useEffect } from 'react';
 import useObservable from 'react-use/lib/useObservable';
 import { debounceTime, Observable } from 'rxjs';
 import type { CustomBranding } from '@kbn/core-custom-branding-common';
@@ -234,6 +234,13 @@ export const ProjectHeader = ({
   const { euiTheme } = useEuiTheme();
   const headerCss = getHeaderCss(euiTheme);
   const { logo: logoCss } = headerCss;
+
+  useEffect(() => {
+    console.log('ProjectHeader mounted');
+    return () => {
+      console.log('ProjectHeader unmounted');
+    };
+  }, []);
 
   return (
     <>

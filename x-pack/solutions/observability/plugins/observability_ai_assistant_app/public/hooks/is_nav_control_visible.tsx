@@ -51,7 +51,8 @@ export function useIsNavControlVisible({ coreStart, pluginsStart }: UseIsNavCont
       aiAssistantManagementSelection.aiAssistantType$,
     ]).subscribe({
       next: ([appId, applications, preferredAssistantType]) => {
-        setIsVisible(getVisibility(appId, applications, preferredAssistantType));
+        const visible = getVisibility(appId, applications, preferredAssistantType);
+        setIsVisible(visible);
       },
     });
 

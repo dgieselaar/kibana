@@ -38,7 +38,7 @@ export const GettingStartedPage = () => {
   const history = useHistory();
 
   const { observabilityAIAssistant } = useKibana<ClientPluginsStart>().services;
-  const setScreenContext = observabilityAIAssistant?.service.setScreenContext;
+  const setScreenContext = observabilityAIAssistant?.service.screenContext.setScreenContext;
 
   useEnablement();
 

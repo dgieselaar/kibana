@@ -35,7 +35,7 @@ export class RedirectManager {
     application.register({
       id: 'r',
       title: 'Redirect endpoint',
-      chromeless: true,
+      chromeless: false,
       mount: async (params) => {
         const { render } = await import('./render');
         const [start] = await core.getStartServices();

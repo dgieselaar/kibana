@@ -6,7 +6,7 @@
  */
 import type { DeeplyMockedKeys } from '@kbn/utility-types-jest';
 import { renderHook, act, type RenderHookResult } from '@testing-library/react';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import {
   MessageRole,
   type ObservabilityAIAssistantChatService,
@@ -81,7 +81,9 @@ describe('useChat', () => {
           ],
           persist: false,
           service: {
-            getScreenContexts: () => [],
+            screenContext: {
+              screenContexts$: of([]),
+            },
           } as unknown as ObservabilityAIAssistantService,
           scopes: ['observability'],
         } as UseChatProps,

@@ -78,7 +78,7 @@ export function OverviewPage() {
   );
   const { hasAnyData, isAllRequestsComplete, hasDataMap } = useHasData();
 
-  const { setScreenContext } = observabilityAIAssistant?.service || {};
+  const { setScreenContext } = observabilityAIAssistant?.service.screenContext || {};
 
   const appsWithoutData = Object.keys(hasDataMap)
     .sort()

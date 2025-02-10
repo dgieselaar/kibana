@@ -96,6 +96,7 @@ export function WelcomeMessage({
           <StarterPrompts onSelectPrompt={onSelectPrompt} />
           <EuiSpacer size="l" />
           <Disclaimer />
+          <EuiSpacer size="l" />
         </EuiFlexItem>
       </EuiFlexGroup>
 

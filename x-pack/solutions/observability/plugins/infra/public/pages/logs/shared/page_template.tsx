@@ -36,10 +36,10 @@ export const LogsPageTemplate: React.FC<LogsPageTemplateProps> = ({
 
   const onboardingLocator = share.url.locators.get(OBSERVABILITY_ONBOARDING_LOCATOR);
   const href = onboardingLocator?.getRedirectUrl({ category: 'logs' });
-  const { setScreenContext } = observabilityAIAssistant?.service || {};
+  const { screenContext } = observabilityAIAssistant?.service || {};
 
   useEffect(() => {
-    return setScreenContext?.({
+    return screenContext?.setScreenContext?.({
       starterPrompts: [
         ...(!isDataLoading && !hasData
           ? [
@@ -62,7 +62,7 @@ export const LogsPageTemplate: React.FC<LogsPageTemplateProps> = ({
           : []),
       ],
     });
-  }, [hasData, isDataLoading, setScreenContext]);
+  }, [hasData, isDataLoading, screenContext]);
 
   const noDataConfig: NoDataConfig | undefined = hasData
     ? undefined

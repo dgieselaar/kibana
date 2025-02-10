@@ -54,7 +54,7 @@ export function SloList() {
       (groupResults) => groupResults.map((result) => `- ${result.name}`).join('\n')
     ) as Record<SLOWithSummaryResponse['summary']['status'], string>;
 
-    return observabilityAIAssistant.service.setScreenContext({
+    return observabilityAIAssistant.service.screenContext.setScreenContext({
       screenDescription: dedent(`The user is looking at a list of SLOs.
 
       ${

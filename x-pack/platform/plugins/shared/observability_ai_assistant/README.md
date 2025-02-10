@@ -157,11 +157,11 @@ Screen context is how the AI Assistant is aware of what the user is looking at. 
 - `data`: this is an array of key/value pairs along with a description. This is not sent over to the LLM immediately, but the LLM is made aware of its existence. It can then pull in this data via a function request. This is done to keep the token cost down initially, but still keep the option open for the LLM to use it if it deems it necessary.
 - `actions`: actions are functions that are executed _client-side_ instead of server-side. That means that these functions can easily interact with the page, e.g. via React state updates or other API calls. For instance, you can use this to allow the Assistant to navigate to another page or fill in a form.
 
-From the start contract, you can use `service.setScreenContext`:
+From the start contract, you can use `service.screenContext.setScreenContext`:
 
 ```ts
 useEffect(() => {
-  return observabilityAIAssistant?.service.setScreenContext({
+  return observabilityAIAssistant?.service.screenContext.setScreenContext({
     description: 'Description of the page',
   });
 }, [observabilityAIAssistant?.service]);
@@ -173,7 +173,7 @@ Here's how to add data:
 
 ```ts
 useEffect(() => {
-  return observabilityAIAssistant?.service.setScreenContext({
+  return observabilityAIAssistant?.service.screenContext.setScreenContext({
     data: [
       {
         name: 'my_data',
@@ -192,7 +192,7 @@ Finally, for actions:
 ```ts
 import { createScreenContext } from '@kbn/observability-ai-assistant-plugin/public';
 useEffect(() => {
-  return observabilityAIAssistant?.service.setScreenContext({
+  return observabilityAIAssistant?.service.screenContext.setScreenContext({
     actions: createScreenContextAction(
       {
         name: 'navigate_to_home',

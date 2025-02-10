@@ -409,6 +409,7 @@ export class ObservabilityAIAssistantClient {
                       id: conversationId,
                       token_count: tokenCountResult,
                     },
+                    attachments: [],
                     public: !!isPublic,
                     labels: {},
                     numeric_labels: {},
@@ -565,7 +566,14 @@ export class ObservabilityAIAssistantClient {
     });
 
     return {
-      conversations: response.hits.hits.map((hit) => hit._source!),
+      conversations: response.hits.hits.map((hit) => {
+        const conversation = hit._source!;
+        return {
+          // @ts-expect-error backwards compatibility
+          attachments: [],
+          ...conversation,
+        };
+      }),
     };
   };
 

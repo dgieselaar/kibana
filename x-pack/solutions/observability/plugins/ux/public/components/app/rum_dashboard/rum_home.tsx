@@ -63,7 +63,7 @@ export function RumHome() {
   }
 
   useEffect(() => {
-    return observabilityAIAssistant?.service.setScreenContext({
+    return observabilityAIAssistant?.service.screenContext.setScreenContext({
       screenDescription,
       starterPrompts: [
         ...(!hasData

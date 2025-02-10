@@ -27,10 +27,15 @@ import { createUseChat } from '@kbn/observability-ai-assistant-plugin/public/hoo
 import type { NotificationsStart } from '@kbn/core/public';
 import { KibanaContextProvider } from '@kbn/kibana-react-plugin/public';
 import { AssistantScope } from '@kbn/ai-assistant-common';
+import { ObservabilityAIAssistantScreenContext } from '@kbn/observability-ai-assistant-plugin/common/types';
+import { ObservabilityAIAssistantScreenContextService } from '@kbn/observability-ai-assistant-plugin/public/types';
 
 let hookResult: RenderHookResult<UseConversationResult, UseConversationProps>;
 
-type MockedService = DeeplyMockedKeys<Omit<AIAssistantAppService, 'conversations'>> & {
+type MockedService = DeeplyMockedKeys<
+  Omit<AIAssistantAppService, 'conversations' | 'screenContext'>
+> & {
+  screenContext: DeeplyMockedKeys<ObservabilityAIAssistantScreenContextService>;
   conversations: DeeplyMockedKeys<
     Omit<AIAssistantAppService['conversations'], 'predefinedConversation$'>
   > & {
@@ -43,8 +48,12 @@ const mockService: MockedService = {
   isEnabled: jest.fn(),
   start: jest.fn(),
   register: jest.fn(),
-  setScreenContext: jest.fn(),
-  getScreenContexts: jest.fn(),
+  screenContext: {
+    setScreenContext: jest.fn(),
+    screenContexts$: new BehaviorSubject(
+      [] as ObservabilityAIAssistantScreenContext[]
+    ).asObservable() as MockedService['screenContext']['screenContexts$'],
+  },
   conversations: {
     openNewConversation: jest.fn(),
     predefinedConversation$: new Observable(),

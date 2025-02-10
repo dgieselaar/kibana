@@ -28,7 +28,7 @@ export function useScreenContext() {
       return;
     }
 
-    observabilityAIAssistant.service.setScreenContext({
+    return observabilityAIAssistant.service.screenContext.setScreenContext({
       screenDescription: dedent(`
         The user is looking at the details of an investigation in order to understand the root cause of an issue.
         The investigation details include the title, status, tags, and its time range.

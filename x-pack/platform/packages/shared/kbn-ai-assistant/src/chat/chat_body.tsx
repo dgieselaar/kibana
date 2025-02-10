@@ -31,7 +31,8 @@ import {
 } from '@kbn/observability-ai-assistant-plugin/public';
 import type { AuthenticatedUser } from '@kbn/security-plugin/common';
 import { findLastIndex } from 'lodash';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { v4 } from 'uuid';
 import type { UseKnowledgeBaseResult } from '../hooks/use_knowledge_base';
 import { ASSISTANT_SETUP_TITLE, EMPTY_CONVERSATION_TITLE, UPGRADE_LICENSE_TITLE } from '../i18n';
 import { useAIAssistantChatService } from '../hooks/use_ai_assistant_chat_service';
@@ -45,8 +46,14 @@ import { IncorrectLicensePanel } from './incorrect_license_panel';
 import { SimulatedFunctionCallingCallout } from './simulated_function_calling_callout';
 import { WelcomeMessage } from './welcome_message';
 import { useLicense } from '../hooks/use_license';
-import { PromptEditor } from '../prompt_editor/prompt_editor';
 import { deserializeMessage } from '../utils/deserialize_message';
+import {
+  InputControl,
+  InputControlMode,
+  InputControlSuggestion,
+} from '../input_control/input_control';
+import { AttachmentList } from './attachment_list';
+import { useAIAssistantAppService } from '../hooks';
 
 const fullHeightClassName = css`
   height: 100%;
@@ -103,8 +110,6 @@ const containerClassName = css`
   max-height: 100%;
 `;
 
-const PADDING_AND_BORDER = 32;
-
 export function ChatBody({
   connectors,
   currentUser,
@@ -136,18 +141,21 @@ export function ChatBody({
   const scrollBarStyles = euiScrollBarStyles(theme);
   const { euiTheme } = theme;
 
+  const service = useAIAssistantAppService();
+
   const chatService = useAIAssistantChatService();
 
   const { simulatedFunctionCallingEnabled } = useSimulatedFunctionCalling();
 
-  const { conversation, messages, next, state, stop, saveTitle } = useConversation({
-    initialConversationId,
-    initialMessages,
-    initialTitle,
-    chatService,
-    connectorId: connectors.selectedConnector,
-    onConversationUpdate,
-  });
+  const { conversation, messages, next, state, stop, saveTitle, addAttachment, removeAttachment } =
+    useConversation({
+      initialConversationId,
+      initialMessages,
+      initialTitle,
+      chatService,
+      connectorId: connectors.selectedConnector,
+      onConversationUpdate,
+    });
 
   const timelineContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -181,8 +189,6 @@ export function ChatBody({
   const isAtBottom = (parent: HTMLElement) =>
     parent.scrollTop + parent.clientHeight >= parent.scrollHeight;
 
-  const [promptEditorHeight, setPromptEditorHeight] = useState<number>(0);
-
   const handleFeedback = (feedback: Feedback) => {
     if (conversation.value?.conversation && 'user' in conversation.value) {
       const {
@@ -205,14 +211,6 @@ export function ChatBody({
       });
     }
   };
-
-  const handleChangeHeight = useCallback((editorHeight: number) => {
-    if (editorHeight === 0) {
-      setPromptEditorHeight(0);
-    } else {
-      setPromptEditorHeight(editorHeight + PADDING_AND_BORDER);
-    }
-  }, []);
 
   useEffect(() => {
     const parent = timelineContainerRef.current?.parentElement;
@@ -324,6 +322,76 @@ export function ChatBody({
     }
   };
 
+  const [mode, setMode] = useState(InputControlMode.Prompt);
+  const [input, setInput] = useState('');
+
+  const [suggestions, setSuggestions] = useState<InputControlSuggestion[]>([]);
+
+  useEffect(() => {}, []);
+
+  const inputElement = (
+    <InputControl
+      value={input}
+      onChange={(nextValue) => {
+        setInput(nextValue);
+      }}
+      mode={mode}
+      onModeChange={(nextMode) => {
+        setMode(nextMode);
+        setInput('');
+      }}
+      onSubmit={async () => {
+        switch (mode) {
+          case InputControlMode.Note:
+            return addAttachment({
+              '@timestamp': new Date().toISOString(),
+              id: v4(),
+              type: 'note',
+              payload: {
+                note: {
+                  message: input,
+                },
+              },
+            }).then(() => {});
+
+          case InputControlMode.Suggest:
+            break;
+
+          case InputControlMode.Prompt:
+            next(
+              messages.concat({
+                '@timestamp': new Date().toISOString(),
+                message: {
+                  role: MessageRole.User,
+                  content: input,
+                },
+              })
+            );
+            break;
+        }
+      }}
+      onSuggestionClick={async () => {
+        setInput('');
+      }}
+      suggestions={suggestions}
+      showSnapshotButton
+      onSnapshotClick={async () => {
+        return (
+          service.screenContext.snapshot().then((snapshotResult) => {
+            addAttachment({
+              '@timestamp': new Date().toISOString(),
+              type: 'snapshot',
+              id: v4(),
+              payload: {
+                snapshot: snapshotResult,
+              },
+            });
+          }) ?? Promise.resolve()
+        );
+      }}
+    />
+  );
+
   if (!hasCorrectLicense && !initialConversationId) {
     footer = (
       <>
@@ -335,7 +403,8 @@ export function ChatBody({
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
           <EuiPanel hasBorder={false} hasShadow={false} paddingSize="m">
-            <PromptEditor
+            {inputElement}
+            {/* <PromptEditor
               hidden={connectors.loading || connectors.connectors?.length === 0}
               loading={isLoading}
               disabled
@@ -346,7 +415,7 @@ export function ChatBody({
               onSendTelemetry={(eventWithPayload) =>
                 chatService.sendAnalyticsEvent(eventWithPayload)
               }
-            />
+            /> */}
             <EuiSpacer size="s" />
           </EuiPanel>
         </EuiFlexItem>
@@ -366,7 +435,8 @@ export function ChatBody({
               paddingSize="m"
               className={animClassName(euiTheme)}
             >
-              {connectors.connectors?.length === 0 || messages.length === 1 ? (
+              {(!connectors.connectors?.length || messages.length === 1) &&
+              !conversation.value?.attachments.length ? (
                 <WelcomeMessage
                   connectors={connectors}
                   knowledgeBase={knowledgeBase}
@@ -382,28 +452,40 @@ export function ChatBody({
                   }
                 />
               ) : (
-                <ChatTimeline
-                  messages={messages}
-                  knowledgeBase={knowledgeBase}
-                  chatService={chatService}
-                  currentUser={currentUser}
-                  chatState={state}
-                  hasConnector={!!connectors.connectors?.length}
-                  onEdit={(editedMessage, newMessage) => {
-                    setStickToBottom(true);
-                    const indexOf = messages.indexOf(editedMessage);
-                    next(messages.slice(0, indexOf).concat(newMessage));
-                  }}
-                  onFeedback={handleFeedback}
-                  onRegenerate={(message) => {
-                    next(reverseToLastUserMessage(messages, message));
-                  }}
-                  onSendTelemetry={(eventWithPayload) =>
-                    chatService.sendAnalyticsEvent(eventWithPayload)
-                  }
-                  onStopGenerating={stop}
-                  onActionClick={handleActionClick}
-                />
+                <EuiFlexGroup direction="column" gutterSize="m">
+                  {conversation.value?.attachments.length ? (
+                    <AttachmentList
+                      attachments={conversation.value.attachments}
+                      onAttachmentRemove={(attachment) => {
+                        return removeAttachment(attachment).then(() => {});
+                      }}
+                    />
+                  ) : (
+                    <></>
+                  )}
+                  <ChatTimeline
+                    messages={messages}
+                    knowledgeBase={knowledgeBase}
+                    chatService={chatService}
+                    currentUser={currentUser}
+                    chatState={state}
+                    hasConnector={!!connectors.connectors?.length}
+                    onEdit={(editedMessage, newMessage) => {
+                      setStickToBottom(true);
+                      const indexOf = messages.indexOf(editedMessage);
+                      next(messages.slice(0, indexOf).concat(newMessage));
+                    }}
+                    onFeedback={handleFeedback}
+                    onRegenerate={(message) => {
+                      next(reverseToLastUserMessage(messages, message));
+                    }}
+                    onSendTelemetry={(eventWithPayload) =>
+                      chatService.sendAnalyticsEvent(eventWithPayload)
+                    }
+                    onStopGenerating={stop}
+                    onActionClick={handleActionClick}
+                  />
+                </EuiFlexGroup>
               )}
             </EuiPanel>
           </div>
@@ -415,11 +497,7 @@ export function ChatBody({
           </EuiFlexItem>
         ) : null}
 
-        <EuiFlexItem
-          grow={false}
-          className={promptEditorClassname(euiTheme)}
-          style={{ height: promptEditorHeight }}
-        >
+        <EuiFlexItem grow={false} className={promptEditorClassname(euiTheme)}>
           <EuiHorizontalRule margin="none" />
           <EuiPanel
             hasBorder={false}
@@ -428,7 +506,8 @@ export function ChatBody({
             color="subdued"
             className={promptEditorContainerClassName}
           >
-            <PromptEditor
+            {inputElement}
+            {/* <PromptEditor
               disabled={!connectors.selectedConnector || !hasCorrectLicense}
               hidden={connectors.loading || connectors.connectors?.length === 0}
               loading={isLoading}
@@ -440,7 +519,7 @@ export function ChatBody({
                 setStickToBottom(true);
                 return next(messages.concat(message));
               }}
-            />
+            /> */}
             <EuiSpacer size="s" />
           </EuiPanel>
         </EuiFlexItem>

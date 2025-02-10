@@ -54,6 +54,7 @@ import { DiscoverResizableLayout } from './discover_resizable_layout';
 import { PanelsToggle, PanelsToggleProps } from '../../../../components/panels_toggle';
 import { sendErrorMsg } from '../../hooks/use_saved_search_messages';
 import { useIsEsqlMode } from '../../hooks/use_is_esql_mode';
+import { getShareOptions } from '../top_nav/get_share_options';
 
 const SidebarMemoized = React.memo(DiscoverSidebarResponsive);
 const TopNavMemoized = React.memo(DiscoverTopNav);
@@ -166,15 +167,38 @@ export function DiscoverLayout({ stateContainer }: DiscoverLayoutProps) {
     [onRemoveColumn, ebtManager, fieldsMetadata]
   );
 
+  const services = useDiscoverServices();
+
+  const { shareableUrl } = getShareOptions({
+    dataView,
+    services,
+    stateContainer,
+  });
+
+  const snapshotTitle = globalQueryState.query
+    ? 'esql' in globalQueryState.query
+      ? globalQueryState.query.esql.replace(/\\n/g, '').trim()
+      : typeof globalQueryState.query.query === 'string'
+      ? globalQueryState.query.query
+      : undefined
+    : undefined;
+
   // The assistant is getting the state from the url correctly
   // expect from the index pattern where we have only the dataview id
   useEffect(() => {
-    return observabilityAIAssistant?.service.setScreenContext({
+    return observabilityAIAssistant?.service.screenContext.setScreenContext({
+      snapshot: async () => {
+        const title: string = snapshotTitle || document.title;
+        return {
+          title,
+          href: shareableUrl,
+        };
+      },
       screenDescription: `The user is looking at the Discover view on the ${
         isEsqlMode ? 'ES|QL' : 'dataView'
       } mode. The index pattern is the ${dataView.getIndexPattern()}`,
     });
-  }, [dataView, isEsqlMode, observabilityAIAssistant?.service]);
+  }, [dataView, isEsqlMode, observabilityAIAssistant?.service, shareableUrl, snapshotTitle]);
 
   const onAddFilter = useCallback<DocViewFilterFn>(
     (field, values, operation) => {
