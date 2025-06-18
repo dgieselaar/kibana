@@ -143,6 +143,7 @@ export {
   type PromptStreamResponse,
   type PromptVersion,
   type ToolOptionsOfPrompt,
+  type ToolOptionsOfPromptOptions,
   type UnboundPromptOptions,
   createPrompt,
 } from './src/prompt';

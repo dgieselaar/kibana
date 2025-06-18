@@ -27,8 +27,8 @@ export function getSampleDocuments({
 }: {
   esClient: ElasticsearchClient;
   index: string;
-  start: number;
-  end: number;
+  start: number | null;
+  end: number | null;
   kql?: string;
   size?: number;
   fields?: Array<QueryDslFieldAndFormat | string>;
@@ -43,7 +43,7 @@ export function getSampleDocuments({
       timeout,
       query: {
         bool: {
-          must: [...kqlQuery(kql), ...rangeQuery(start, end)],
+          must: [...kqlQuery(kql), ...rangeQuery(start ?? undefined, end ?? undefined)],
           should: [
             {
               function_score: {

@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import { BoundOptions } from '../bind';
 import { BoundChatCompleteAPI, ChatCompleteAPI } from '../chat_complete';
 import { InferenceConnector } from '../connectors';
 import { BoundOutputAPI, OutputAPI } from '../output';
@@ -36,6 +37,11 @@ export interface InferenceClient {
    * Non-inference connectors will throw an error.
    */
   getConnectorById: (id: string) => Promise<InferenceConnector>;
+  /**
+   * `bindTo` returns a bound version of the current
+   * InferenceClient.
+   */
+  bindTo: (options: BoundOptions) => BoundInferenceClient;
 }
 
 /**
@@ -64,4 +70,9 @@ export interface BoundInferenceClient {
    * Non-inference connectors will throw an error.
    */
   getConnectorById: (id: string) => Promise<InferenceConnector>;
+  /**
+   * `bindTo` returns a bound version of the current
+   * InferenceClient.
+   */
+  bindTo: (options: BoundOptions) => BoundInferenceClient;
 }

@@ -19,9 +19,11 @@ import {
   ToolCallback,
   PromptResponse,
   UnboundPromptOptions,
+  ToolOptionsOfPromptOptions,
 } from '@kbn/inference-common';
 import { withExecuteToolSpan } from '@kbn/inference-tracing';
 import { partition, last, takeRightWhile } from 'lodash';
+import { z } from '@kbn/zod';
 import { createReasonToolCall } from './create_reason_tool_call';
 import {
   createCompleteToolCall,
@@ -105,16 +107,15 @@ function prepareMessagesForLLM({
 interface PromptReasoningAgentOptions {
   inferenceClient: BoundInferenceClient;
   maxSteps?: number;
-  prevMessages?: undefined;
 }
 
 export function executePromptAsReasoningAgent<
   TPrompt extends Prompt,
   TPromptOptions extends PromptOptions<TPrompt>
 >(
-  options: UnboundPromptOptions &
-    PromptReasoningAgentOptions & { prompt: TPrompt } & {
-      toolCallbacks: ToolCallbacksOf<ToolOptionsOfPrompt<TPrompt>>;
+  options: Omit<UnboundPromptOptions, 'input' | 'prompt'> &
+    PromptReasoningAgentOptions & { prompt: TPrompt; input: z.input<TPrompt['input']> } & {
+      toolCallbacks: ToolCallbacksOf<ToolOptionsOfPromptOptions<TPromptOptions>>;
     }
 ): Promise<PromptResponse<TPromptOptions>>;
 
@@ -124,7 +125,14 @@ export function executePromptAsReasoningAgent(
       toolCallbacks: Record<string, ToolCallback>;
     }
 ): Promise<PromptResponse> {
-  const { inferenceClient, maxSteps = 10, toolCallbacks, tools, toolChoice } = options;
+  const {
+    inferenceClient,
+    maxSteps = 10,
+    toolCallbacks,
+    tools,
+    toolChoice,
+    prevMessages: initialMessages,
+  } = options;
 
   async function callTools(toolCalls: ToolCall[]): Promise<ToolMessage[]> {
     return await Promise.all(
@@ -288,7 +296,7 @@ export function executePromptAsReasoningAgent(
   }
 
   return innerCallPromptUntil({
-    messages: createReasonToolCall(),
+    messages: (initialMessages ?? []).concat(createReasonToolCall()),
     stepsLeft: maxSteps,
   });
 }

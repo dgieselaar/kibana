@@ -17,18 +17,21 @@ export async function describeDataset({
   kql,
 }: {
   esClient: ElasticsearchClient;
-  start: number;
-  end: number;
+  start: number | null;
+  end: number | null;
   index: string;
   kql?: string;
 }) {
+  const timeRangeFilter =
+    start !== null && end !== null ? rangeQuery(start, end) : [{ match_all: {} }];
+
   const [fieldCaps, hits] = await Promise.all([
     esClient.fieldCaps({
       index,
       fields: '*',
       index_filter: {
         bool: {
-          filter: rangeQuery(start, end),
+          filter: timeRangeFilter,
         },
       },
     }),

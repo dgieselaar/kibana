@@ -12,6 +12,9 @@ export function rangeQuery(
   end?: number,
   field = '@timestamp'
 ): estypes.QueryDslQueryContainer[] {
+  if (start === undefined || end === undefined) {
+    return [{ match_all: {} }];
+  }
   return [
     {
       range: {

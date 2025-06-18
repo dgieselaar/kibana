@@ -13,6 +13,7 @@ import { createChatCompleteApi } from '../chat_complete';
 import { createOutputApi } from '../../common/output/create_output_api';
 import { getConnectorById } from '../util/get_connector_by_id';
 import { createPromptApi } from '../prompt';
+import { bindClient } from '../../common/inference_client/bind_client';
 
 export function createInferenceClient({
   request,
@@ -24,6 +25,7 @@ export function createInferenceClient({
   actions: ActionsPluginStart;
 }): InferenceClient {
   const chatComplete = createChatCompleteApi({ request, actions, logger });
+
   return {
     chatComplete,
     prompt: createPromptApi({ request, actions, logger }),
@@ -31,6 +33,9 @@ export function createInferenceClient({
     getConnectorById: async (connectorId: string) => {
       const actionsClient = await actions.getActionsClientWithRequest(request);
       return await getConnectorById({ connectorId, actionsClient });
+    },
+    bindTo(options) {
+      return bindClient(this, options);
     },
   };
 }

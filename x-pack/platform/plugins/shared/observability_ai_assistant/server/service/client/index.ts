@@ -7,10 +7,15 @@
 import type { SearchHit } from '@elastic/elasticsearch/lib/api/types';
 import { notFound, forbidden } from '@hapi/boom';
 import type { ActionsClient } from '@kbn/actions-plugin/server';
-import type { CoreSetup, ElasticsearchClient, IUiSettingsClient } from '@kbn/core/server';
+import type {
+  CoreSetup,
+  ElasticsearchClient,
+  IScopedClusterClient,
+  IUiSettingsClient,
+} from '@kbn/core/server';
 import type { Logger } from '@kbn/logging';
 import type { PublicMethodsOf } from '@kbn/utility-types';
-import { last, merge, omit } from 'lodash';
+import { last, mapValues, merge, omit } from 'lodash';
 import {
   catchError,
   defer,
@@ -36,6 +41,12 @@ import {
   ToolChoiceType,
 } from '@kbn/inference-common';
 import { isLockAcquisitionError } from '@kbn/lock-manager';
+import { executePromptAsReasoningAgent } from '@kbn/inference-prompt-utils';
+import {
+  ObservabilityAIAssistantChatPrompt,
+  createAnalyticsAgent,
+} from '@kbn/observability-ai-tools';
+import { ToolResponseOf } from '@kbn/inference-common/src/chat_complete/tools';
 import { resourceNames } from '..';
 import {
   ChatCompletionChunkEvent,
@@ -175,6 +186,72 @@ export class ObservabilityAIAssistantClient {
       index: conversation._index,
       refresh: true,
     });
+  };
+
+  chatComplete = async ({
+    connectorId,
+    messages,
+    signal,
+    inferenceClient,
+    clusterClient,
+  }: {
+    connectorId: string;
+    messages: Message[];
+    signal: AbortSignal;
+    inferenceClient: InferenceClient;
+    clusterClient: IScopedClusterClient;
+  }): Promise<{ content: string }> => {
+    const boundInferenceClient = inferenceClient.bindTo({ connectorId });
+
+    const agents = {
+      analytics_agent: createAnalyticsAgent({
+        clusterClient,
+        inferenceClient: boundInferenceClient,
+        logger: this.dependencies.logger,
+        signal,
+      }),
+    };
+
+    const tools = mapValues(agents, (agent) => {
+      return {
+        description: agent.description,
+        schema: {
+          type: 'object',
+          properties: {
+            input: {
+              type: 'string',
+            },
+          },
+          required: ['input'],
+        },
+      } as const;
+    });
+
+    const response = await executePromptAsReasoningAgent({
+      prompt: ObservabilityAIAssistantChatPrompt,
+      inferenceClient: boundInferenceClient,
+      tools,
+      toolCallbacks: mapValues(tools, (tool, key) => {
+        return (toolCall: ToolResponseOf<typeof tool>) => {
+          return agents[key as keyof typeof agents].prompt(toolCall.input).then((res) => {
+            return {
+              output: {
+                content: res.content,
+              },
+            };
+          });
+        };
+      }),
+      abortSignal: signal,
+      prevMessages: convertMessagesForInference(messages, this.dependencies.logger),
+      input: {
+        agent_description: mapValues(agents, (agent) => ({ description: agent.description })),
+      },
+    });
+
+    return {
+      content: response.content,
+    };
   };
 
   complete = ({

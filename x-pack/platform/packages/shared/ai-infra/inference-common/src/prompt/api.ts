@@ -14,7 +14,7 @@ import {
   ToolDefinition,
   ToolOptions,
 } from '../chat_complete';
-import { Prompt, ToolOptionsOfPrompt } from './types';
+import { Prompt, ToolOptionsOfPrompt, ToolOptionsOfPromptOptions } from './types';
 import {
   ChatCompleteAPIResponse,
   ChatCompleteCompositeResponse,
@@ -39,10 +39,7 @@ export interface PromptOptions<TPrompt extends Prompt = Prompt> extends PromptCh
  * whether API was called with stream mode enabled or not.
  */
 export type PromptCompositeResponse<TPromptOptions extends PromptOptions = PromptOptions> =
-  ChatCompleteCompositeResponse<
-    Omit<TPromptOptions, 'tools' | 'toolChoice'> &
-      MergeToolOptions<ToolOptionsOfPrompt<TPromptOptions['prompt']>, TPromptOptions>
-  >;
+  ChatCompleteCompositeResponse<ToolOptionsOfPromptOptions<TPromptOptions>>;
 
 type MergeToolOptions<TLeft extends ToolOptions, TRight extends ToolOptions> = Overwrite<
   Pick<TLeft, 'tools' | 'toolChoice'>,

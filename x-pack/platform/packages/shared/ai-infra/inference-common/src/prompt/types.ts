@@ -6,8 +6,10 @@
  */
 
 import { z } from '@kbn/zod';
-import { MessageRole, ToolOptions } from '../chat_complete';
+import { Assign, Overwrite } from 'utility-types';
+import { MessageRole, ToolChoice, ToolDefinition, ToolOptions } from '../chat_complete';
 import { Model } from '../model_provider';
+import { PromptOptions } from './api';
 
 export interface ModelMatch extends Model {
   id?: string;
@@ -46,7 +48,7 @@ export type PromptVersion<TToolOptions extends ToolOptions = ToolOptions> = {
 export interface Prompt<TInput = any, TPromptVersions extends PromptVersion[] = PromptVersion[]> {
   name: string;
   description: string;
-  input: z.Schema<TInput>;
+  input: z.Schema<unknown, z.ZodTypeDef, TInput>;
   versions: TPromptVersions;
 }
 
@@ -67,3 +69,25 @@ export type ToolOptionsOfPrompt<TPrompt extends Prompt> = TPrompt['versions'] ex
     ? Pick<TPromptVersion, 'tools' | 'toolChoice'>
     : never
   : never;
+
+type MergeToolOptions<TLeft extends ToolOptions, TRight extends ToolOptions> = Overwrite<
+  Pick<TLeft, 'tools' | 'toolChoice'>,
+  {
+    toolChoice: TRight['toolChoice'] extends ToolChoice
+      ? TRight['toolChoice']
+      : TLeft['toolChoice'];
+    tools: TLeft['tools'] extends Record<string, ToolDefinition>
+      ? TRight['tools'] extends Record<string, ToolDefinition>
+        ? Assign<TLeft['tools'], TRight['tools']>
+        : TLeft['tools']
+      : TRight['tools'] extends Record<string, ToolDefinition>
+      ? TRight['tools']
+      : {};
+  }
+>;
+
+export type ToolOptionsOfPromptOptions<TPromptOptions extends PromptOptions> = Omit<
+  TPromptOptions,
+  'tools' | 'toolChoice'
+> &
+  MergeToolOptions<ToolOptionsOfPrompt<TPromptOptions['prompt']>, TPromptOptions>;

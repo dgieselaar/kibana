@@ -114,7 +114,7 @@ export async function answerAsEsqlExpert({
           index: toolCall.function.arguments.index,
           kql: toolCall.function.arguments.kql,
           start: start ?? moment().subtract(24, 'hours').valueOf(),
-          end: Date.now(),
+          end: end ?? Date.now(),
         });
 
         return {
