@@ -6,7 +6,6 @@
  */
 
 import { ElasticsearchClient, Logger } from '@kbn/core/server';
-import { inspect } from 'util';
 import { indexDocuments } from './index_documents';
 import { HuggingFaceDatasetSpec } from './types';
 
@@ -42,7 +41,7 @@ export async function getEmbeddings({
     .then((response) =>
       response.hits.hits.map((hit) => {
         const source = hit._source!;
-        Object.entries(source._inference_fields).forEach(([fieldName, config]) => {
+        Object.entries(source._inference_fields ?? {}).forEach(([fieldName, config]) => {
           delete (config as Record<string, any>).inference.model_settings.service;
         });
         return source;

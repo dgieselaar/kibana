@@ -8,6 +8,7 @@
 import { ElasticsearchClient, Logger } from '@kbn/core/server';
 import { createLocalDirDiskCacheStore, fromCache } from '@kbn/cache-cli';
 import { createCache } from 'cache-manager';
+import { errors } from '@elastic/elasticsearch';
 import { ALL_HUGGING_FACE_DATASETS } from './config';
 import { HuggingFaceDatasetSpec } from './types';
 import { ensureDatasetIndexExists } from './ensure_dataset_index_exists';
@@ -36,12 +37,28 @@ export async function loadHuggingFaceDatasets({
   logger,
   datasets = ALL_HUGGING_FACE_DATASETS,
   limit = 1000,
+  clear = false,
 }: {
   esClient: ElasticsearchClient;
   logger: Logger;
   datasets?: HuggingFaceDatasetSpec[];
   limit?: number;
+  clear?: boolean;
 }) {
+  if (clear) {
+    await esClient.indices
+      .delete({
+        index: datasets.map((dataset) => dataset.index),
+        allow_no_indices: true,
+      })
+      .catch((error) => {
+        if (error instanceof errors.ResponseError && error.statusCode === 404) {
+          return;
+        }
+        throw error;
+      });
+  }
+
   for (const dataset of datasets) {
     logger.info(`Indexing dataset ${dataset.name}`);
 
@@ -85,5 +102,7 @@ export async function loadHuggingFaceDatasets({
       dataset,
       logger,
     });
+
+    logger.debug(`Indexed dataset`);
   }
 }

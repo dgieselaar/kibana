@@ -11,6 +11,7 @@ import streamWeb from 'stream/web';
 import { Readable } from 'stream';
 import { createGunzip } from 'zlib';
 import * as readline from 'node:readline';
+import { pickBy } from 'lodash';
 import { HuggingFaceDatasetSpec } from './types';
 
 function toMb(bytes: number): string {
@@ -80,7 +81,7 @@ export async function fetchRowsFromDataset({
     if (!line) continue;
     const raw = JSON.parse(line);
     const doc = dataset.mapDocument(raw);
-    docs.push(doc);
+    docs.push(pickBy(doc, (val) => val !== undefined && val !== null && val !== ''));
 
     if (docs.length === limit) {
       break;
@@ -89,5 +90,5 @@ export async function fetchRowsFromDataset({
 
   logger.debug(`Fetched ${docs.length} rows for ${dataset.name}`);
 
-  return docs.slice(0, 1);
+  return docs;
 }

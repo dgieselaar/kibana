@@ -12,18 +12,25 @@ import { HuggingFaceDatasetSpec } from './types';
 export async function ensureDatasetIndexExists({
   esClient,
   dataset,
+  clear,
 }: {
   esClient: ElasticsearchClient;
   dataset: HuggingFaceDatasetSpec;
+  clear?: boolean;
 }) {
   const { index, mapping } = dataset;
 
-  const exists = await esClient.indices.exists({ index, allow_no_indices: true }).catch((error) => {
+  let exists = await esClient.indices.exists({ index, allow_no_indices: true }).catch((error) => {
     if (error instanceof errors.ResponseError && error.statusCode === 404) {
       return false;
     }
     throw error;
   });
+
+  if (clear && exists) {
+    await esClient.indices.delete({ index, allow_no_indices: true });
+    exists = false;
+  }
 
   if (exists) {
     await esClient.indices.putMapping({
