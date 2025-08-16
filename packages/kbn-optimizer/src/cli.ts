@@ -20,6 +20,7 @@ import { logOptimizerProgress } from './log_optimizer_progress';
 import { OptimizerConfig } from './optimizer';
 import { runOptimizer } from './run_optimizer';
 import { validateLimitsForAllBundles, updateBundleLimits } from './limits';
+import { runCompare } from './compare/run_compare';
 import { reportOptimizerTimings } from './report_optimizer_timings';
 
 function getLimitsPath(flags: Flags, defaultPath: string) {
@@ -116,6 +117,11 @@ export function runKbnOptimizerCli(options: { defaultLimitsPath: string }) {
 
       const limitsPath = getLimitsPath(flags, options.defaultLimitsPath);
 
+      const compareRef = flags.compare as undefined | string;
+      if (compareRef != null && typeof compareRef !== 'string') {
+        throw createFlagError('expected --compare to be a string (git ref)');
+      }
+
       const validateLimits = flags['validate-limits'] ?? false;
       if (typeof validateLimits !== 'boolean') {
         throw createFlagError('expected --validate-limits to have no value');
@@ -141,6 +147,15 @@ export function runKbnOptimizerCli(options: { defaultLimitsPath: string }) {
         focus,
         limitsPath,
       });
+
+      if (compareRef) {
+        await runCompare({
+          log,
+          repoRoot: REPO_ROOT,
+          compareRef,
+        });
+        return;
+      }
 
       if (validateLimits) {
         validateLimitsForAllBundles(log, config, limitsPath);
@@ -182,7 +197,7 @@ export function runKbnOptimizerCli(options: { defaultLimitsPath: string }) {
           'update-limits',
           'progress',
         ],
-        string: ['workers', 'scan-dir', 'filter', 'limits'],
+        string: ['workers', 'scan-dir', 'filter', 'limits', 'compare'],
         default: {
           core: true,
           examples: true,
@@ -210,6 +225,7 @@ export function runKbnOptimizerCli(options: { defaultLimitsPath: string }) {
           --limits           path to a limits.yml file to read, defaults to $KBN_OPTIMIZER_LIMITS_PATH or source file
           --validate-limits  validate the limits.yml config to ensure that there are limits defined for every bundle
           --update-limits    run a build and rewrite the limits file to include the current bundle sizes +15kb
+          --compare          compare bundle size metrics against another git ref (branch, tag, or commit sha)
         `,
       },
     }
