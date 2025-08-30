@@ -16,6 +16,8 @@ import type { DataViewsServerPluginStart } from '@kbn/data-views-plugin/server';
 import { config } from './config';
 import { CloudExperimentsPlugin } from './plugin';
 
+jest.mock('@launchdarkly/openfeature-node-server');
+
 describe('Cloud Experiments server plugin', () => {
   jest.useFakeTimers();
 
