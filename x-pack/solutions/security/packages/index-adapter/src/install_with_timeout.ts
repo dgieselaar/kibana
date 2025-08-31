@@ -43,7 +43,7 @@ export const installWithTimeout = async ({
         timeoutId = setTimeout(() => {
           const msg = `Timeout: it took more than ${timeoutMs}ms`;
           reject(new Error(msg));
-        }, timeoutMs);
+        }, timeoutMs).unref();
 
         firstValueFrom(pluginStop$).then(() => {
           clearTimeout(timeoutId);

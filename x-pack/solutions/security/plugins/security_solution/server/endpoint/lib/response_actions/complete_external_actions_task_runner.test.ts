@@ -12,7 +12,6 @@ import { RESPONSE_ACTION_AGENT_TYPE } from '../../../../common/endpoint/service/
 import { responseActionsClientMock } from '../../services/actions/clients/mocks';
 import { EndpointActionGenerator } from '../../../../common/endpoint/data_generators/endpoint_action_generator';
 import { ENDPOINT_ACTION_RESPONSES_INDEX } from '../../../../common/endpoint/constants';
-import { waitFor } from '@testing-library/react';
 import { ResponseActionsConnectorNotConfiguredError } from '../../services/actions/clients/errors';
 import {
   COMPLETE_EXTERNAL_RESPONSE_ACTIONS_TASK_TYPE,
@@ -20,6 +19,7 @@ import {
 } from './complete_external_actions_task';
 import { getDeleteTaskRunResult } from '@kbn/task-manager-plugin/server/task';
 import { fetchSpaceIdsWithMaybePendingActions as _fetchSpaceIdsWithMaybePendingActionsMock } from '../../services/actions/utils/fetch_space_ids_with_maybe_pending_actions';
+import { retry } from 'async';
 
 jest.mock('../../services/actions/utils/fetch_space_ids_with_maybe_pending_actions');
 
@@ -218,9 +218,13 @@ describe('CompleteExternalTaskRunner class', () => {
     );
     void runnerInstance.run();
 
-    await waitFor(() => {
-      expect(endpointContextServicesMock.getInternalResponseActionsClient).toHaveBeenCalled();
+    await retry({ times: 10, interval: 50 }, async () => {
+      if (endpointContextServicesMock.getInternalResponseActionsClient.mock.calls.length === 0) {
+        throw new Error(`Mock not called`);
+      }
     });
+
+    expect(endpointContextServicesMock.getInternalResponseActionsClient).toHaveBeenCalled();
 
     await runnerInstance.cancel();
 
