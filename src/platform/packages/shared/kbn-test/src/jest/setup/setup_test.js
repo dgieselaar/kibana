@@ -7,6 +7,8 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+Error.stackTraceLimit = 0; // or a small number like 2
+
 /*
   Global import, so we don't need to remember to import the lib in each file
   https://www.npmjs.com/package/jest-styled-components#global-installation
