@@ -21,12 +21,24 @@ const omittedProps = [
   'helpers',
   'acceptedParams',
 ] as Array<PublicKeys<Client>>;
+// Use a Set for faster lookups during descriptor filtering
+const omittedPropsSet: Set<string> = new Set(omittedProps as string[]);
 
 export type DeeplyMockedApi<T> = {
   [P in keyof T]: T[P] extends (...args: any[]) => any
     ? ClientApiMockInstance<ReturnType<T[P]>, Parameters<T[P]>>
     : DeeplyMockedApi<T[P]>;
 } & T;
+
+// Options for configuring the client mocks
+export interface ElasticsearchClientMockOptions {
+  /**
+   * When true (default), use a lazy Proxy-based mock that creates jest.fn methods on first access
+   * and avoids instantiating a real client per mock. When false, use the legacy eager deep-mock
+   * behavior that constructs a real Client instance and walks its prototype.
+   */
+  lazy?: boolean;
+}
 
 export interface ClientApiMockInstance<T, Y extends any[]> extends jest.MockInstance<T, Y> {
   /**
@@ -123,17 +135,44 @@ const createMockedApi = <
 
 // use jest.requireActual() to prevent weird errors when people mock @elastic/elasticsearch
 const { Client: UnmockedClient } = jest.requireActual('@elastic/elasticsearch');
-const createInternalClientMock = (res?: Promise<unknown>): DeeplyMockedApi<Client> => {
+
+// Create one real client for introspection only (no sockets opened until used),
+// reused across lazy proxies to derive the shape without per-instance cost.
+const introspectionClient: Client = new UnmockedClient({
+  node: 'http://127.0.0.1',
+});
+
+const createInternalClientMock = (
+  res?: Promise<unknown>,
+  options?: ElasticsearchClientMockOptions
+): DeeplyMockedApi<Client> => {
+  const lazy = options?.lazy ?? true;
+  if (lazy) {
+    return createLazyClientMock(res, options);
+  }
+  // Legacy non-lazy behavior below
   // we mimic 'reflection' on a concrete instance of the client to generate the mocked functions.
   const client = new UnmockedClient({
     node: 'http://127.0.0.1',
   });
 
+  // Reuse a single default implementation per client instance to reduce
+  // per-method closure allocations. This preserves behavior while lowering CPU/GC.
+  const defaultMethodImpl = () => res ?? createSuccessTransportRequestPromise({});
+
   const getAllPropertyDescriptors = (obj: Record<string, any>) => {
     const descriptors = Object.entries(Object.getOwnPropertyDescriptors(obj));
     let prototype = Object.getPrototypeOf(obj);
+    // Track seen property names to avoid duplicate processing from prototypes
+    const seen = new Set<string>(descriptors.map(([k]) => k));
     while (prototype != null && prototype !== Object.prototype) {
-      descriptors.push(...Object.entries(Object.getOwnPropertyDescriptors(prototype)));
+      const protoDescriptors = Object.entries(Object.getOwnPropertyDescriptors(prototype));
+      for (const [key, desc] of protoDescriptors) {
+        if (!seen.has(key)) {
+          seen.add(key);
+          descriptors.push([key, desc]);
+        }
+      }
       prototype = Object.getPrototypeOf(prototype);
     }
     return descriptors;
@@ -143,18 +182,23 @@ const createInternalClientMock = (res?: Promise<unknown>): DeeplyMockedApi<Clien
     // the @elastic/elasticsearch::Client uses prototypical inheritance
     // so we have to crawl up the prototype chain and get all descriptors
     // to find everything that we should be mocking
-    const descriptors = getAllPropertyDescriptors(obj);
-    descriptors
-      .filter(([key]) => !omitted.includes(key))
-      .forEach(([key, descriptor]) => {
+    // Prevent infinite recursion or re-visiting the same nested objects
+    const visited = new WeakSet<object>();
+    const processObject = (target: Record<string, any>) => {
+      if (visited.has(target)) return;
+      visited.add(target);
+      for (const [key, descriptor] of getAllPropertyDescriptors(target)) {
+        if (omittedPropsSet.has(key) || omitted.includes(key)) continue;
         if (typeof descriptor.value === 'function') {
           const mock = createMockedApi();
-          mock.mockImplementation(() => res ?? createSuccessTransportRequestPromise({}));
-          obj[key] = mock;
-        } else if (typeof obj[key] === 'object' && obj[key] != null) {
-          mockify(obj[key], omitted);
+          mock.mockImplementation(defaultMethodImpl as any);
+          target[key] = mock;
+        } else if (typeof target[key] === 'object' && target[key] != null) {
+          processObject(target[key]);
         }
-      });
+      }
+    };
+    processObject(obj);
   };
 
   mockify(client, omittedProps as string[]);
@@ -163,10 +207,12 @@ const createInternalClientMock = (res?: Promise<unknown>): DeeplyMockedApi<Clien
   client.child = jest.fn().mockImplementation(() => createInternalClientMock());
 
   const mockGetter = (obj: Record<string, any>, propertyName: string) => {
+    // Memoize the returned mock so repeated accesses don't allocate new fns
+    const fn = jest.fn();
     Object.defineProperty(obj, propertyName, {
       configurable: true,
       enumerable: false,
-      get: () => jest.fn(),
+      get: () => fn,
       set: undefined,
     });
   };
@@ -184,10 +230,118 @@ const createInternalClientMock = (res?: Promise<unknown>): DeeplyMockedApi<Clien
   return client as DeeplyMockedApi<Client>;
 };
 
+// Build a lazy Proxy-based mock using the shared introspection client
+function createLazyClientMock(
+  res?: Promise<unknown>,
+  options?: ElasticsearchClientMockOptions
+): DeeplyMockedApi<Client> {
+  // per-instance default implementation to avoid per-method closures
+  const defaultMethodImpl = () => res ?? createSuccessTransportRequestPromise({});
+
+  const proxiesCache = new WeakMap<object, any>();
+
+  const createDiagnosticStub = () => {
+    const on = jest.fn();
+    const off = jest.fn();
+    const once = jest.fn();
+    return Object.create(null, {
+      on: { configurable: true, enumerable: false, get: () => on },
+      off: { configurable: true, enumerable: false, get: () => off },
+      once: { configurable: true, enumerable: false, get: () => once },
+    });
+  };
+
+  const getOmittedStub = (prop: string) => {
+    switch (prop) {
+      case 'diagnostic':
+        return createDiagnosticStub();
+      case 'transport':
+        return { request: jest.fn() };
+      default:
+        return undefined;
+    }
+  };
+
+  const makeMethodMock = () => {
+    const mock = createMockedApi();
+    mock.mockImplementation(defaultMethodImpl as any);
+    return mock;
+  };
+
+  const createProxy = (shape: Record<string, any>, isRoot: boolean): any => {
+    if (shape && typeof shape === 'object') {
+      const cached = proxiesCache.get(shape);
+      if (cached) return cached;
+
+      const store: Record<string, any> = {};
+      const proxy = new Proxy(store, {
+        get(target, prop, receiver) {
+          if (prop === 'then') return undefined; // avoid thenable
+          if (Reflect.has(target, prop)) return Reflect.get(target, prop, receiver);
+
+          // string-only handling for known API keys
+          if (typeof prop === 'string') {
+            if (omittedPropsSet.has(prop)) {
+              const value = getOmittedStub(prop);
+              target[prop] = value;
+              return value;
+            }
+
+            // Special-cases for lifecycle methods
+            if (prop === 'close') {
+              const fn = jest.fn().mockResolvedValue(undefined);
+              target[prop] = fn;
+              return fn;
+            }
+            if (prop === 'child') {
+              const fn = jest.fn().mockImplementation(() => createInternalClientMock(res, options));
+              target[prop] = fn;
+              return fn;
+            }
+
+            const valueFromShape = Reflect.get(shape, prop);
+            if (typeof valueFromShape === 'function') {
+              const fn = makeMethodMock();
+              target[prop] = fn;
+              return fn;
+            }
+            if (valueFromShape && typeof valueFromShape === 'object') {
+              const child = createProxy(valueFromShape, false);
+              target[prop] = child;
+              return child;
+            }
+            // primitive or undefined: copy as-is
+            target[prop] = valueFromShape;
+            return valueFromShape;
+          }
+          return undefined;
+        },
+        set(target, prop, value) {
+          target[prop as any] = value;
+          return true;
+        },
+      });
+
+      proxiesCache.set(shape, proxy);
+      return proxy;
+    }
+    return {};
+  };
+
+  // Root proxy based on the shared introspection client
+  return createProxy(
+    introspectionClient as unknown as Record<string, any>,
+    true
+  ) as DeeplyMockedApi<Client>;
+}
+
 export type ElasticsearchClientMock = DeeplyMockedApi<ElasticsearchClient>;
 
-const createClientMock = (res?: Promise<unknown>): ElasticsearchClientMock =>
-  createInternalClientMock(res) as unknown as ElasticsearchClientMock;
+const createClientMock = (
+  res?: Promise<unknown>,
+  options?: ElasticsearchClientMockOptions
+): ElasticsearchClientMock =>
+  createInternalClientMock(res, options) as unknown as ElasticsearchClientMock;
 
 export interface ScopedClusterClientMock {
   asInternalUser: ElasticsearchClientMock;
@@ -195,11 +349,11 @@ export interface ScopedClusterClientMock {
   asSecondaryAuthUser: ElasticsearchClientMock;
 }
 
-const createScopedClusterClientMock = () => {
+const createScopedClusterClientMock = (options?: ElasticsearchClientMockOptions) => {
   const mock: ScopedClusterClientMock = {
-    asInternalUser: createClientMock(),
-    asCurrentUser: createClientMock(),
-    asSecondaryAuthUser: createClientMock(),
+    asInternalUser: createClientMock(undefined, options),
+    asCurrentUser: createClientMock(undefined, options),
+    asSecondaryAuthUser: createClientMock(undefined, options),
   };
 
   return mock;
@@ -210,27 +364,27 @@ export interface ClusterClientMock {
   asScoped: jest.MockedFunction<() => ScopedClusterClientMock>;
 }
 
-const createClusterClientMock = () => {
+const createClusterClientMock = (options?: ElasticsearchClientMockOptions) => {
   const mock: ClusterClientMock = {
-    asInternalUser: createClientMock(),
+    asInternalUser: createClientMock(undefined, options),
     asScoped: jest.fn(),
   };
 
-  mock.asScoped.mockReturnValue(createScopedClusterClientMock());
+  mock.asScoped.mockReturnValue(createScopedClusterClientMock(options));
 
   return mock;
 };
 
 export type CustomClusterClientMock = jest.Mocked<ICustomClusterClient> & ClusterClientMock;
 
-const createCustomClusterClientMock = () => {
+const createCustomClusterClientMock = (options?: ElasticsearchClientMockOptions) => {
   const mock: CustomClusterClientMock = {
-    asInternalUser: createClientMock(),
+    asInternalUser: createClientMock(undefined, options),
     asScoped: jest.fn(),
     close: jest.fn(),
   };
 
-  mock.asScoped.mockReturnValue(createScopedClusterClientMock());
+  mock.asScoped.mockReturnValue(createScopedClusterClientMock(options));
   mock.close.mockReturnValue(Promise.resolve());
 
   return mock;
