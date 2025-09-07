@@ -11,6 +11,7 @@ import { useStreamsPrivileges } from '../../../hooks/use_streams_privileges';
 import { StreamDetailSignificantEventsView } from '../../stream_detail_significant_events_view';
 import { StreamDetailEnrichment } from '../stream_detail_enrichment';
 import { StreamDetailReferencesView } from '../../stream_detail_references_view/stream_detail_references_view';
+import { StreamDetailSystemsView } from '../stream_detail_systems_view';
 
 export function useStreamsDetailManagementTabs({
   definition,
@@ -46,6 +47,12 @@ export function useStreamsDetailManagementTabs({
       : {}),
     ...(isSignificantEventsEnabled
       ? {
+          systems: {
+            content: <StreamDetailSystemsView definition={definition} />,
+            label: i18n.translate('xpack.streams.streamDetailView.systemsTab', {
+              defaultMessage: 'Systems',
+            }),
+          },
           significantEvents: {
             content: <StreamDetailSignificantEventsView definition={definition} />,
             label: i18n.translate('xpack.streams.streamDetailView.significantEventsTab', {

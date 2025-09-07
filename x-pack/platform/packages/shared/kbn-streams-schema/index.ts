@@ -12,6 +12,8 @@ export { WiredIngest } from './src/models/ingest/wired';
 export { ClassicIngest } from './src/models/ingest/classic';
 export { Group } from './src/models/group';
 
+export { type System, systemSchema } from './src/models/system';
+
 export {
   type RoutingDefinition,
   routingStatus,

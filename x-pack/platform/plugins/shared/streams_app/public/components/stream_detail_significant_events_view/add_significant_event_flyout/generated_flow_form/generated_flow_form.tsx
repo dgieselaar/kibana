@@ -7,7 +7,7 @@
 
 import { EuiButton, EuiFlexGroup, EuiFlexItem, EuiTitle } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import type { StreamQueryKql, Streams } from '@kbn/streams-schema';
+import type { StreamQueryKql, Streams, System } from '@kbn/streams-schema';
 import React, { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { useKibana } from '../../../../hooks/use_kibana';
@@ -16,16 +16,23 @@ import { validateQuery } from '../common/validate_query';
 import { AIConnectorSelector } from './ai_connector_selector';
 import { AIFeaturesDisabledCallout } from './ai_features_disabled_callout';
 import { SignificantEventsGeneratedTable } from './significant_events_generated_table';
-import { useAIFeatures } from './use_ai_features';
+import { useAIFeatures } from '../../../../hooks/use_ai_features';
 
 interface Props {
   definition: Streams.all.Definition;
+  system?: System;
   isSubmitting: boolean;
   setQueries: (queries: StreamQueryKql[]) => void;
   setCanSave: (canSave: boolean) => void;
 }
 
-export function GeneratedFlowForm({ setQueries, definition, setCanSave, isSubmitting }: Props) {
+export function GeneratedFlowForm({
+  setQueries,
+  definition,
+  system,
+  setCanSave,
+  isSubmitting,
+}: Props) {
   const {
     core: { notifications },
   } = useKibana();
@@ -75,7 +82,10 @@ export function GeneratedFlowForm({ setQueries, definition, setCanSave, isSubmit
                   setGeneratedQueries([]);
                   setSelectedQueries([]);
 
-                  const generation$ = generate(aiFeatures.genAiConnectors.selectedConnector!);
+                  const generation$ = generate(
+                    aiFeatures.genAiConnectors.selectedConnector!,
+                    system
+                  );
                   generation$.subscribe({
                     next: (result) => {
                       const validation = validateQuery({

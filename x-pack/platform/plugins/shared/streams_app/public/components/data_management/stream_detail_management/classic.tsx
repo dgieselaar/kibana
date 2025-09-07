@@ -23,6 +23,7 @@ const classicStreamManagementSubTabs = [
   'enrich',
   'advanced',
   'lifecycle',
+  'systems',
   'significantEvents',
   'schemaEditor',
   'references',
@@ -149,7 +150,8 @@ export function ClassicStreamDetailManagement({
     };
   }
 
-  if (otherTabs.significantEvents) {
+  if (otherTabs.significantEvents && otherTabs.systems) {
+    tabs.systems = otherTabs.systems;
     tabs.significantEvents = otherTabs.significantEvents;
   }
 

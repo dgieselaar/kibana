@@ -12,12 +12,16 @@ import {
   EuiFlyoutBody,
   EuiFlyoutFooter,
   EuiFlyoutHeader,
+  EuiMarkdownFormat,
+  EuiPanel,
   EuiTitle,
+  useEuiTheme,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import type { StreamQueryKql, Streams } from '@kbn/streams-schema';
+import type { StreamQueryKql, Streams, System } from '@kbn/streams-schema';
 import { streamQuerySchema } from '@kbn/streams-schema';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { css } from '@emotion/css';
 import { FlowSelector } from './flow_selector';
 import { GeneratedFlowForm } from './generated_flow_form/generated_flow_form';
 import { ManualFlowForm } from './manual_flow_form/manual_flow_form';
@@ -27,14 +31,24 @@ import { defaultQuery } from './utils/default_query';
 interface Props {
   onClose: () => void;
   definition: Streams.all.Definition;
+  system?: System;
   onSave: (data: SaveData) => Promise<void>;
   query?: StreamQueryKql;
+  initialFlow?: Flow;
 }
 
-export function AddSignificantEventFlyout({ query, onClose, definition, onSave }: Props) {
+export function AddSignificantEventFlyout({
+  query,
+  onClose,
+  definition,
+  system,
+  onSave,
+  initialFlow,
+}: Props) {
   const isEditMode = !!query?.id;
+
   const [selectedFlow, setSelectedFlow] = useState<Flow | undefined>(
-    isEditMode ? 'manual' : undefined
+    isEditMode ? 'manual' : initialFlow
   );
   const flowRef = useRef<Flow | undefined>(selectedFlow);
   const [queries, setQueries] = useState<StreamQueryKql[]>([{ ...defaultQuery(), ...query }]);
@@ -53,6 +67,8 @@ export function AddSignificantEventFlyout({ query, onClose, definition, onSave }
       setQueries([defaultQuery()]);
     }
   }, [selectedFlow]);
+
+  const theme = useEuiTheme();
 
   return (
     <EuiFlyout aria-labelledby="addSignificantEventFlyout" onClose={() => onClose()} size="m">
@@ -73,6 +89,29 @@ export function AddSignificantEventFlyout({ query, onClose, definition, onSave }
       </EuiFlyoutHeader>
       <EuiFlyoutBody>
         <EuiFlexGroup direction="column" gutterSize="m">
+          {system ? (
+            <EuiPanel color="primary" hasBorder hasShadow={false} paddingSize="m">
+              <EuiFlexGroup direction="column" gutterSize="m">
+                <EuiTitle
+                  className={css`
+                    color: ${theme.euiTheme.colors.primary};
+                  `}
+                  size="s"
+                >
+                  <h4>{system.name}</h4>
+                </EuiTitle>
+                <EuiMarkdownFormat
+                  className={css`
+                    max-height: 400px;
+                    overflow: auto;
+                  `}
+                >
+                  {system.description}
+                </EuiMarkdownFormat>
+              </EuiFlexGroup>
+            </EuiPanel>
+          ) : null}
+
           {!isEditMode && (
             <FlowSelector
               isSubmitting={isSubmitting}
@@ -98,6 +137,7 @@ export function AddSignificantEventFlyout({ query, onClose, definition, onSave }
             <GeneratedFlowForm
               isSubmitting={isSubmitting}
               definition={definition}
+              system={system}
               setQueries={(next: StreamQueryKql[]) => {
                 setQueries(next);
               }}

@@ -278,7 +278,6 @@ export class StreamsClient {
       result: result.changes.created.includes(name) ? 'created' : 'updated',
     };
   }
-
   async bulkUpsert(streams: Array<{ name: string; request: Streams.all.UpsertRequest }>) {
     const result = await State.attemptChanges(
       streams.map(({ name, request }) => ({
@@ -345,6 +344,7 @@ export class StreamsClient {
           definition: {
             name,
             description: '',
+            systems: [],
             ingest: {
               lifecycle: { inherit: {} },
               processing: {
@@ -544,6 +544,7 @@ export class StreamsClient {
     const definition: Streams.ClassicStream.Definition = {
       name: dataStream.name,
       description: '',
+      systems: [],
       ingest: {
         lifecycle: { inherit: {} },
         processing: {

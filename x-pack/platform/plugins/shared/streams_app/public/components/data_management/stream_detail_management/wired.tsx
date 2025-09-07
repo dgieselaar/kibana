@@ -21,6 +21,7 @@ const wiredStreamManagementSubTabs = [
   'enrich',
   'schemaEditor',
   'lifecycle',
+  'systems',
   'significantEvents',
   'references',
 ] as const;

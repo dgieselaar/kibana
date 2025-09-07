@@ -15,13 +15,15 @@ import type {
   ToolCallOfToolDefinitions,
   ToolCallback,
   ToolCallbacksOfToolOptions,
+  ToolChoice,
   ToolMessage,
+  ToolNamesOf,
   ToolOptionsOfPrompt,
   UnboundPromptOptions,
 } from '@kbn/inference-common';
 import { MessageRole, type Prompt } from '@kbn/inference-common';
-import { withExecuteToolSpan } from '@kbn/inference-tracing';
-import { partition, takeRightWhile } from 'lodash';
+import { withActiveInferenceSpan, withExecuteToolSpan } from '@kbn/inference-tracing';
+import { omit, partition, takeRightWhile } from 'lodash';
 import { trace } from '@opentelemetry/api';
 import type { ToolCallbackResult } from '@kbn/inference-common';
 import {
@@ -64,6 +66,17 @@ function removeReasonToolCalls(messages: Message[]) {
       (message.role === MessageRole.Tool && message.name === 'reason') ||
       (message.role === MessageRole.Assistant &&
         message.toolCalls?.some((toolCall) => toolCall.function.name === 'reason'));
+
+    return !isInternalMessage;
+  });
+}
+
+function removeSystemToolCalls(messages: Message[]) {
+  return messages.filter((message) => {
+    const isInternalMessage =
+      (message.role === MessageRole.Tool && isPlanningToolName(message.name)) ||
+      (message.role === MessageRole.Assistant &&
+        message.toolCalls?.some((toolCall) => isPlanningToolName(toolCall.function.name)));
 
     return !isInternalMessage;
   });
@@ -139,21 +152,32 @@ export type ReasoningPromptResponse = PromptResponse & { input: Message[] };
 export function executeAsReasoningAgent<
   TPrompt extends Prompt,
   TPromptOptions extends PromptOptions<TPrompt>,
-  TToolCallbacks extends ToolCallbacksOfToolOptions<ToolOptionsOfPrompt<TPrompt>>
+  TToolCallbacks extends ToolCallbacksOfToolOptions<ToolOptionsOfPrompt<TPrompt>>,
+  TFinalToolChoice extends ToolChoice<ToolNamesOf<ToolOptionsOfPrompt<TPrompt>>> | undefined =
+    | ToolChoice<ToolNamesOf<ToolOptionsOfPrompt<TPrompt>>>
+    | undefined
 >(
-  options: UnboundPromptOptions &
+  options: UnboundPromptOptions<TPrompt> &
     ReasoningPromptOptions & { prompt: TPrompt } & {
       toolCallbacks: TToolCallbacks;
+      finalToolChoice?: TFinalToolChoice;
     }
-): Promise<ReasoningPromptResponseOf<TPrompt, TPromptOptions, TToolCallbacks>>;
+): Promise<
+  ReasoningPromptResponseOf<
+    TPrompt,
+    TPromptOptions & { toolChoice: TFinalToolChoice },
+    TToolCallbacks
+  >
+>;
 
 export async function executeAsReasoningAgent(
   options: UnboundPromptOptions &
     ReasoningPromptOptions & {
       toolCallbacks: Record<string, ToolCallback>;
+      finalToolChoice?: ToolChoice;
     }
 ): Promise<ReasoningPromptResponse> {
-  const { inferenceClient, maxSteps = 10, toolCallbacks, toolChoice } = options;
+  const { inferenceClient, maxSteps = 10, toolCallbacks } = options;
 
   async function callTools(toolCalls: ToolCall[]): Promise<ToolMessage[]> {
     return await Promise.all(
@@ -232,13 +256,13 @@ export async function executeAsReasoningAgent(
 
         const mergedToolOptions = {
           tools: promptTools,
-          toolChoice,
         };
 
         const nextTools = isCompleting
-          ? mergedToolOptions
+          ? {
+              ...mergedToolOptions,
+            }
           : {
-              toolChoice: undefined,
               tools: {
                 ...mergedToolOptions.tools,
                 ...planningTools,
@@ -253,7 +277,7 @@ export async function executeAsReasoningAgent(
     };
 
     const promptOptions = {
-      ...options,
+      ...omit(options, 'finalToolChoice'),
       prompt: nextPrompt,
     };
 
@@ -261,6 +285,7 @@ export async function executeAsReasoningAgent(
       ...promptOptions,
       stream: false,
       temperature,
+      toolChoice: isCompleting ? options.finalToolChoice : undefined,
       prevMessages: prepareMessagesForLLM({
         stepsLeft,
         messages: prevMessages,
@@ -313,14 +338,25 @@ export async function executeAsReasoningAgent(
       throw new Error(`When using system tools, only a single tool call is allowed`);
     }
 
-    if (isCompleting) {
+    const finalToolCallName =
+      options.finalToolChoice && typeof options.finalToolChoice === 'object'
+        ? options.finalToolChoice.function
+        : undefined;
+
+    const hasCalledFinalTool = response.toolCalls.some(
+      (toolCall) => toolCall.function.name === finalToolCallName
+    );
+
+    if (isCompleting || hasCalledFinalTool) {
       // We don't want to send these results back to the LLM, if we are already
       // completing
       return {
         content: response.content,
         tokens: response.tokens,
-        toolCalls: response.toolCalls as [],
-        input: withoutSystemToolCalls,
+        toolCalls: response.toolCalls.filter(
+          (toolCall) => toolCall.function.name === finalToolCallName
+        ),
+        input: removeSystemToolCalls(prevMessages),
       };
     }
 
@@ -364,8 +400,10 @@ export async function executeAsReasoningAgent(
     });
   }
 
-  return await innerCallPromptUntil({
-    messages: createReasonToolCall(),
-    stepsLeft: maxSteps,
-  });
+  return await withActiveInferenceSpan('reason', () =>
+    innerCallPromptUntil({
+      messages: createReasonToolCall(),
+      stepsLeft: maxSteps,
+    })
+  );
 }

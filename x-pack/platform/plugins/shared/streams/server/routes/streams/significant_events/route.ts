@@ -7,12 +7,12 @@
 
 import { badRequest } from '@hapi/boom';
 import type { LicensingPluginStart } from '@kbn/licensing-plugin/server';
-import type {
-  SignificantEventsGenerateResponse,
-  SignificantEventsGetResponse,
-  SignificantEventsPreviewResponse,
+import {
+  systemSchema,
+  type SignificantEventsGenerateResponse,
+  type SignificantEventsGetResponse,
+  type SignificantEventsPreviewResponse,
 } from '@kbn/streams-schema';
-import { createTracedEsClient } from '@kbn/traced-es-client';
 import { z } from '@kbn/zod';
 import moment from 'moment';
 import { from as fromRxjs, map, mergeMap } from 'rxjs';
@@ -27,6 +27,7 @@ import { SecurityError } from '../../../lib/streams/errors/security_error';
 import type { StreamsServer } from '../../../types';
 import { createServerRoute } from '../../create_server_route';
 import { assertEnterpriseLicense } from '../../utils/assert_enterprise_license';
+import { DateFromString } from '../../utils/date_from_string';
 
 async function assertLicenseAndPricingTier(
   server: StreamsServer,
@@ -41,15 +42,11 @@ async function assertLicenseAndPricingTier(
   await assertEnterpriseLicense(licensing);
 }
 
-// Make sure strings are expected for input, but still converted to a
-// Date, without breaking the OpenAPI generator
-const dateFromString = z.string().transform((input) => new Date(input));
-
 const previewSignificantEventsRoute = createServerRoute({
   endpoint: 'POST /api/streams/{name}/significant_events/_preview 2023-10-31',
   params: z.object({
     path: z.object({ name: z.string() }),
-    query: z.object({ from: dateFromString, to: dateFromString, bucketSize: z.string() }),
+    query: z.object({ from: DateFromString, to: DateFromString, bucketSize: z.string() }),
     body: z.object({
       query: z.object({
         kql: z.object({
@@ -116,8 +113,8 @@ const readSignificantEventsRoute = createServerRoute({
   params: z.object({
     path: z.object({ name: z.string() }),
     query: z.object({
-      from: dateFromString,
-      to: dateFromString,
+      from: DateFromString,
+      to: DateFromString,
       bucketSize: z.string(),
     }),
   }),
@@ -184,12 +181,13 @@ const durationSchema = z.string().transform((value) => {
 });
 
 const generateSignificantEventsRoute = createServerRoute({
-  endpoint: 'GET /api/streams/{name}/significant_events/_generate 2023-10-31',
+  endpoint: 'POST /api/streams/{name}/significant_events/_generate 2023-10-31',
   params: z.object({
     path: z.object({ name: z.string() }),
-    query: z.object({
+    body: z.object({
       connectorId: z.string(),
-      currentDate: dateFromString.optional(),
+      system: z.optional(systemSchema),
+      currentDate: DateFromString.optional(),
       shortLookback: durationSchema.optional(),
       longLookback: durationSchema.optional(),
     }),
@@ -226,23 +224,19 @@ const generateSignificantEventsRoute = createServerRoute({
       generateSignificantEventDefinitions(
         {
           definition,
-          connectorId: params.query.connectorId,
-          currentDate: params.query.currentDate,
-          shortLookback: params.query.shortLookback,
-          longLookback: params.query.longLookback,
+          connectorId: params.body.connectorId,
+          currentDate: params.body.currentDate,
+          shortLookback: params.body.shortLookback,
+          system: params.body.system,
         },
         {
           inferenceClient,
-          esClient: createTracedEsClient({
-            client: scopedClusterClient.asCurrentUser,
-            logger,
-            plugin: 'streams',
-          }),
+          esClient: scopedClusterClient.asCurrentUser,
           logger,
         }
       )
     ).pipe(
-      mergeMap((queries) => fromRxjs(queries)),
+      mergeMap((queries) => queries),
       map((query) => ({
         query,
         type: 'generated_query' as const,

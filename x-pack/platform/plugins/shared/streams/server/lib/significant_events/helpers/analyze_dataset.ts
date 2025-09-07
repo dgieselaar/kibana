@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+import type { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 import { describeDataset, sortAndTruncateAnalyzedFields } from '@kbn/ai-tools';
 import { type Streams, getIndexPatternsForStream } from '@kbn/streams-schema';
 import type { TracedElasticsearchClient } from '@kbn/traced-es-client';
@@ -13,6 +14,7 @@ interface Params {
   start: number;
   end: number;
   definition: Streams.all.Definition;
+  filter?: QueryDslQueryContainer | QueryDslQueryContainer[];
 }
 
 interface Dependencies {
@@ -21,12 +23,13 @@ interface Dependencies {
 
 export async function analyzeDataset(params: Params, dependencies: Dependencies) {
   const { esClient } = dependencies;
-  const { start, end, definition } = params;
+  const { start, end, definition, filter } = params;
   const analysis = await describeDataset({
     esClient: esClient.client,
     start,
     end,
     index: getIndexPatternsForStream(definition),
+    filter,
   });
 
   const short = sortAndTruncateAnalyzedFields(analysis);

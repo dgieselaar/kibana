@@ -5,25 +5,13 @@
  * 2.0.
  */
 
-import React from 'react';
-import {
-  EuiButton,
-  EuiCallOut,
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiPopover,
-  EuiButtonIcon,
-  EuiContextMenuPanel,
-  EuiContextMenuItem,
-  useGeneratedHtmlId,
-  EuiToolTip,
-  EuiLink,
-} from '@elastic/eui';
+import { EuiCallOut, EuiLink } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import { useBoolean } from '@kbn/react-hooks';
 import { FormattedMessage } from '@kbn/i18n-react';
-import type { AIFeatures } from './use_ai_features';
+import React from 'react';
+import type { AIFeatures } from '../../../../../hooks/use_ai_features';
 import { useKibana } from '../../../../../hooks/use_kibana';
+import { ConnectorListButtonBase } from '../../../../connector_list_button/connector_list_button';
 
 export interface GeneratePatternButtonProps {
   onClick(connectorId: string): void;
@@ -38,111 +26,26 @@ export const GeneratePatternButton = ({
   isLoading,
   isDisabled,
 }: GeneratePatternButtonProps) => {
-  const {
-    core: { http },
-  } = useKibana();
-  const [isPopoverOpen, { off: closePopover, toggle: togglePopover }] = useBoolean(false);
-  const splitButtonPopoverId = useGeneratedHtmlId({
-    prefix: 'splitButtonPopover',
-  });
-
-  if (!aiFeatures.enabled) {
-    if (aiFeatures.couldBeEnabled) {
-      return (
-        <EuiToolTip
-          content={i18n.translate(
-            'xpack.streams.streamDetailView.managementTab.enrichment.processorFlyout.aiAssistantNotEnabledTooltip',
-            {
-              defaultMessage:
-                'AI Assistant features are not enabled. To enable features, add an AI connector on the management page.',
-            }
-          )}
-        >
-          <EuiLink
-            target="_blank"
-            href={http.basePath.prepend(
-              `/app/management/insightsAndAlerting/triggersActionsConnectors/connectors`
-            )}
-          >
-            {i18n.translate(
-              'xpack.streams.streamDetailView.managementTab.enrichment.processorFlyout.aiAssistantNotEnabled',
-              { defaultMessage: 'Enable AI Assistant features' }
-            )}
-          </EuiLink>
-        </EuiToolTip>
-      );
-    }
-    return null;
-  }
-
   return (
-    <>
-      <EuiFlexGroup responsive={false} gutterSize="xs" alignItems="center">
-        <EuiFlexItem grow={false}>
-          <EuiButton
-            size="s"
-            iconType="sparkles"
-            data-test-subj="streamsAppGrokAiSuggestionsRefreshSuggestionsButton"
-            onClick={() => onClick(aiFeatures.genAiConnectors.selectedConnector!)}
-            isLoading={isLoading}
-            isDisabled={!aiFeatures.genAiConnectors.selectedConnector || isDisabled}
-          >
-            {i18n.translate(
-              'xpack.streams.streamDetailView.managementTab.enrichment.processorFlyout.refreshSuggestions',
-              {
-                defaultMessage: 'Generate pattern',
-              }
-            )}
-          </EuiButton>
-        </EuiFlexItem>
-        {aiFeatures.genAiConnectors.connectors &&
-          aiFeatures.genAiConnectors.connectors.length >= 2 && (
-            <EuiFlexItem grow={false}>
-              <EuiPopover
-                id={splitButtonPopoverId}
-                isOpen={isPopoverOpen}
-                closePopover={() => closePopover()}
-                button={
-                  <EuiButtonIcon
-                    data-test-subj="streamsAppGrokAiPickConnectorButton"
-                    onClick={togglePopover}
-                    display="base"
-                    size="s"
-                    iconType="boxesVertical"
-                    aria-label={i18n.translate(
-                      'xpack.streams.refreshButton.euiButtonIcon.moreLabel',
-                      {
-                        defaultMessage: 'More',
-                      }
-                    )}
-                  />
-                }
-                panelPaddingSize="none"
-              >
-                <EuiContextMenuPanel
-                  size="s"
-                  items={aiFeatures.genAiConnectors.connectors.map((connector) => (
-                    <EuiContextMenuItem
-                      key={connector.id}
-                      icon={
-                        connector.id === aiFeatures.genAiConnectors.selectedConnector
-                          ? 'check'
-                          : 'empty'
-                      }
-                      onClick={() => {
-                        aiFeatures.genAiConnectors.selectConnector(connector.id);
-                        closePopover();
-                      }}
-                    >
-                      {connector.name}
-                    </EuiContextMenuItem>
-                  ))}
-                />
-              </EuiPopover>
-            </EuiFlexItem>
-          )}
-      </EuiFlexGroup>
-    </>
+    <ConnectorListButtonBase
+      aiFeatures={aiFeatures}
+      buttonProps={{
+        size: 's',
+        iconType: 'sparkles',
+        'data-test-subj': 'streamsAppGrokAiSuggestionsRefreshSuggestionsButton',
+        isLoading,
+        onClick: () => {
+          onClick(aiFeatures.genAiConnectors.selectedConnector!);
+        },
+        isDisabled: !aiFeatures.genAiConnectors.selectedConnector || isDisabled,
+        children: i18n.translate(
+          'xpack.streams.streamDetailView.managementTab.enrichment.processorFlyout.refreshSuggestions',
+          {
+            defaultMessage: 'Generate pattern',
+          }
+        ),
+      }}
+    />
   );
 };
 
