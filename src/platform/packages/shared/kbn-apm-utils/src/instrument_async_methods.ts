@@ -77,7 +77,7 @@ export function instrumentAsyncMethods(
 
       const wrappedFn = function wrapped(this: unknown, ...args: any[]) {
         let spanOptions: SpanOptions = {
-          name: spanName,
+          name: `${name}: ${propertyName}`,
         };
 
         if (getSpanOptions) {

@@ -9,4 +9,4 @@
 
 require('../src/setup_node_env');
 
-require('@kbn/profiler-cli/cli');
+void require('@kbn/profiler-cli').cli('profile');

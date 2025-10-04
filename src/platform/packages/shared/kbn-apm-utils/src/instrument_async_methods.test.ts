@@ -43,7 +43,7 @@ describe('instrumentAsyncMethods', () => {
     expect(result).toBe('updated-result');
     expect(instance.value).toBe('updated');
     expect(withSpanMock).toHaveBeenCalledTimes(1);
-    expect(withSpanMock.mock.calls[0][0]).toEqual({ name: 'Example.doWork' });
+    expect(withSpanMock.mock.calls[0][0]).toEqual({ name: 'Example: doWork' });
     const wrappedMethod = Object.getPrototypeOf(instance).doWork;
     expect(wrappedMethod).not.toBe(originalMethod);
   });
@@ -69,7 +69,7 @@ describe('instrumentAsyncMethods', () => {
     expect(result).toBe(2);
     expect(service.value).toBe(2);
     expect(withSpanMock).toHaveBeenCalledTimes(1);
-    expect(withSpanMock.mock.calls[0][0]).toEqual({ name: 'Service.increment' });
+    expect(withSpanMock.mock.calls[0][0]).toEqual({ name: 'Service: increment' });
     expect(service.increment).not.toBe(originalIncrement);
     expect(Object.prototype.propertyIsEnumerable.call(service, 'increment')).toBe(true);
     // ensure non-async methods are untouched

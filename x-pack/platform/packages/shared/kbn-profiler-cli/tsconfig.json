@@ -16,5 +16,7 @@
   "kbn_references": [
     "@kbn/dev-cli-runner",
     "@kbn/tooling-log",
+    "@kbn/kibana-api-cli",
+    "@kbn/profiler",
   ]
 }

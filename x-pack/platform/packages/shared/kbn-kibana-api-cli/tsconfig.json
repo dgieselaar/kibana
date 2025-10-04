@@ -19,5 +19,7 @@
     "@kbn/dev-cli-runner",
     "@kbn/core",
     "@kbn/logging",
+    "@kbn/config",
+    "@kbn/utils",
   ]
 }

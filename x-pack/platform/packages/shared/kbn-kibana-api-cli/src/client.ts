@@ -4,6 +4,7 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
+import type { ClientOptions } from '@elastic/elasticsearch';
 import { Client } from '@elastic/elasticsearch';
 import { compact } from 'lodash';
 import { format, parse } from 'node:url';
@@ -20,6 +21,8 @@ interface KibanaClientOptions {
   baseUrl: string;
   spaceId?: string;
   signal: AbortSignal;
+  auth?: ClientOptions['auth'];
+  headers?: Record<string, string | string[]>;
 }
 
 function combineSignal(left: AbortSignal, right?: AbortSignal | null | undefined) {
@@ -41,10 +44,11 @@ function combineSignal(left: AbortSignal, right?: AbortSignal | null | undefined
 
 export class KibanaClient {
   public readonly es: Client;
+
+  private readonly inputOptions: URL;
+  private readonly initOptions: Partial<FetchInitOptions>;
   constructor(private readonly options: KibanaClientOptions) {
     const parsedBaseUrl = parse(options.baseUrl, true);
-
-    const [username, password] = (parsedBaseUrl.auth ?? '').split(':');
 
     const node = format({
       ...parsedBaseUrl,
@@ -52,15 +56,41 @@ export class KibanaClient {
       pathname: null,
     });
 
-    this.es = new Client({
-      auth: {
-        username,
-        password,
+    const [username, password] = parsedBaseUrl.auth?.split(';') ?? ['', ''];
+
+    const auth = options.auth
+      ? options.auth
+      : username && password
+      ? { username, password }
+      : undefined;
+
+    this.inputOptions = new URL(options.baseUrl);
+
+    this.inputOptions.username = '';
+    this.inputOptions.password = '';
+
+    const Authorization = auth
+      ? 'apiKey' in auth
+        ? `ApiKey ${auth.apiKey}`
+        : 'username' in auth && 'password' in auth
+        ? `Basic ${Buffer.from([auth.username, auth.password].join(':')).toString('base64')}`
+        : undefined
+      : undefined;
+
+    this.initOptions = {
+      headers: {
+        ...getInternalKibanaHeaders(),
+        ...options.headers,
+        ...(Authorization ? { Authorization } : {}),
       },
+    };
+
+    this.es = new Client({
+      auth: options.auth,
       node,
       Transport: createProxyTransport({
         pathname: parsedBaseUrl.pathname!,
-        headers: getInternalKibanaHeaders(),
+        headers: this.initOptions.headers,
       }),
     });
   }
@@ -83,15 +113,13 @@ export class KibanaClient {
           }
         : options;
 
-    const formattedBaseUrl = parse(this.options.baseUrl, true);
-
     const urlOptions: UrlWithParsedQuery = {
-      ...formattedBaseUrl,
+      ...parse(this.inputOptions.toString(), true),
       ...urlObject,
       pathname: Path.posix.join(
         ...compact([
           '/',
-          formattedBaseUrl.pathname,
+          this.inputOptions.pathname,
           ...(this.options.spaceId ? ['s', this.options.spaceId] : []),
           urlObject.pathname,
         ])
@@ -102,11 +130,11 @@ export class KibanaClient {
     const body = init?.body ? JSON.stringify(init?.body) : undefined;
 
     const response = await fetch(format(urlOptions), {
+      ...this.initOptions,
       ...init,
       headers: {
         ['content-type']: 'application/json',
-        ...getInternalKibanaHeaders(),
-        Authorization: `Basic ${Buffer.from(formattedBaseUrl.auth!).toString('base64')}`,
+        ...this.initOptions.headers,
         ...init?.headers,
       },
       signal: combineSignal(this.options.signal, init?.signal),

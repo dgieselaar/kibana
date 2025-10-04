@@ -10,6 +10,7 @@ import { omit } from 'lodash';
 import fetch from 'node-fetch';
 import type { Url } from 'url';
 import { format, parse } from 'url';
+import type { ClientOptions } from '@elastic/elasticsearch';
 import { getInternalKibanaHeaders } from './get_internal_kibana_headers';
 
 async function discoverAuth(parsedTarget: Url, log: ToolingLog) {
@@ -32,7 +33,8 @@ async function discoverAuth(parsedTarget: Url, log: ToolingLog) {
     }
 
     if (status === 200) {
-      return auth;
+      const [username, password] = auth.split(':');
+      return { username, password };
     }
   }
 
@@ -117,16 +119,22 @@ export async function discoverKibanaUrl({
 }: {
   baseUrl?: string;
   log: ToolingLog;
-  auth?: { basic: { username: string; password: string } };
+  auth?: ClientOptions['auth'];
 }) {
   baseUrl = baseUrl ?? 'http://127.0.0.1:5601';
 
   const parsedTarget = parse(baseUrl);
 
-  let authToUse = auth?.basic ? `${auth.basic.username}:${auth.basic.password}` : parsedTarget.auth;
+  let authToUse =
+    auth && 'username' in auth && 'password' in auth
+      ? `${auth.username}:${auth.password}`
+      : parsedTarget.auth;
 
   if (!authToUse) {
-    authToUse = await discoverAuth(parsedTarget, log);
+    const discoveredAuth = await discoverAuth(parsedTarget, log);
+    if (discoveredAuth) {
+      authToUse = `${discoveredAuth.username}:${discoveredAuth.password}`;
+    }
   }
 
   const suspectedKibanaUrl = baseUrl;

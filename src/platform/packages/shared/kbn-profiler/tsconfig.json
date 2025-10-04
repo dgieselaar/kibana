@@ -15,5 +15,8 @@
   ],
   "kbn_references": [
     "@kbn/tooling-log",
+    "@kbn/logging",
+    "@kbn/core",
+    "@kbn/es-query",
   ]
 }

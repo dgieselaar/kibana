@@ -5,4 +5,4 @@
  * 2.0.
  */
 
-require('./src/run_cli').cli();
+export { cli } from './src/run_cli';

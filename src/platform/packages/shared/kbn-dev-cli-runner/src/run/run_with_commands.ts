@@ -17,13 +17,15 @@ import { FlagsReader } from '../flags/flags_reader';
 import { Cleanup } from '../cleanup';
 import { getHelpForAllCommands, getCommandLevelHelp } from '../help';
 import { Metrics } from '../metrics';
-import type { FlagOptions } from '../flags/types';
+import type { FlagOptions, Flags } from '../flags/types';
 
-export type CommandRunFn<T> = (context: RunContext & T) => Promise<void> | void;
+export type CommandRunFn<T, TFlags extends Flags = Flags> = (
+  context: RunContext<TFlags> & T
+) => Promise<void> | void;
 
-export interface Command<T> {
+export interface Command<T, TFlags extends Flags = Flags> {
   name: string;
-  run: CommandRunFn<T>;
+  run: CommandRunFn<T, TFlags>;
   description: RunOptions['description'];
   usage?: RunOptions['usage'];
   flags?: FlagOptions;
