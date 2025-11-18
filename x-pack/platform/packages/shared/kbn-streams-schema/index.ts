@@ -134,6 +134,23 @@ export type {
   GeneratedSignificantEventQuery,
 } from './src/api/significant_events';
 
+export type {
+  IngestSimulationResult,
+  PipelineSimulationResult,
+  SuccessfulPipelineSimulateDocumentResult,
+  SuccessfulPipelineSimulateResponse,
+  FailedSimulationResponse,
+  SuccessfulSimulationResponse,
+  SimulationResponse,
+  SimulationResponseBase,
+  DetectedField,
+  BaseSimulationError,
+  DocSimulationStatus,
+  ProcessorMetrics,
+  SimulationDocReport,
+  SimulationError,
+} from './src/api/processing';
+
 export { emptyAssets } from './src/helpers/empty_assets';
 
 export {
@@ -146,17 +163,5 @@ export {
   featureWithFilterSchema,
   isFeatureWithFilter,
 } from './src/feature';
-
-export {
-  type BaseSimulationError,
-  type SimulationError,
-  type DocSimulationStatus,
-  type SimulationDocReport,
-  type ProcessorMetrics,
-  type DetectedField,
-  type WithNameAndEsType,
-  type DocumentsMetrics,
-  type ProcessingSimulationResponse,
-} from './src/models/processing_simulation';
 
 export { type IngestStreamProcessing } from './src/models/ingest/processing';

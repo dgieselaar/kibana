@@ -9,45 +9,51 @@
 
 import { errors as esErrors } from '@elastic/elasticsearch';
 import type {
-  IngestDocument,
-  IngestProcessorContainer,
-  IngestSimulateRequest,
-  IngestPipelineProcessorResult,
-  IngestSimulateDocumentResult,
-  SimulateIngestRequest,
+  FieldCapsResponse,
   IndicesIndexState,
+  IngestDocument,
+  IngestPipelineProcessorResult,
+  IngestProcessorContainer,
+  IngestSimulateDocumentResult,
+  IngestSimulateRequest,
+  IngestSimulateResponse,
+  SimulateIngestRequest,
   SimulateIngestResponse,
   SimulateIngestSimulateIngestDocumentResult,
-  FieldCapsResponse,
-  IngestSimulateResponse,
 } from '@elastic/elasticsearch/lib/api/types';
 import type { IScopedClusterClient } from '@kbn/core/server';
+import type { FieldMetadataPlain } from '@kbn/fields-metadata-plugin/common';
 import type { IFieldsMetadataClient } from '@kbn/fields-metadata-plugin/server/services/fields_metadata/types';
-import { flattenObjectNestedLast, calculateObjectDiff } from '@kbn/object-utils';
-import type {
-  FlattenRecord,
-  NamedFieldDefinitionConfig,
-  FieldDefinition,
-  SimulationError,
-  DocSimulationStatus,
-  SimulationDocReport,
-  ProcessorMetrics,
-  DetectedField,
-  ProcessingSimulationResponse,
-} from '@kbn/streams-schema';
-import { getInheritedFieldsFromAncestors, Streams } from '@kbn/streams-schema';
-import { mapValues, uniq, omit, isEmpty, uniqBy } from 'lodash';
+import { calculateObjectDiff, flattenObjectNestedLast } from '@kbn/object-utils';
 import type { StreamlangDSL } from '@kbn/streamlang';
 import { transpileIngestPipeline } from '@kbn/streamlang';
-import { getRoot } from '@kbn/streams-schema/src/shared/hierarchy';
-import type { FieldMetadataPlain } from '@kbn/fields-metadata-plugin/common';
+import type {
+  DetectedField,
+  DocSimulationStatus,
+  FailedSimulationResponse,
+  FieldDefinition,
+  FlattenRecord,
+  IngestSimulationResult,
+  NamedFieldDefinitionConfig,
+  PipelineSimulationResult,
+  ProcessorMetrics,
+  SimulationDocReport,
+  SimulationError,
+  SimulationResponse,
+  SuccessfulPipelineSimulateDocumentResult,
+  SuccessfulPipelineSimulateResponse,
+  SuccessfulSimulationResponse,
+} from '@kbn/streams-schema';
+import { getInheritedFieldsFromAncestors, Streams } from '@kbn/streams-schema';
 import { FIELD_DEFINITION_TYPES } from '@kbn/streams-schema/src/fields';
+import { getRoot } from '@kbn/streams-schema/src/shared/hierarchy';
+import { isEmpty, mapValues, omit, uniq, uniqBy } from 'lodash';
+import type { StreamsClient } from '../../../../lib/streams/client';
 import {
-  normalizeGeoPointsInObject,
   detectGeoPointPatternsFromDocuments,
+  normalizeGeoPointsInObject,
 } from '../../../../lib/streams/helpers/normalize_geo_points';
 import { getProcessingPipelineName } from '../../../../lib/streams/ingest_pipelines/name';
-import type { StreamsClient } from '../../../../lib/streams/client';
 
 export interface ProcessingSimulationParams {
   path: {
@@ -67,44 +73,14 @@ export interface SimulateProcessingDeps {
   fieldsMetadataClient: IFieldsMetadataClient;
 }
 
-// Narrow down the type to only successful processor results
-export type SuccessfulPipelineSimulateDocumentResult = WithRequired<
-  IngestSimulateDocumentResult,
-  'processor_results'
->;
-
-export interface SuccessfulPipelineSimulateResponse {
-  docs: SuccessfulPipelineSimulateDocumentResult[];
-}
-
-export type PipelineSimulationResult =
-  | {
-      status: 'success';
-      simulation: SuccessfulPipelineSimulateResponse;
-    }
-  | {
-      status: 'failure';
-      error: SimulationError;
-    };
-
-export type IngestSimulationResult =
-  | {
-      status: 'success';
-      simulation: SimulateIngestResponse;
-    }
-  | {
-      status: 'failure';
-      error: SimulationError;
-    };
-
-export type WithRequired<TObj, TKey extends keyof TObj> = TObj & { [TProp in TKey]-?: TObj[TProp] };
+type WithRequired<TObj, TKey extends keyof TObj> = TObj & { [TProp in TKey]-?: TObj[TProp] };
 
 export const simulateProcessing = async ({
   params,
   scopedClusterClient,
   streamsClient,
   fieldsMetadataClient,
-}: SimulateProcessingDeps): Promise<ProcessingSimulationResponse> => {
+}: SimulateProcessingDeps): Promise<SimulationResponse> => {
   /* 0. Retrieve required data to prepare the simulation */
   const [stream, { indexState: streamIndexState, fieldCaps: streamIndexFieldCaps }] =
     await Promise.all([
@@ -175,7 +151,7 @@ const prepareSimulationDocs = (
   }));
 };
 
-const prepareSimulationProcessors = (processing: StreamlangDSL): IngestProcessorContainer[] => {
+function prepareSimulationProcessors(processing: StreamlangDSL): IngestProcessorContainer[] {
   //
   /**
    * We want to simulate processors logic and collect data independently from the user config for simulation purposes.
@@ -210,7 +186,7 @@ const prepareSimulationProcessors = (processing: StreamlangDSL): IngestProcessor
       },
     };
   });
-};
+}
 
 const prepareSimulationData = (
   params: ProcessingSimulationParams,
@@ -244,9 +220,9 @@ const prepareSimulationData = (
   };
 };
 
-const preparePipelineSimulationBody = (
+function preparePipelineSimulationBody(
   simulationData: ReturnType<typeof prepareSimulationData>
-): IngestSimulateRequest => {
+): IngestSimulateRequest {
   const { docs, processors } = simulationData;
 
   return {
@@ -255,14 +231,14 @@ const preparePipelineSimulationBody = (
     pipeline: { processors, field_access_pattern: 'flexible' },
     verbose: true,
   };
-};
+}
 
-const prepareIngestSimulationBody = (
+function prepareIngestSimulationBody(
   simulationData: ReturnType<typeof prepareSimulationData>,
   stream: Streams.all.Definition,
   streamIndex: IndicesIndexState,
   params: ProcessingSimulationParams
-): SimulateIngestRequest => {
+): SimulateIngestRequest {
   const { body } = params;
   const { detected_fields } = body;
 
@@ -307,7 +283,7 @@ const prepareIngestSimulationBody = (
   };
 
   return simulationBody;
-};
+}
 
 /**
  * When running a pipeline simulation, we want to fail fast on syntax failures, such as grok patterns.
@@ -748,11 +724,11 @@ const collectIngestDocumentErrors = (docResult: SimulateIngestSimulateIngestDocu
   return errors;
 };
 
-const prepareSimulationResponse = async (
+function prepareSimulationResponse(
   docReports: SimulationDocReport[],
   processorsMetrics: Record<string, ProcessorMetrics>,
   detectedFields: DetectedField[]
-) => {
+): SuccessfulSimulationResponse {
   const calculateRateByStatus = getRateCalculatorForDocs(docReports);
 
   const parsedRate = calculateRateByStatus('parsed');
@@ -774,9 +750,9 @@ const prepareSimulationResponse = async (
       dropped_rate: parseFloat(droppedRate.toFixed(3)),
     },
   };
-};
+}
 
-const prepareSimulationFailureResponse = (error: SimulationError) => {
+function prepareSimulationFailureResponse(error: SimulationError): FailedSimulationResponse {
   const failedBecauseNoSampleDocs = error.message.includes('must specify at least one document');
   return {
     detected_fields: [],
@@ -805,7 +781,7 @@ const prepareSimulationFailureResponse = (error: SimulationError) => {
       dropped_rate: 0,
     },
   };
-};
+}
 
 const getStreamIndex = async (
   scopedClusterClient: IScopedClusterClient,
@@ -857,13 +833,13 @@ const getStreamFields = async (
 /**
  * In case new fields have been detected, we want to tell the user which ones are inherited and already mapped.
  */
-const computeDetectedFields = async (
+async function computeDetectedFields(
   processorsMetrics: Record<string, ProcessorMetrics>,
   params: ProcessingSimulationParams,
   streamFields: FieldDefinition,
   streamFieldCaps: FieldCapsResponse['fields'],
   fieldsMetadataClient: IFieldsMetadataClient
-): Promise<DetectedField[]> => {
+): Promise<DetectedField[]> {
   const fields = Object.values(processorsMetrics).flatMap((metrics) => metrics.detected_fields);
 
   const uniqueFields = uniq(fields);
@@ -920,7 +896,7 @@ const computeDetectedFields = async (
       description,
     };
   });
-};
+}
 
 const getRateCalculatorForDocs = (docs: SimulationDocReport[]) => (status: DocSimulationStatus) => {
   const matchCount = docs.reduce((rate, doc) => (rate += doc.status === status ? 1 : 0), 0);

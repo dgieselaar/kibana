@@ -27,5 +27,8 @@
     "@kbn/zod-helpers",
     "@kbn/fields-metadata-plugin",
     "@kbn/apm-utils",
+    "@kbn/dashboard-plugin",
+    "@kbn/grok-heuristics",
+    "@kbn/slo-schema",
   ]
 }
