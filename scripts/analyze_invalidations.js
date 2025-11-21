@@ -6,16 +6,5 @@
  * your election, the "Elastic License 2.0", the "GNU Affero General Public
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
-
-import { createRequire } from 'module';
-globalThis.require = createRequire(import.meta.url);
-
-// development env setup includes babel/register after the env is initialized
-require('./setup_env');
-
-// restore < Node 16 default DNS lookup behavior
-require('./dns_ipv4_first');
-
-require('@kbn/babel-register').install();
-
-require('@kbn/security-hardening');
+require('../src/setup_node_env');
+require('./analyze_pr_ts_invalidations');

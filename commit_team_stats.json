@@ -1,0 +1,1665 @@
+{
+  "metadata": {
+    "generatedAt": "2025-11-02T12:56:04.108Z",
+    "remote": "upstream",
+    "branch": "main",
+    "months": 3,
+    "window": {
+      "unit": "months",
+      "value": 3
+    },
+    "since": "2025-08-02T00:00:00.000Z",
+    "commitsConsidered": 3690,
+    "commitsWithRelevantChanges": 3246,
+    "uniqueGitHubUsersQueried": 289
+  },
+  "stats": {
+    "security-solution": {
+      "Security": {
+        "authors": 55,
+        "authorsPercent": 79.71,
+        "loc": 333032,
+        "locPercent": 49.94,
+        "commits": 507,
+        "commitsPercent": 61.01
+      },
+      "Observability": {
+        "authors": 4,
+        "authorsPercent": 5.8,
+        "loc": 120,
+        "locPercent": 0.02,
+        "commits": 4,
+        "commitsPercent": 0.48
+      },
+      "Search": {
+        "authors": 2,
+        "authorsPercent": 2.9,
+        "loc": 61,
+        "locPercent": 0.01,
+        "commits": 2,
+        "commitsPercent": 0.24
+      },
+      "Platform": {
+        "authors": 58,
+        "authorsPercent": 84.06,
+        "loc": 333597,
+        "locPercent": 50.03,
+        "commits": 318,
+        "commitsPercent": 38.27
+      }
+    },
+    "observability": {
+      "Security": {
+        "authors": 10,
+        "authorsPercent": 12.5,
+        "loc": 10384,
+        "locPercent": 2.47,
+        "commits": 16,
+        "commitsPercent": 1.78
+      },
+      "Observability": {
+        "authors": 59,
+        "authorsPercent": 73.75,
+        "loc": 82694,
+        "locPercent": 19.67,
+        "commits": 285,
+        "commitsPercent": 31.7
+      },
+      "Search": {
+        "authors": 3,
+        "authorsPercent": 3.75,
+        "loc": 5262,
+        "locPercent": 1.25,
+        "commits": 3,
+        "commitsPercent": 0.33
+      },
+      "Platform": {
+        "authors": 66,
+        "authorsPercent": 82.5,
+        "loc": 322097,
+        "locPercent": 76.61,
+        "commits": 595,
+        "commitsPercent": 66.18
+      }
+    },
+    "enterprise-search": {
+      "Security": {
+        "authors": 2,
+        "authorsPercent": 8.33,
+        "loc": 7,
+        "locPercent": 0.01,
+        "commits": 3,
+        "commitsPercent": 0.98
+      },
+      "Observability": {
+        "authors": 1,
+        "authorsPercent": 4.17,
+        "loc": 32,
+        "locPercent": 0.02,
+        "commits": 3,
+        "commitsPercent": 0.98
+      },
+      "Search": {
+        "authors": 16,
+        "authorsPercent": 66.67,
+        "loc": 55749,
+        "locPercent": 43.46,
+        "commits": 97,
+        "commitsPercent": 31.6
+      },
+      "Platform": {
+        "authors": 24,
+        "authorsPercent": 100,
+        "loc": 72481,
+        "locPercent": 56.51,
+        "commits": 204,
+        "commitsPercent": 66.45
+      }
+    },
+    "other": {
+      "Security": {
+        "authors": 55,
+        "authorsPercent": 45.08,
+        "loc": 23536,
+        "locPercent": 4.27,
+        "commits": 202,
+        "commitsPercent": 12.27
+      },
+      "Observability": {
+        "authors": 47,
+        "authorsPercent": 38.52,
+        "loc": 8099,
+        "locPercent": 1.47,
+        "commits": 128,
+        "commitsPercent": 7.78
+      },
+      "Search": {
+        "authors": 20,
+        "authorsPercent": 16.39,
+        "loc": 2361,
+        "locPercent": 0.43,
+        "commits": 45,
+        "commitsPercent": 2.73
+      },
+      "Platform": {
+        "authors": 112,
+        "authorsPercent": 91.8,
+        "loc": 516797,
+        "locPercent": 93.83,
+        "commits": 1271,
+        "commitsPercent": 77.22
+      }
+    },
+    "all": {
+      "Security": {
+        "authors": 122,
+        "authorsPercent": 41.36,
+        "loc": 366959,
+        "locPercent": 20.78,
+        "commits": 728,
+        "commitsPercent": 19.77
+      },
+      "Observability": {
+        "authors": 111,
+        "authorsPercent": 37.63,
+        "loc": 90945,
+        "locPercent": 5.15,
+        "commits": 420,
+        "commitsPercent": 11.4
+      },
+      "Search": {
+        "authors": 41,
+        "authorsPercent": 13.9,
+        "loc": 63433,
+        "locPercent": 3.59,
+        "commits": 147,
+        "commitsPercent": 3.99
+      },
+      "Platform": {
+        "authors": 260,
+        "authorsPercent": 88.14,
+        "loc": 1244972,
+        "locPercent": 70.48,
+        "commits": 2388,
+        "commitsPercent": 64.84
+      }
+    }
+  },
+  "authors": [
+    {
+      "identifier": "198982749+Copilot@users.noreply.github.com",
+      "login": "Copilot",
+      "group": "other"
+    },
+    {
+      "identifier": "fagnani.francesco@gmail.com",
+      "login": "cesco-f",
+      "group": "observability"
+    },
+    {
+      "identifier": "bailey.cash@elastic.co",
+      "login": "baileycash-elastic",
+      "group": "observability"
+    },
+    {
+      "identifier": "kerry.gallagher@elastic.co",
+      "login": "Kerry350",
+      "group": "observability"
+    },
+    {
+      "identifier": "42973632+kibanamachine@users.noreply.github.com",
+      "login": "kibanamachine",
+      "group": "other"
+    },
+    {
+      "identifier": "tiago.costa@elastic.co",
+      "login": "mistic",
+      "group": "other"
+    },
+    {
+      "identifier": "stephanie.milovic@elastic.co",
+      "login": "stephmilovic",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "igorskynet13@gmail.com",
+      "login": "skynetigor",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "18648970+christineweng@users.noreply.github.com",
+      "login": "christineweng",
+      "group": "other"
+    },
+    {
+      "identifier": "matt.wilde@elastic.co",
+      "login": "wildemat",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "ryalnd@gmail.com",
+      "login": "rylnd",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "109488926+doakalexi@users.noreply.github.com",
+      "login": "doakalexi",
+      "group": "other"
+    },
+    {
+      "identifier": "90178898+juliaElastic@users.noreply.github.com",
+      "login": "juliaElastic",
+      "group": "observability"
+    },
+    {
+      "identifier": "davis.mcphee@elastic.co",
+      "login": "davismcphee",
+      "group": "other"
+    },
+    {
+      "identifier": "wtty.fool@gmail.com",
+      "login": "kubasobon",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "92210485+rbrtj@users.noreply.github.com",
+      "login": "rbrtj",
+      "group": "other"
+    },
+    {
+      "identifier": "50221462+chrisbmar@users.noreply.github.com",
+      "login": "chrisbmar",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "shahzad31comp@gmail.com",
+      "login": "shahzad31",
+      "group": "observability"
+    },
+    {
+      "identifier": "Heenawter@users.noreply.github.com",
+      "login": "Heenawter",
+      "group": "other"
+    },
+    {
+      "identifier": "soren.louv@elastic.co",
+      "login": "sorenlouv",
+      "group": "observability"
+    },
+    {
+      "identifier": "1525308+jorgeoliveira117@users.noreply.github.com",
+      "login": "jorgeoliveira117",
+      "group": "observability"
+    },
+    {
+      "identifier": "nicolas.chaulet@elastic.co",
+      "login": "nchaulet",
+      "group": "observability"
+    },
+    {
+      "identifier": "79913332+bartoval@users.noreply.github.com",
+      "login": "bartoval",
+      "group": "other"
+    },
+    {
+      "identifier": "reese.nathan@elastic.co",
+      "login": "nreese",
+      "group": "other"
+    },
+    {
+      "identifier": "ana.davydova@elastic.co",
+      "login": "ana-davydova",
+      "group": "observability"
+    },
+    {
+      "identifier": "maxim.kholod@elastic.co",
+      "login": "maxcold",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "patrick.mueller@elastic.co",
+      "login": "pmuellr",
+      "group": "other"
+    },
+    {
+      "identifier": "maxim.palenov@elastic.co",
+      "login": "maximpn",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "samuel.brito@elastic.co",
+      "login": "sbelastic",
+      "group": "observability"
+    },
+    {
+      "identifier": "pierre.gayvallet@elastic.co",
+      "login": "pgayvallet",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "47327793+AlejandroFrndz@users.noreply.github.com",
+      "login": "AlejandroFrndz",
+      "group": "observability"
+    },
+    {
+      "identifier": "85914248+robester0403@users.noreply.github.com",
+      "login": "robester0403",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "lene.gadewoll@elastic.co",
+      "login": "mgadewoll",
+      "group": "other"
+    },
+    {
+      "identifier": "jgowdy@elastic.co",
+      "login": "jgowdyelastic",
+      "group": "other"
+    },
+    {
+      "identifier": "efstratia.kalafateli@elastic.co",
+      "login": "stratoula",
+      "group": "other"
+    },
+    {
+      "identifier": "gerard.soldevila@elastic.co",
+      "login": "gsoldevila",
+      "group": "other"
+    },
+    {
+      "identifier": "31973472+AlexGPlay@users.noreply.github.com",
+      "login": "AlexGPlay",
+      "group": "other"
+    },
+    {
+      "identifier": "sergi.massaneda@elastic.co",
+      "login": "semd",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "walter.rafelsberger@elastic.co",
+      "login": "walterra",
+      "group": "other"
+    },
+    {
+      "identifier": "sebastian.delledonne@elastic.co",
+      "login": "sddonne",
+      "group": "other"
+    },
+    {
+      "identifier": "johannes.reuter@elastic.co",
+      "login": "flash1293",
+      "group": "observability"
+    },
+    {
+      "identifier": "anton.dosov@elastic.co",
+      "login": "Dosant",
+      "group": "other"
+    },
+    {
+      "identifier": "117628830+abhishekbhatia1710@users.noreply.github.com",
+      "login": "abhishekbhatia1710",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "nicholas.partridge@elastic.co",
+      "login": "nickofthyme",
+      "group": "other"
+    },
+    {
+      "identifier": "56408403+kqualters-elastic@users.noreply.github.com",
+      "login": "kqualters-elastic",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "philippe.oberti@elastic.co",
+      "login": "PhilippeOberti",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "omolola.akinleye@elastic.co",
+      "login": "Omolola-Akinleye",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "132922331+saikatsarkar056@users.noreply.github.com",
+      "login": "saikatsarkar056",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "sean.story@elastic.co",
+      "login": "seanstory",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "42113355+KDKHD@users.noreply.github.com",
+      "login": "KDKHD",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "chris@elastic.co",
+      "login": "simianhacker",
+      "group": "observability"
+    },
+    {
+      "identifier": "spong@users.noreply.github.com",
+      "login": "spong",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "talboren2@gmail.com",
+      "login": "talboren",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "43350163+qn895@users.noreply.github.com",
+      "login": "qn895",
+      "group": "other"
+    },
+    {
+      "identifier": "nick.peihl@elastic.co",
+      "login": "nickpeihl",
+      "group": "other"
+    },
+    {
+      "identifier": "paulina.shakirova@elastic.co",
+      "login": "paulinashakirova",
+      "group": "other"
+    },
+    {
+      "identifier": "55978943+cauemarcondes@users.noreply.github.com",
+      "login": "cauemarcondes",
+      "group": "observability"
+    },
+    {
+      "identifier": "dzheni.pavlova@elastic.co",
+      "login": "jennypavlova",
+      "group": "observability"
+    },
+    {
+      "identifier": "julia.rechkunova@elastic.co",
+      "login": "jughosta",
+      "group": "other"
+    },
+    {
+      "identifier": "150824886+Samiul-TheSoccerFan@users.noreply.github.com",
+      "login": "Samiul-TheSoccerFan",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "melissa.alvarez@elastic.co",
+      "login": "alvarezmelissa87",
+      "group": "other"
+    },
+    {
+      "identifier": "92688503+ersin-erdal@users.noreply.github.com",
+      "login": "ersin-erdal",
+      "group": "other"
+    },
+    {
+      "identifier": "nikita.lavrov@elastic.co",
+      "login": "nikita-lavrov",
+      "group": "observability"
+    },
+    {
+      "identifier": "jeramy.soucy@elastic.co",
+      "login": "jeramysoucy",
+      "group": "other"
+    },
+    {
+      "identifier": "konrad.szwarc@elastic.co",
+      "login": "szwarckonrad",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "umbopepato@users.noreply.github.com",
+      "login": "umbopepato",
+      "group": "other"
+    },
+    {
+      "identifier": "31922082+MiriamAparicio@users.noreply.github.com",
+      "login": "MiriamAparicio",
+      "group": "observability"
+    },
+    {
+      "identifier": "georgiana.onoleata@elastic.co",
+      "login": "georgianaonoleata1904",
+      "group": "other"
+    },
+    {
+      "identifier": "shaharglazner@gmail.com",
+      "login": "shahargl",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "7893459+eokoneyo@users.noreply.github.com",
+      "login": "eokoneyo",
+      "group": "other"
+    },
+    {
+      "identifier": "sergi.romeu@elastic.co",
+      "login": "rmyz",
+      "group": "observability"
+    },
+    {
+      "identifier": "sonia.sanzvivas@elastic.co",
+      "login": "SoniaSanzV",
+      "group": "other"
+    },
+    {
+      "identifier": "pablo.nevesmachado@elastic.co",
+      "login": "machadoum",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "61565784+agusruidiazgd@users.noreply.github.com",
+      "login": "agusruidiazgd",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "98294366+couvq@users.noreply.github.com",
+      "login": "couvq",
+      "group": "observability"
+    },
+    {
+      "identifier": "tomasz.ciecierski@elastic.co",
+      "login": "tomsonpl",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "diogo.lima@elastic.co",
+      "login": "diogolima-elastic",
+      "group": "observability"
+    },
+    {
+      "identifier": "aikaterini.patticha@elastic.co",
+      "login": "kpatticha",
+      "group": "observability"
+    },
+    {
+      "identifier": "jedrazb@gmail.com",
+      "login": "jedrazb",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "alexwizp@gmail.com",
+      "login": "alexwizp",
+      "group": "other"
+    },
+    {
+      "identifier": "63072419+akowalska622@users.noreply.github.com",
+      "login": "akowalska622",
+      "group": "other"
+    },
+    {
+      "identifier": "awahab07@yahoo.com",
+      "login": "awahab07",
+      "group": "observability"
+    },
+    {
+      "identifier": "jeanlouis.leysens@elastic.co",
+      "login": "jloleysens",
+      "group": "other"
+    },
+    {
+      "identifier": "gergo.abraham@elastic.co",
+      "login": "gergoabraham",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "angeles.martinezbarrio@elastic.co",
+      "login": "angeles-mb",
+      "group": "other"
+    },
+    {
+      "identifier": "Ikuni17@users.noreply.github.com",
+      "login": "Ikuni17",
+      "group": "other"
+    },
+    {
+      "identifier": "mikhail.dokolin@elastic.co",
+      "login": "dokmic",
+      "group": "other"
+    },
+    {
+      "identifier": "jakobmalmo@protonmail.com",
+      "login": "jmalmo",
+      "group": "other"
+    },
+    {
+      "identifier": "trent.mick@elastic.co",
+      "login": "trentm",
+      "group": "observability"
+    },
+    {
+      "identifier": "4283304+mbondyra@users.noreply.github.com",
+      "login": "mbondyra",
+      "group": "other"
+    },
+    {
+      "identifier": "ying.mao@elastic.co",
+      "login": "ymao1",
+      "group": "other"
+    },
+    {
+      "identifier": "rodney.norris@elastic.co",
+      "login": "TattdCodeMonkey",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "56442535+paul-tavares@users.noreply.github.com",
+      "login": "paul-tavares",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "hammad.nasir@elastic.co",
+      "login": "hammad-nasir-elastic",
+      "group": "other"
+    },
+    {
+      "identifier": "dzmitry.lemechko@elastic.co",
+      "login": "dmlemeshko",
+      "group": "other"
+    },
+    {
+      "identifier": "robert.oskamp@elastic.co",
+      "login": "pheyos",
+      "group": "other"
+    },
+    {
+      "identifier": "106958839+mariairiartef@users.noreply.github.com",
+      "login": "mariairiartef",
+      "group": "other"
+    },
+    {
+      "identifier": "seialkali@gmail.com",
+      "login": "seialkali",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "viduni.wickramarachchi@elastic.co",
+      "login": "viduni94",
+      "group": "observability"
+    },
+    {
+      "identifier": "peter.pisljar@elastic.co",
+      "login": "ppisljar",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "59341489+ElenaStoeva@users.noreply.github.com",
+      "login": "ElenaStoeva",
+      "group": "other"
+    },
+    {
+      "identifier": "55718608+marshallmain@users.noreply.github.com",
+      "login": "marshallmain",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "crespocarlos@users.noreply.github.com",
+      "login": "crespocarlos",
+      "group": "observability"
+    },
+    {
+      "identifier": "jill.guyonnet@elastic.co",
+      "login": "jillguyonnet",
+      "group": "observability"
+    },
+    {
+      "identifier": "christos.nasikas@elastic.co",
+      "login": "cnasikas",
+      "group": "other"
+    },
+    {
+      "identifier": "rickyangwyn@gmail.com",
+      "login": "animehart",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "irene.blanco@elastic.co",
+      "login": "iblancof",
+      "group": "observability"
+    },
+    {
+      "identifier": "tobio85@gmail.com",
+      "login": "tobio",
+      "group": "other"
+    },
+    {
+      "identifier": "teresa.romero@elastic.co",
+      "login": "teresaromero",
+      "group": "observability"
+    },
+    {
+      "identifier": "lcawley@elastic.co",
+      "login": "lcawl",
+      "group": "observability"
+    },
+    {
+      "identifier": "55930906+saarikabhasi@users.noreply.github.com",
+      "login": "saarikabhasi",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "goncalo.rica@elastic.co",
+      "login": "Bluefinger",
+      "group": "observability"
+    },
+    {
+      "identifier": "68001413+rosomri@users.noreply.github.com",
+      "login": "rosomri",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "17549662+jcger@users.noreply.github.com",
+      "login": "jcger",
+      "group": "other"
+    },
+    {
+      "identifier": "marcoantonio.ghiani01@gmail.com",
+      "login": "tonyghiani",
+      "group": "observability"
+    },
+    {
+      "identifier": "190132+thomheymann@users.noreply.github.com",
+      "login": "thomheymann",
+      "group": "observability"
+    },
+    {
+      "identifier": "123897612+bhapas@users.noreply.github.com",
+      "login": "bhapas",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "alex.szabo@elastic.co",
+      "login": "delanni",
+      "group": "other"
+    },
+    {
+      "identifier": "maryam.saeidi@elastic.co",
+      "login": "maryam-saeidi",
+      "group": "observability"
+    },
+    {
+      "identifier": "sdesalas@users.noreply.github.com",
+      "login": "sdesalas",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "74562234+JiaweiWu@users.noreply.github.com",
+      "login": "JiaweiWu",
+      "group": "other"
+    },
+    {
+      "identifier": "6295984+angorayc@users.noreply.github.com",
+      "login": "angorayc",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "vladimir.filonov@elastic.co",
+      "login": "VladimirFilonov",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "39905449+intxgo@users.noreply.github.com",
+      "login": "intxgo",
+      "group": "other"
+    },
+    {
+      "identifier": "sean.rathier@gmail.com",
+      "login": "seanrathier",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "kevin.lacabane@elastic.co",
+      "login": "klacabane",
+      "group": "observability"
+    },
+    {
+      "identifier": "krzysztof.kowalczyk@elastic.co",
+      "login": "kowalczyk-krzysztof",
+      "group": "other"
+    },
+    {
+      "identifier": "alex.prozorov@elastic.co",
+      "login": "alexreal1314",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "46727170+Supplementing@users.noreply.github.com",
+      "login": "Supplementing",
+      "group": "observability"
+    },
+    {
+      "identifier": "jon@elastic.co",
+      "login": "jbudz",
+      "group": "other"
+    },
+    {
+      "identifier": "tiagoffcc@hotmail.com",
+      "login": "mistic",
+      "group": "other"
+    },
+    {
+      "identifier": "CAWilson94@users.noreply.github.com",
+      "login": "CAWilson94",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "1849116+ashokaditya@users.noreply.github.com",
+      "login": "ashokaditya",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "nikita.khristinin@elastic.co",
+      "login": "nkhristinin",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "chris.georgakopoulos@elastic.co",
+      "login": "c-georgakopoulos",
+      "group": "observability"
+    },
+    {
+      "identifier": "andreana.malama@elastic.co",
+      "login": "andrimal",
+      "group": "other"
+    },
+    {
+      "identifier": "104936644+KodeRad@users.noreply.github.com",
+      "login": "KodeRad",
+      "group": "other"
+    },
+    {
+      "identifier": "antonio.coelho@elastic.co",
+      "login": "adcoelho",
+      "group": "other"
+    },
+    {
+      "identifier": "56409205+parkiino@users.noreply.github.com",
+      "login": "parkiino",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "56367316+dplumlee@users.noreply.github.com",
+      "login": "dplumlee",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "michel.losier@elastic.co",
+      "login": "MichelLosier",
+      "group": "observability"
+    },
+    {
+      "identifier": "125268832+damian-polewski@users.noreply.github.com",
+      "login": "damian-polewski",
+      "group": "other"
+    },
+    {
+      "identifier": "lorenzo.soligo@elastic.co",
+      "login": "LolloneS",
+      "group": "other"
+    },
+    {
+      "identifier": "11671118+lgestc@users.noreply.github.com",
+      "login": "lgestc",
+      "group": "other"
+    },
+    {
+      "identifier": "174716857+elastic-renovate-prod[bot]@users.noreply.github.com",
+      "login": "elastic-renovate-prod[bot]",
+      "group": "other"
+    },
+    {
+      "identifier": "achyut.jhunjhunwala@elastic.co",
+      "login": "achyutjhunjhunwala",
+      "group": "observability"
+    },
+    {
+      "identifier": "brad.white@elastic.co",
+      "login": "Ikuni17",
+      "group": "other"
+    },
+    {
+      "identifier": "dej611@users.noreply.github.com",
+      "login": "dej611",
+      "group": "other"
+    },
+    {
+      "identifier": "82822460+vadimkibana@users.noreply.github.com",
+      "login": "vadimkibana",
+      "group": "other"
+    },
+    {
+      "identifier": "yakiryous@gmail.com",
+      "login": "Kiryous",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "mradzynski.elastic@gmail.com",
+      "login": "MiloszRadzynski",
+      "group": "other"
+    },
+    {
+      "identifier": "lukas@elastic.co",
+      "login": "lukasolson",
+      "group": "other"
+    },
+    {
+      "identifier": "arturo.castillo@elastic.co",
+      "login": "acstll",
+      "group": "other"
+    },
+    {
+      "identifier": "kc13greiner@users.noreply.github.com",
+      "login": "kc13greiner",
+      "group": "other"
+    },
+    {
+      "identifier": "edgar.santos@elastic.co",
+      "login": "denar50",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "larry.gregory@elastic.co",
+      "login": "legrego",
+      "group": "other"
+    },
+    {
+      "identifier": "165678770+elena-shostak@users.noreply.github.com",
+      "login": "elena-shostak",
+      "group": "other"
+    },
+    {
+      "identifier": "44780623+momovdg@users.noreply.github.com",
+      "login": "momovdg",
+      "group": "other"
+    },
+    {
+      "identifier": "JDKurma@gmail.com",
+      "login": "JDKurma",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "christiane.heiligers@elastic.co",
+      "login": "TinaHeiligers",
+      "group": "other"
+    },
+    {
+      "identifier": "tiago.vilaverde@elastic.co",
+      "login": "tiansivive",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "srdjan.lulic@elastic.co",
+      "login": "SrdjanLL",
+      "group": "observability"
+    },
+    {
+      "identifier": "andrew.macri@elastic.co",
+      "login": "andrew-goldstein",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "jan.monschke@elastic.co",
+      "login": "janmonschke",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "efeguerkan.yalaman@elastic.co",
+      "login": "efegurkan",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "nikita.indik@elastic.co",
+      "login": "nikitaindik",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "marco.vettorello@elastic.co",
+      "login": "markov00",
+      "group": "other"
+    },
+    {
+      "identifier": "paulo.henrique@elastic.co",
+      "login": "opauloh",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "karen.grigoryan@elastic.co",
+      "login": "kapral18",
+      "group": "other"
+    },
+    {
+      "identifier": "florent.leborgne@elastic.co",
+      "login": "florent-leborgne",
+      "group": "other"
+    },
+    {
+      "identifier": "rivasign@gmail.com",
+      "login": "sabarasaba",
+      "group": "other"
+    },
+    {
+      "identifier": "catherine.liu@elastic.co",
+      "login": "cqliu1",
+      "group": "other"
+    },
+    {
+      "identifier": "117571355+js-jankisalvi@users.noreply.github.com",
+      "login": "js-jankisalvi",
+      "group": "other"
+    },
+    {
+      "identifier": "tomasz.kajtoch@elastic.co",
+      "login": "tkajtoch",
+      "group": "other"
+    },
+    {
+      "identifier": "its.jenetic@gmail.com",
+      "login": "jen-huang",
+      "group": "observability"
+    },
+    {
+      "identifier": "michael.olorunnisola@elastic.co",
+      "login": "michaelolo24",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "devon.thomson@elastic.co",
+      "login": "ThomThomson",
+      "group": "other"
+    },
+    {
+      "identifier": "ievgen.sorokopud@elastic.co",
+      "login": "e40pud",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "jatin.kathuria@elastic.co",
+      "login": "logeekal",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "98127445+olapawlus@users.noreply.github.com",
+      "login": "olapawlus",
+      "group": "other"
+    },
+    {
+      "identifier": "AlexanderWert@users.noreply.github.com",
+      "login": "AlexanderWert",
+      "group": "observability"
+    },
+    {
+      "identifier": "dario.gieselaar@elastic.co",
+      "login": "dgieselaar",
+      "group": "observability"
+    },
+    {
+      "identifier": "60304951+rStelmach@users.noreply.github.com",
+      "login": "rStelmach",
+      "group": "observability"
+    },
+    {
+      "identifier": "jaime.soriano@elastic.co",
+      "login": "jsoriano",
+      "group": "observability"
+    },
+    {
+      "identifier": "matt@mattki.me",
+      "login": "mattkime",
+      "group": "other"
+    },
+    {
+      "identifier": "sebastian.zaffarano@elastic.co",
+      "login": "szaffarano",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "38698566+miloszmarcinkowski@users.noreply.github.com",
+      "login": "miloszmarcinkowski",
+      "group": "observability"
+    },
+    {
+      "identifier": "drew.tate@elastic.co",
+      "login": "drewdaemon",
+      "group": "other"
+    },
+    {
+      "identifier": "mykola.harmash@gmail.com",
+      "login": "mykolaharmash",
+      "group": "observability"
+    },
+    {
+      "identifier": "41008968+jesuswr@users.noreply.github.com",
+      "login": "jesuswr",
+      "group": "other"
+    },
+    {
+      "identifier": "luca.wintergerst@elastic.co",
+      "login": "LucaWintergerst",
+      "group": "other"
+    },
+    {
+      "identifier": "joey.poon@elastic.co",
+      "login": "joeypoon",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "tiago.marques@elastic.co",
+      "login": "TFCMarques",
+      "group": "observability"
+    },
+    {
+      "identifier": "matthias.wilhelm@elastic.co",
+      "login": "kertal",
+      "group": "other"
+    },
+    {
+      "identifier": "jk@elastic.co",
+      "login": "justinkambic",
+      "group": "observability"
+    },
+    {
+      "identifier": "ryan.godfrey@elastic.co",
+      "login": "rgodfrey-elastic",
+      "group": "other"
+    },
+    {
+      "identifier": "panagiota.mitsopoulou@elastic.co",
+      "login": "mgiota",
+      "group": "observability"
+    },
+    {
+      "identifier": "albertoblaz@users.noreply.github.com",
+      "login": "albertoblaz",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "faisal.kanout@elastic.co",
+      "login": "fkanout",
+      "group": "observability"
+    },
+    {
+      "identifier": "contact@patrykkopycinski.com",
+      "login": "patrykkopycinski",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "arturo.liduena@elastic.co",
+      "login": "arturoliduena",
+      "group": "observability"
+    },
+    {
+      "identifier": "skaapgif@gmail.com",
+      "login": "rudolf",
+      "group": "other"
+    },
+    {
+      "identifier": "yngrid.coello@elastic.co",
+      "login": "yngrdyn",
+      "group": "observability"
+    },
+    {
+      "identifier": "mohamed.ahmed@elastic.co",
+      "login": "mohamedhamed-ahmed",
+      "group": "observability"
+    },
+    {
+      "identifier": "yiannis.nikolopoulos@elastic.co",
+      "login": "yiannisnikolopoulos",
+      "group": "observability"
+    },
+    {
+      "identifier": "jacek.kolezynski+gh@gmail.com",
+      "login": "jkelas",
+      "group": "other"
+    },
+    {
+      "identifier": "69037875+benakansara@users.noreply.github.com",
+      "login": "benakansara",
+      "group": "observability"
+    },
+    {
+      "identifier": "32842468+weronikaolejniczak@users.noreply.github.com",
+      "login": "weronikaolejniczak",
+      "group": "other"
+    },
+    {
+      "identifier": "dmitrii.arnautov@elastic.co",
+      "login": "darnautov",
+      "group": "other"
+    },
+    {
+      "identifier": "romulo.farias@elastic.co",
+      "login": "romulets",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "mark.hopkin@elastic.co",
+      "login": "hop-dev",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "milton.hultgren@elastic.co",
+      "login": "miltonhultgren",
+      "group": "observability"
+    },
+    {
+      "identifier": "neptunian@users.noreply.github.com",
+      "login": "neptunian",
+      "group": "observability"
+    },
+    {
+      "identifier": "75274611+bryce-b@users.noreply.github.com",
+      "login": "bryce-b",
+      "group": "observability"
+    },
+    {
+      "identifier": "jacek.kolezynski@elastic.co",
+      "login": null,
+      "group": "other"
+    },
+    {
+      "identifier": "nicholas.peretti@elastic.co",
+      "login": "NicholasPeretti",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "zachary.parikh@elastic.co",
+      "login": "zacharyparikh",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "boris.kirov@elastic.co",
+      "login": "boriskirov",
+      "group": "observability"
+    },
+    {
+      "identifier": "dennis.tismenko@elastic.co",
+      "login": "dennis-tismenko",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "jo.naumenko@gmail.com",
+      "login": "YulNaumenko",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "cesare.decal@elastic.co",
+      "login": "csr",
+      "group": "other"
+    },
+    {
+      "identifier": "criamico@users.noreply.github.com",
+      "login": "criamico",
+      "group": "observability"
+    },
+    {
+      "identifier": "rogercoll@protonmail.com",
+      "login": "rogercoll",
+      "group": "observability"
+    },
+    {
+      "identifier": "10844131+jmcarlock@users.noreply.github.com",
+      "login": "jmcarlock",
+      "group": "other"
+    },
+    {
+      "identifier": "neh6a683@gmail.com",
+      "login": "naaa760",
+      "group": "other"
+    },
+    {
+      "identifier": "siddharthmantri1@gmail.com",
+      "login": "SiddharthMantri",
+      "group": "other"
+    },
+    {
+      "identifier": "92328789+vitaliidm@users.noreply.github.com",
+      "login": "vitaliidm",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "yuliia.fryshko@elastic.co",
+      "login": "yuliia-fryshko",
+      "group": "observability"
+    },
+    {
+      "identifier": "coen.warmer@gmail.com",
+      "login": "CoenWarmer",
+      "group": "observability"
+    },
+    {
+      "identifier": "leemthompo@gmail.com",
+      "login": "leemthompo",
+      "group": "observability"
+    },
+    {
+      "identifier": "yan.savitski@elastic.co",
+      "login": "yansavitski",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "kathleen.derusso@elastic.co",
+      "login": "kderusso",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "david.luna@elastic.co",
+      "login": "david-luna",
+      "group": "observability"
+    },
+    {
+      "identifier": "ahmad.bamyeh@elastic.co",
+      "login": "Bamieh",
+      "group": "other"
+    },
+    {
+      "identifier": "119305140+Eamonn-OL@users.noreply.github.com",
+      "login": "Eamonn-OL",
+      "group": "other"
+    },
+    {
+      "identifier": "georgios.bamparopoulos@elastic.co",
+      "login": "gbamparop",
+      "group": "observability"
+    },
+    {
+      "identifier": "delanni.alex@gmail.com",
+      "login": "delanni",
+      "group": "other"
+    },
+    {
+      "identifier": "aleh.zasypkin@elastic.co",
+      "login": "azasypkin",
+      "group": "other"
+    },
+    {
+      "identifier": "alejandro.haro@elastic.co",
+      "login": "afharo",
+      "group": "other"
+    },
+    {
+      "identifier": "xavier.mouligneau@elastic.co",
+      "login": "XavierM",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "51442161+JordanSh@users.noreply.github.com",
+      "login": "JordanSh",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "57465354+matthewscherer@users.noreply.github.com",
+      "login": "matthewscherer",
+      "group": "other"
+    },
+    {
+      "identifier": "39087493+fake-haris@users.noreply.github.com",
+      "login": "fake-haris",
+      "group": "other"
+    },
+    {
+      "identifier": "99575341+mashhurs@users.noreply.github.com",
+      "login": "mashhurs",
+      "group": "observability"
+    },
+    {
+      "identifier": "matthew.horrocks@elastic.co",
+      "login": "matthewh-elastic",
+      "group": "other"
+    },
+    {
+      "identifier": "georgii.gorbachev@elastic.co",
+      "login": "banderror",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "artem.shelkovnikov@elastic.co",
+      "login": "artem-shelkovnikov",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "lorena.balan@elastic.co",
+      "login": "lorenabalan",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "michal.pristas@elastic.co",
+      "login": "michalpristas",
+      "group": "observability"
+    },
+    {
+      "identifier": "dolaru@elastic.co",
+      "login": "dolaru",
+      "group": "other"
+    },
+    {
+      "identifier": "dominique.clarke@elastic.co",
+      "login": "dominiqueclarke",
+      "group": "observability"
+    },
+    {
+      "identifier": "kylie.geller@elastic.co",
+      "login": "kgeller",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "tsullivan@users.noreply.github.com",
+      "login": "tsullivan",
+      "group": "other"
+    },
+    {
+      "identifier": "ruflin@elastic.co",
+      "login": "ruflin",
+      "group": "observability"
+    },
+    {
+      "identifier": "marc-gr@users.noreply.github.com",
+      "login": "marc-gr",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "90622908+taylor-swanson@users.noreply.github.com",
+      "login": "taylor-swanson",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "asuka.nakajima@elastic.co",
+      "login": "AsuNa-jp",
+      "group": "other"
+    },
+    {
+      "identifier": "iuliia.guskova@elastic.co",
+      "login": "guskovaue",
+      "group": "other"
+    },
+    {
+      "identifier": "dmitry.gurevich@elastic.co",
+      "login": "gurevichdmitry",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "inge4pres@users.noreply.github.com",
+      "login": "inge4pres",
+      "group": "observability"
+    },
+    {
+      "identifier": "mridula.s@elastic.co",
+      "login": "mridula-s109",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "enrique.sanchez@elastic.co",
+      "login": "enriquesanchez-elastic",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "jason.rhodes@elastic.co",
+      "login": "jasonrhodes",
+      "group": "observability"
+    },
+    {
+      "identifier": "matt.nowzari@elastic.co",
+      "login": "mattnowzari",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "jacks@fasterj.com",
+      "login": "jackshirazi",
+      "group": "observability"
+    },
+    {
+      "identifier": "17003240+stratoula@users.noreply.github.com",
+      "login": "stratoula",
+      "group": "other"
+    },
+    {
+      "identifier": "Zacqary@users.noreply.github.com",
+      "login": "Zacqary",
+      "group": "observability"
+    },
+    {
+      "identifier": "94373878+sphilipse@users.noreply.github.com",
+      "login": "sphilipse",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "102962586+ishleenk17@users.noreply.github.com",
+      "login": "ishleenk17",
+      "group": "observability"
+    },
+    {
+      "identifier": "andrew.kroh@elastic.co",
+      "login": "andrewkroh",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "34942518+kvanerum@users.noreply.github.com",
+      "login": "kvanerum",
+      "group": "other"
+    },
+    {
+      "identifier": "72010092+andrimal@users.noreply.github.com",
+      "login": "andrimal",
+      "group": "other"
+    },
+    {
+      "identifier": "52030607+eleonoramicozzi@users.noreply.github.com",
+      "login": "eleonoramicozzi",
+      "group": "other"
+    },
+    {
+      "identifier": "abhi.anand@elastic.co",
+      "login": "abhi-elastic",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "124562280+p55d2k@users.noreply.github.com",
+      "login": "p55d2k",
+      "group": "other"
+    },
+    {
+      "identifier": "alison.goryachev@elastic.co",
+      "login": "alisonelizabeth",
+      "group": "other"
+    },
+    {
+      "identifier": "meghan.murphy@elastic.co",
+      "login": "meghanmurphy1",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "mikecote@users.noreply.github.com",
+      "login": "mikecote",
+      "group": "other"
+    },
+    {
+      "identifier": "devin.hurley@elastic.co",
+      "login": "dhurley14",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "123843734+VriaA@users.noreply.github.com",
+      "login": "VriaA",
+      "group": "other"
+    },
+    {
+      "identifier": "kevin.delemme@elastic.co",
+      "login": "kdelemme",
+      "group": "observability"
+    },
+    {
+      "identifier": "yctercero@users.noreply.github.com",
+      "login": "yctercero",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "137783811+natasha-moore-elastic@users.noreply.github.com",
+      "login": "natasha-moore-elastic",
+      "group": "other"
+    },
+    {
+      "identifier": "riccardo.magliocchetti@gmail.com",
+      "login": "xrmx",
+      "group": "observability"
+    },
+    {
+      "identifier": "contactryank@gmail.com",
+      "login": "ryankeairns",
+      "group": "other"
+    },
+    {
+      "identifier": "nathan.smith@elastic.co",
+      "login": "smith",
+      "group": "observability"
+    },
+    {
+      "identifier": "weltenwort@users.noreply.github.com",
+      "login": "weltenwort",
+      "group": "observability"
+    },
+    {
+      "identifier": "61654899+kfirpeled@users.noreply.github.com",
+      "login": "kfirpeled",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "joseph.mcelroy@elastic.co",
+      "login": "joemcelroy",
+      "group": "enterprise-search"
+    },
+    {
+      "identifier": "79124755+nastasha-solomon@users.noreply.github.com",
+      "login": "nastasha-solomon",
+      "group": "other"
+    },
+    {
+      "identifier": "55240027+dkirchan@users.noreply.github.com",
+      "login": "dkirchan",
+      "group": "security-solution"
+    },
+    {
+      "identifier": "vignesh.shanmugam22@gmail.com",
+      "login": "vigneshshanmugam",
+      "group": "observability"
+    },
+    {
+      "identifier": "pure.zero.23@gmail.com",
+      "login": "pure-zero",
+      "group": "other"
+    },
+    {
+      "identifier": "98645757+zk2k2@users.noreply.github.com",
+      "login": "zk2k2",
+      "group": "other"
+    },
+    {
+      "identifier": "alexandra.konrad@elastic.co",
+      "login": "trisch-me",
+      "group": "other"
+    }
+  ]
+}
