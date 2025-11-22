@@ -19,6 +19,7 @@ import { StreamActions } from './screens/StreamActions';
 import { OnboardingMenu } from './screens/OnboardingMenu';
 import { DescribeDataset } from './screens/DescribeDataset';
 import { ChatWithData } from './screens/ChatWithData';
+import { AnalyzeStream } from './screens/AnalyzeStream';
 import { WorkflowResult } from './screens/WorkflowResult';
 import type { AppState, AppContext, Screen } from './types';
 import { LogBuffer } from './utils/log_buffer';
@@ -194,8 +195,12 @@ export function App({ context, logBuffer }: AppProps) {
     handleBack();
   };
 
-  const handleStreamAction = (action: string) => {
-    handleNavigate(action as Screen, action.replace('-', ' '));
+  const handleStreamAction = async (action: string) => {
+    if (action === 'partition-stream') {
+      await handleWorkflowSelect('partition-stream');
+    } else {
+      handleNavigate(action as Screen, action.replace('-', ' '));
+    }
   };
 
   const handleWorkflowSelect = async (workflowId: string) => {
@@ -374,6 +379,8 @@ export function App({ context, logBuffer }: AppProps) {
           <DescribeDataset context={actionContext} onBack={handleBack} />
         ) : state.currentScreen === 'chat-with-data' && actionContext ? (
           <ChatWithData context={actionContext} onBack={handleBack} />
+        ) : state.currentScreen === 'analyze-stream' && actionContext ? (
+          <AnalyzeStream context={actionContext} onBack={handleBack} />
         ) : state.currentScreen === 'workflow-result' && workflowState ? (
           <WorkflowResult
             workflowName={workflowState.workflow.label}
