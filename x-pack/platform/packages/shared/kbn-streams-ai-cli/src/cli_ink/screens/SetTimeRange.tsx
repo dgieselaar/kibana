@@ -13,7 +13,7 @@ import { Box, Text } from 'ink';
 
 interface SetTimeRangeProps {
   currentTimeRangeId: string;
-  onSelect: (timeRangeId: string) => void;
+  onSelect: (timeRangeId: string, customRange?: import('../utils/time_ranges').TimeRangeOption) => void;
   onBack: () => void;
 }
 
@@ -42,7 +42,7 @@ export function SetTimeRange({ currentTimeRangeId, onSelect, onBack }: SetTimeRa
   const handleCustomInput = (input: string) => {
     const customRange = parseCustomTimeRange(input);
     if (customRange) {
-      onSelect(customRange.id);
+      onSelect(customRange.id, customRange);
       setShowingCustomInput(false);
       setCustomError(null);
     } else {

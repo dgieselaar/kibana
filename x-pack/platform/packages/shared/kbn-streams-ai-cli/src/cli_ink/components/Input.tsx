@@ -22,11 +22,13 @@ export function Input({ prompt, onSubmit, onBack, placeholder }: InputProps) {
     if (key.return) {
       onSubmit(value);
       setValue('');
+    } else if (key.escape && onBack) {
+      onBack();
     } else if (key.delete || key.backspace) {
       setValue((prev) => prev.slice(0, -1));
     } else if (input === 'q' && value === '' && onBack) {
       onBack();
-    } else if (!key.ctrl && !key.meta && input) {
+    } else if (!key.ctrl && !key.meta && !key.escape && input) {
       setValue((prev) => prev + input);
     }
   });
@@ -45,7 +47,9 @@ export function Input({ prompt, onSubmit, onBack, placeholder }: InputProps) {
         </Text>
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>Enter: Submit{onBack ? ' | q: Back (when empty)' : ''}</Text>
+        <Text dimColor>
+          Enter: Submit{onBack ? ' | ESC or q (when empty): Back' : ''}
+        </Text>
       </Box>
     </Box>
   );

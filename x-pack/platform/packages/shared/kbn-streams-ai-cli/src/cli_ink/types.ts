@@ -15,6 +15,7 @@ export interface AppState {
   connector?: InferenceConnector;
   stream?: Streams.ingest.all.Definition;
   timeRangeId: string;
+  customTimeRange?: TimeRangeOption;
   streams: Streams.ingest.all.Definition[];
   breadcrumbs: string[];
   logs: LogEntry[];

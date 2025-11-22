@@ -16,7 +16,7 @@ interface HeaderProps {
 
 export function Header({ state }: HeaderProps) {
   const breadcrumbText = state.breadcrumbs.length > 0 ? state.breadcrumbs.join(' > ') : 'Home';
-  const timeRange = getTimeRangeById(state.timeRangeId);
+  const timeRange = getTimeRangeById(state.timeRangeId, state.customTimeRange);
 
   return (
     <Box flexDirection="column" marginBottom={1}>

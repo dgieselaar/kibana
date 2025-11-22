@@ -18,12 +18,34 @@ export const TIME_RANGES: TimeRangeOption[] = [
 
 export const DEFAULT_TIME_RANGE = TIME_RANGES[2]; // Last 12 hours
 
-export function getTimeRangeById(id: string): TimeRangeOption {
+export function getTimeRangeById(id: string, customRange?: TimeRangeOption): TimeRangeOption {
+  if (id === 'custom' && customRange) {
+    return customRange;
+  }
   return TIME_RANGES.find((tr) => tr.id === id) || DEFAULT_TIME_RANGE;
 }
 
 export function computeTimeRangeBounds(timeRange: TimeRangeOption): { start: number; end: number } {
   const now = Date.now();
+  
+  // Handle custom time range (format: "start,end")
+  if (timeRange.isCustom) {
+    const parts = timeRange.value.split(',').map((p) => p.trim());
+    if (parts.length === 2) {
+      const startDate = datemath.parse(parts[0]);
+      const endDate = datemath.parse(parts[1], { roundUp: true });
+      
+      if (startDate && endDate) {
+        return {
+          start: startDate.valueOf(),
+          end: endDate.valueOf(),
+        };
+      }
+    }
+    // Fallback to default if custom parsing fails
+  }
+  
+  // Handle standard time ranges
   const endDate = datemath.parse('now', { roundUp: true });
   const startDate = datemath.parse(timeRange.value);
 

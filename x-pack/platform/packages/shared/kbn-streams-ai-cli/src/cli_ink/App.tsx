@@ -30,6 +30,7 @@ import { onboardStreamWorkflow } from '@kbn/streams-ai/src/workflows/onboarding/
 import {
   onboardAnomalyDetectionJobsWorkflow,
   onboardDashboardsWorkflow,
+  onboardFieldDefinitionsWorkflow,
   generateNaturalLanguageQueriesWorkflow,
   onboardProcessingWorkflow,
   onboardRulesWorkflow,
@@ -184,13 +185,14 @@ export function App({ context, logBuffer }: AppProps) {
     handleBack();
   };
 
-  const handleTimeRangeSelect = (timeRangeId: string) => {
+  const handleTimeRangeSelect = (timeRangeId: string, customRange?: import('./utils/time_ranges').TimeRangeOption) => {
     setState((prev) => ({
       ...prev,
       timeRangeId,
+      customTimeRange: customRange,
     }));
     
-    const timeRange = getTimeRangeById(timeRangeId);
+    const timeRange = getTimeRangeById(timeRangeId, customRange);
     logBuffer.add('info', `Selected time range: ${timeRange.label}`);
     handleBack();
   };
@@ -206,7 +208,7 @@ export function App({ context, logBuffer }: AppProps) {
   const handleWorkflowSelect = async (workflowId: string) => {
     if (!state.stream) return;
 
-    const timeRange = getTimeRangeById(state.timeRangeId);
+    const timeRange = getTimeRangeById(state.timeRangeId, state.customTimeRange);
     const { start, end } = computeTimeRangeBounds(timeRange);
 
     const workflowContext = {
@@ -229,7 +231,10 @@ export function App({ context, logBuffer }: AppProps) {
     };
 
     const workflow = getWorkflow(workflowId);
-    if (!workflow) return;
+    if (!workflow) {
+      logBuffer.add('error', `Workflow '${workflowId}' is not implemented yet`);
+      return;
+    }
 
     try {
       logBuffer.add('info', `Generating workflow: ${workflowId}`);
@@ -288,6 +293,11 @@ export function App({ context, logBuffer }: AppProps) {
         generate: partitionStreamWorkflow.generate,
         apply: partitionStreamWorkflow.apply,
       },
+      'description': {
+        label: 'Description',
+        generate: onboardStreamWorkflow.generate,
+        apply: onboardStreamWorkflow.apply,
+      },
       'anomaly-detection': {
         label: 'Anomaly Detection',
         generate: onboardAnomalyDetectionJobsWorkflow.generate,
@@ -318,6 +328,11 @@ export function App({ context, logBuffer }: AppProps) {
         generate: onboardSLOsWorkflow.generate,
         apply: onboardSLOsWorkflow.apply,
       },
+      'field-definitions': {
+        label: 'Field Definitions',
+        generate: onboardFieldDefinitionsWorkflow.generate,
+        apply: onboardFieldDefinitionsWorkflow.apply,
+      },
     };
 
     return workflows[workflowId];
@@ -327,7 +342,7 @@ export function App({ context, logBuffer }: AppProps) {
     exit();
   };
 
-  const timeRange = getTimeRangeById(state.timeRangeId);
+  const timeRange = getTimeRangeById(state.timeRangeId, state.customTimeRange);
   const { start, end } = computeTimeRangeBounds(timeRange);
 
   const actionContext = state.stream ? {
