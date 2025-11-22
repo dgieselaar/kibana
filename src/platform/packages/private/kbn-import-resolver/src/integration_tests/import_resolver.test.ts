@@ -94,6 +94,16 @@ describe('#resolve()', () => {
     `);
   });
 
+  it('resolves package root with default export', () => {
+    expect(resolver.resolve('default-exports-pkg', FIXTURES_DIR)).toMatchInlineSnapshot(`
+      Object {
+        "absolute": <absolute path>/src/platform/packages/private/kbn-import-resolver/src/__fixtures__/node_modules/default-exports-pkg/dist/index.js,
+        "nodeModule": "default-exports-pkg",
+        "type": "file",
+      }
+    `);
+  });
+
   it('returns null when the import cannot be resolved', () => {
     expect(resolver.resolve('../../../../../../../invalid', FIXTURES_DIR)).toMatchInlineSnapshot(
       `null`

@@ -92,6 +92,7 @@ function match(path, matchers) {
 }
 
 let installed = false;
+let esmInstalled = false;
 
 /**
  * @param {{ ignore?: Matcher[], only?: Matcher[] } | undefined} options
@@ -149,4 +150,27 @@ function install(options = undefined) {
   );
 }
 
-module.exports = { install };
+/**
+ * Install ESM loader for transforming ES modules with Babel
+ * Uses Node.js module.register() API (Node 22+)
+ */
+function installEsm() {
+  if (esmInstalled) {
+    return;
+  }
+
+  esmInstalled = true;
+
+  // Node 22+ supports module.register()
+  if (typeof require('module').register === 'function') {
+    const Path = require('path');
+    const loaderPath = Path.resolve(__dirname, 'esm_loader.js');
+    require('module').register(loaderPath);
+  } else {
+    throw new Error(
+      '@kbn/babel-register: installEsm() requires Node.js 22+ with module.register() support'
+    );
+  }
+}
+
+module.exports = { install, installEsm };
