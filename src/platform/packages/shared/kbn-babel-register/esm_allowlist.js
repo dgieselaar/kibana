@@ -8,9 +8,9 @@
  */
 
 /**
- * List of packages that should use ESM (module: false in Babel preset)
+ * List of regex patterns for packages that should use ESM (module: false in Babel preset)
  * instead of CommonJS (module: 'cjs')
  */
-const ESM_ALLOWLIST = ['@kbn/streams-ai-cli'];
+const ESM_ALLOWLIST = [/kbn-streams-ai-cli/];
 
 module.exports = { ESM_ALLOWLIST };
