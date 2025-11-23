@@ -9,6 +9,7 @@
   },
   "include": [
     "**/*.ts",
+    "**/*.tsx"
   ],
   "exclude": [
     "target/**/*"
@@ -24,6 +25,7 @@
     "@kbn/inference-cli",
     "@kbn/core",
     "@kbn/inference-tracing",
-    "@kbn/inference-langchain",
+    "@kbn/ink",
+    "@kbn/datemath",
   ]
 }

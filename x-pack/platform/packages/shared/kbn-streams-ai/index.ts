@@ -26,6 +26,14 @@ export {
   onboardSLOsWorkflow,
 } from './src/workflows/onboarding/onboarding_workflows';
 
+export type {
+  StreamWorkflow,
+  StreamWorkflowContext,
+  StreamWorkflowGenerateResult,
+  StreamWorkflowApplyResult,
+  StreamWorkflowInput,
+} from './src/workflows/types';
+
 export { onboardStreamWorkflow } from './src/workflows/onboarding/onboard_stream_workflow';
 
 export { analyzeStream } from './src/workflows/analyze';

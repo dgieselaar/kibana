@@ -4,7 +4,11 @@
  * 2.0; you may not use this file except in compliance with the Elastic License
  * 2.0.
  */
-export { createInferenceClient } from './src/create_inference_client';
-export { getConnectors as getInferenceConnectors } from './src/get_connector';
-export type { InferenceCliClient } from './src/client';
-export { runRecipe } from './src/run_recipe';
+
+export function keepAlive() {
+  const ref = setTimeout(() => {}, 1_000_000_000);
+
+  return () => {
+    ref.unref();
+  };
+}

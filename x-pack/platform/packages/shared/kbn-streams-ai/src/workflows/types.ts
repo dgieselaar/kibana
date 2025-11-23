@@ -42,7 +42,7 @@ export interface StreamWorkflowResultBase<TChange = unknown> {
 
 export type StreamworkflowResult = StreamWorkflowResultBase<unknown>;
 
-export interface StreamWorkflowContext<TStreamModel extends Streams.all.Model = Streams.all.Model> {
+export interface StreamWorkflowContext {
   start: number;
   end: number;
   logger: Logger;
@@ -51,7 +51,6 @@ export interface StreamWorkflowContext<TStreamModel extends Streams.all.Model = 
   esClient: ElasticsearchClient;
   services: {
     streams: {
-      updateStream(input: TStreamModel['UpsertRequest']): Promise<TStreamModel['Definition']>;
       processing: ProcessingService;
     };
   };

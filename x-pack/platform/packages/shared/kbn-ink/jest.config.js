@@ -6,9 +6,7 @@
  */
 
 module.exports = {
-  preset: '@kbn/test/jest_node',
+  preset: '@kbn/test',
   rootDir: '../../../../..',
-  roots: ['<rootDir>/x-pack/platform/packages/shared/kbn-streams-ai-cli'],
-  // Allow ESM ink-testing-library within node_modules to be transformed by Babel
-  transformIgnorePatterns: ['/node_modules/(?!ink-testing-library/)'],
+  roots: ['<rootDir>/x-pack/platform/packages/shared/kbn-ink'],
 };

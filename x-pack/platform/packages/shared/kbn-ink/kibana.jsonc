@@ -1,6 +1,6 @@
 {
   "type": "shared-server",
-  "id": "@kbn/streams-ai-cli",
+  "id": "@kbn/ink",
   "owner": "@elastic/streams-program-team",
   "group": "platform",
   "visibility": "shared",

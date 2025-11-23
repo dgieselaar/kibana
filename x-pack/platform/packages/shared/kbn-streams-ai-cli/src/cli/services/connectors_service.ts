@@ -9,14 +9,14 @@ import type { InferenceConnector } from '@kbn/inference-common';
 import type { KibanaClient } from '@kbn/kibana-api-cli';
 
 export class ConnectorsService {
-  constructor(private readonly kibanaClient: KibanaClient) {}
+  constructor(private readonly kibanaClient: KibanaClient, private readonly signal: AbortSignal) {}
 
-  public async list(signal: AbortSignal): Promise<InferenceConnector[]> {
+  public async listConnectors(): Promise<InferenceConnector[]> {
     const response = await this.kibanaClient.fetch<{ connectors: InferenceConnector[] }>(
       '/internal/inference/connectors',
       {
         method: 'GET',
-        signal,
+        signal: this.signal,
         body: undefined,
       }
     );

@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /*
  * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
  * or more contributor license agreements. Licensed under the "Elastic License
@@ -9,5 +7,10 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-require('../src/setup_node_env');
-void require('@kbn/streams-ai-cli').cli.run();
+require('@kbn/setup-node-env');
+require('@kbn/streams-ai-cli')
+  .cli.run()
+  .catch(function (error) {
+    console.error(error);
+    process.exitCode = 1;
+  });

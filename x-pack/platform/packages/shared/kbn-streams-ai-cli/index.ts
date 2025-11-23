@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import { run } from './src/cli_ink';
+import { run } from './src/cli';
 
 export const cli = {
   run,
