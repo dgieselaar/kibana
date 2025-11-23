@@ -7,16 +7,10 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-const { installCJS } = require('./install_cjs');
-const { installESM } = require('./install_esm');
-
 /**
- * Install both CommonJS and ESM loaders for transforming modules with Babel
- * @param {{ ignore?: (RegExp | string)[], only?: (RegExp | string)[] } | undefined} options
+ * List of packages that should use ESM (module: false in Babel preset)
+ * instead of CommonJS (module: 'cjs')
  */
-function install(options = undefined) {
-  installCJS(options);
-  installESM();
-}
+const ESM_ALLOWLIST = ['@kbn/streams-ai-cli'];
 
-module.exports = { install };
+module.exports = { ESM_ALLOWLIST };

@@ -7,7 +7,33 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-module.exports = (_, options = {}) => {
+const Path = require('path');
+const { ESM_ALLOWLIST } = require('@kbn/babel-register/esm_allowlist');
+
+/**
+ * Check if a file path belongs to a package in the ESM allowlist
+ * @param {string} filename
+ * @returns {boolean}
+ */
+function isInEsmAllowlist(filename) {
+  if (!filename) {
+    return false;
+  }
+
+  // Normalize path separators
+  const normalizedPath = filename.split(Path.sep).join('/');
+
+  // Check if the file is in any of the allowlisted packages
+  return ESM_ALLOWLIST.some((pkg) => {
+    const pkgPath = pkg.replace('@kbn/', '');
+    return normalizedPath.includes(`/kbn-${pkgPath}/`) || normalizedPath.includes(`/${pkgPath}/`);
+  });
+}
+
+module.exports = (api, options = {}) => {
+  const filename = api?.caller?.((caller) => caller.filename);
+  const useEsm = isInEsmAllowlist(filename);
+
   return {
     presets: [
       [
@@ -26,7 +52,8 @@ module.exports = (_, options = {}) => {
           // for just the polyfills that the target versions don't already supply
           // on their own
           useBuiltIns: 'entry',
-          modules: 'cjs',
+          // Use ESM for packages in the allowlist, otherwise use CommonJS
+          modules: useEsm ? false : 'cjs',
           // right now when using `corejs: 3` babel does not use the latest available
           // core-js version due to a bug: https://github.com/babel/babel/issues/10816
           // Because of that we should use for that value the same version we install
