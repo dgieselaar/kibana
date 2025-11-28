@@ -5,6 +5,7 @@
  * 2.0.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { describeDataset } from '@kbn/ai-tools';
 import type { Streams } from '@kbn/streams-schema';
 import type {
   StreamWorkflow,
@@ -15,6 +16,8 @@ import type {
 } from '@kbn/streams-ai';
 import { Box, Text, useInput } from 'ink';
 import { useGoBack } from '@kbn/ink/router';
+import { format } from 'util';
+import { withActiveInferenceSpan } from '@kbn/inference-tracing';
 import { useAppState } from '../state/use_app_state';
 import { useCopyableOutput } from '../hooks/use_copyable_output';
 
@@ -104,31 +107,43 @@ export function WorkflowDetail({ workflow, stream, label }: WorkflowDetailProps)
       },
     };
 
-    const workflowInput: StreamWorkflowInput = { stream: { definition: stream } };
+    setWorkflowState({});
 
-    setWorkflowState((prev) => {
-      return {
-        input: workflowInput,
-        context: workflowContext,
-      };
-    });
+    withActiveInferenceSpan('Workflow', (span) =>
+      describeDataset({
+        esClient: workflowContext.esClient,
+        start: workflowContext.start,
+        end: workflowContext.end,
+        index: stream.name,
+      }).then((analysis) => {
+        const workflowInput = { stream: { definition: stream }, analysis };
 
-    workflow
-      .generate(workflowContext, workflowInput)
-      .then((generateResult) => {
-        setWorkflowState(() => {
+        setWorkflowState((prev) => {
           return {
-            context: workflowContext,
             input: workflowInput,
-            generateResult,
+            context: workflowContext,
           };
         });
+
+        return workflow
+          .generate(workflowContext, workflowInput)
+          .then((generateResult) => {
+            setWorkflowState(() => {
+              return {
+                context: workflowContext,
+                input: workflowInput,
+                generateResult,
+              };
+            });
+          })
+          .catch((error) => {
+            span?.recordException(error);
+            setWorkflowState((prev) => ({
+              error,
+            }));
+          });
       })
-      .catch((error) => {
-        setWorkflowState((prev) => ({
-          error,
-        }));
-      });
+    );
   }, [workflow, stream, state.timeRange.start, state.timeRange.end, context]);
 
   const applyWorkflow = useCallback(() => {
@@ -161,7 +176,7 @@ export function WorkflowDetail({ workflow, stream, label }: WorkflowDetailProps)
   if (workflowState.error) {
     return (
       <Box flexDirection="column">
-        <Text color="red">Error: {workflowState.error.message}</Text>
+        <Text color="red">Error: {format(workflowState.error)}</Text>
         <Box marginTop={1}>
           <Text dimColor>Press q to go back</Text>
         </Box>
@@ -178,9 +193,6 @@ export function WorkflowDetail({ workflow, stream, label }: WorkflowDetailProps)
   }
 
   const changeStr = JSON.stringify(workflowState.generateResult.change, null, 2);
-  const lines = changeStr.split('\n');
-  const displayLines = lines.slice(0, 20);
-  const hasMore = lines.length > 20;
 
   return (
     <Box flexDirection="column">
@@ -190,10 +202,7 @@ export function WorkflowDetail({ workflow, stream, label }: WorkflowDetailProps)
         </Text>
       </Box>
       <Box flexDirection="column" marginBottom={1}>
-        {displayLines.map((line, idx) => (
-          <Text key={idx}>{line}</Text>
-        ))}
-        {hasMore && <Text dimColor>... ({lines.length - 20} more lines)</Text>}
+        <Text>{changeStr}</Text>
       </Box>
       {workflowState.applyResult ? (
         <Box marginTop={1}>

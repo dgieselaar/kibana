@@ -5,6 +5,7 @@
  * 2.0.
  */
 
+export { generateDescriptionWorkflow } from './description/generate_description_workflow';
 export { onboardAnomalyDetectionJobsWorkflow } from './anomaly_detection/onboard_anomaly_detection_workflow';
 export { onboardDashboardsWorkflow } from './dashboards/onboard_dashboards_workflow';
 export { onboardFieldDefinitionsWorkflow } from './field_definitions/onboard_field_definitions_workflow';

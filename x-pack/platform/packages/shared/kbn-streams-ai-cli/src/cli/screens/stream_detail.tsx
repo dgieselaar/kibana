@@ -10,6 +10,7 @@
 
 import type { StreamWorkflow } from '@kbn/streams-ai';
 import {
+  generateDescriptionWorkflow,
   generateNaturalLanguageQueriesWorkflow,
   onboardAnomalyDetectionJobsWorkflow,
   onboardDashboardsWorkflow,
@@ -48,7 +49,7 @@ export function StreamDetail({ stream }: StreamDetailProps) {
       },
       description: {
         label: 'Description',
-        workflow: onboardStreamWorkflow,
+        workflow: generateDescriptionWorkflow,
       },
       'anomaly-detection': {
         label: 'Anomaly Detection',

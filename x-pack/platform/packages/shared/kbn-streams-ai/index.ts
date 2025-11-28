@@ -24,6 +24,7 @@ export {
   onboardProcessingWorkflow,
   onboardRulesWorkflow,
   onboardSLOsWorkflow,
+  generateDescriptionWorkflow,
 } from './src/workflows/onboarding/onboarding_workflows';
 
 export type {
