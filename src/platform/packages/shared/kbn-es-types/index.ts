@@ -24,4 +24,5 @@ export type {
   ESQLSearchResponse,
   ESQLSearchParams,
   SearchField,
+  ChangePointType,
 } from './src';

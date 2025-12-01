@@ -46,7 +46,8 @@ export async function generateReasoningPrompts({
         - Do not preface your output with any intro or summary.
         - Directly output the prompt.
         - Do not create a distinction between a user and a system prompt.
-        - Use JSON for example tool calls.
+        - Use JSON for example tool calls. Use \`{ tool_call: { function: 'foo', arguments: { ... } } }\`
+        as the schema.
         - Pay close attention to rendering a variable_name ("\`foo\`") vs
         rendering a variable value ("{{foo}}").
         `,

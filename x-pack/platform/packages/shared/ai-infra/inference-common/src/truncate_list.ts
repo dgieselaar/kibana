@@ -14,3 +14,5 @@ export function truncateList<T>(values: T[], limit: number): Array<T | string> {
 
   return [...take(values, limit), `${values.length - limit} more values`];
 }
+
+export type TruncatedList<T> = Array<T | string>;

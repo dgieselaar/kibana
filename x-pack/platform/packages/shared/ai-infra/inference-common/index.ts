@@ -26,6 +26,7 @@ export {
   type ToolCall,
   type ToolCallback,
   type ToolDefinition,
+  type ToolDefinitions,
   type ToolOptions,
   type FunctionCallingMode,
   type ToolChoice,
@@ -129,6 +130,7 @@ export { Tokenizer, generateFakeToolCallId, ShortIdTable } from './src/utils';
 export { elasticModelDictionary } from './src/const';
 
 export { truncateList } from './src/truncate_list';
+export type { TruncatedList } from './src/truncate_list';
 export {
   InferenceConnectorType,
   isSupportedConnectorType,

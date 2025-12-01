@@ -9,6 +9,7 @@ export { executeAsReasoningAgent } from './src/flows/reasoning/execute_as_reason
 export type {
   ReasoningPromptResponse,
   ReasoningPromptResponseOf,
+  FinalToolChoice,
 } from './src/flows/reasoning/types';
 
 export { executeUntilValid } from './src/flows/until_valid/execute_until_valid';

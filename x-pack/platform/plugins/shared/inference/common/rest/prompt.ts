@@ -44,7 +44,7 @@ export function createPromptRestApi({ fetch, signal }: PublicInferenceClientCrea
       toolChoice,
     } = options;
 
-    const body: PromptRequestBody = {
+    let body: PromptRequestBody = {
       connectorId,
       functionCalling,
       modelName,
@@ -67,6 +67,13 @@ export function createPromptRestApi({ fetch, signal }: PublicInferenceClientCrea
         errorFilter: getRetryFilter(retryConfiguration?.retryOn),
         initialDelay: retryConfiguration?.initialDelay,
       });
+    }
+
+    if (validationResult.success) {
+      body = {
+        ...body,
+        input: validationResult.data,
+      };
     }
 
     if (stream) {

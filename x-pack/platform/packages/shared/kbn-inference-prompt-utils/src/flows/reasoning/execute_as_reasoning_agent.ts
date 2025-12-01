@@ -21,7 +21,7 @@ import type {
 import { MessageRole, ToolChoiceType, type Prompt } from '@kbn/inference-common';
 import { withActiveInferenceSpan, withExecuteToolSpan } from '@kbn/inference-tracing';
 import { trace } from '@opentelemetry/api';
-import { omit, partition } from 'lodash';
+import { omit, partition, pick } from 'lodash';
 import { z } from '@kbn/zod';
 import {
   createCompleteToolCall,
@@ -33,6 +33,7 @@ import { BEGIN_INTERNAL_REASONING_MARKER, END_INTERNAL_REASONING_MARKER } from '
 import type { PlanningToolCall, PlanningToolMessage } from './planning_tools';
 import { PLANNING_TOOLS, isPlanningToolName, removeSystemToolCalls } from './planning_tools';
 import type {
+  FinalToolChoice,
   ReasoningPromptOptions,
   ReasoningPromptResponse,
   ReasoningPromptResponseOf,
@@ -85,7 +86,7 @@ export async function executeAsReasoningAgent(
   options: UnboundPromptOptions &
     ReasoningPromptOptions & {
       toolCallbacks: Record<string, ToolCallback>;
-      finalToolChoice?: ToolChoice;
+      finalToolChoice?: FinalToolChoice;
     }
 ): Promise<ReasoningPromptResponse> {
   const { inferenceClient, maxSteps = 10, power = 'medium', toolCallbacks } = options;
@@ -203,11 +204,15 @@ export async function executeAsReasoningAgent(
       prompt: nextPrompt,
     };
 
-    const toolChoice = forceComplete
+    let toolChoice = forceComplete
       ? options.finalToolChoice || ToolChoiceType.none
       : forceReason
       ? ToolChoiceType.none
       : ToolChoiceType.auto;
+
+    if (typeof toolChoice === 'object') {
+      toolChoice = pick(toolChoice, 'function');
+    }
 
     const response = await inferenceClient.prompt({
       ...promptOptions,
@@ -303,6 +308,14 @@ export async function executeAsReasoningAgent(
     if (hasCalledFinalTool || isFinalTurn) {
       // We don't want to send these results back to the LLM, if we are already
       // completing
+
+      // TODO: implement summarization step if summarization is required and missing
+      // const missingSummarization =
+      //   options.finalToolChoice &&
+      //   typeof options.finalToolChoice === 'object' &&
+      //   options.finalToolChoice.summarize &&
+      //   !response.content;
+
       return {
         content: response.content,
         tokens: response.tokens,

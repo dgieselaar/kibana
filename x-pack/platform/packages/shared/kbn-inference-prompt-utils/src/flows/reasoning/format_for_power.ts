@@ -8,6 +8,7 @@
 import type { AssistantMessage } from '@kbn/inference-common';
 import {
   MessageRole,
+  ToolChoiceType,
   type Message,
   type ToolMessage,
   type ToolOptions,
@@ -99,6 +100,12 @@ export function formatToolOptions<TToolOptions extends ToolOptions>(
 ): TToolOptions;
 
 export function formatToolOptions(toolOptions: ToolOptions, power: ReasoningPower) {
+  if (toolOptions.toolChoice === ToolChoiceType.none) {
+    return {
+      toolChoice: toolOptions.toolChoice,
+    };
+  }
+
   return {
     ...toolOptions,
     tools: toolOptions.tools

@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import type { z } from '@kbn/zod';
+import type { ZodTypeDef, z } from '@kbn/zod';
 import type { MessageRole } from '../chat_complete';
 import type { Model } from '../model_provider';
 import type { ToolChoice, ToolDefinitions, ToolOptions } from '../chat_complete/tools';
@@ -102,7 +102,7 @@ export interface Prompt<TInput = any, TPromptVersions extends PromptVersion[] = 
   /**
    * A zod schema that will validate and transform the input variables for a prompt.
    */
-  input: z.Schema<TInput>;
+  input: z.Schema<unknown, ZodTypeDef, TInput>;
   /**
    * The model-specific variants of the prompt.
    */

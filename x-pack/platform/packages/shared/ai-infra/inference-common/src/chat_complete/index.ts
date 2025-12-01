@@ -44,6 +44,7 @@ export {
   type ToolCallback,
   type ToolOptions,
   type ToolDefinition,
+  type ToolDefinitions,
   type ToolCall,
   type UnvalidatedToolCall,
   type ToolChoice,

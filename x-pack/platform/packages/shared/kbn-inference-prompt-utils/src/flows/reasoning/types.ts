@@ -13,6 +13,7 @@ import type {
   PromptOptions,
   PromptResponse,
   ToolCallbacksOfToolOptions,
+  ToolChoice,
   ToolOptionsOfPrompt,
 } from '@kbn/inference-common';
 
@@ -43,3 +44,7 @@ export type ReasoningPromptResponseOf<
 };
 
 export type ReasoningPromptResponse = PromptResponse & { input: Message[] };
+
+export type FinalToolChoice<TToolNames extends string = string> = ToolChoice<TToolNames> & {
+  summarize?: boolean;
+};

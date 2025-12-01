@@ -23,6 +23,7 @@
     <processing-commands>
         ES|QL processing commands change an input table by adding, removing, or changing rows and columns.
 
+        - CHANGE_POINT: detects spikes, dips, and change points in a metric.
         - DISSECT: extracts structured data out of a string, using a dissect pattern
         - DROP: drops one or more columns
         - ENRICH: adds data from existing indices as new columns
@@ -38,7 +39,6 @@
         - [preview] RERANK: uses an inference model to compute a new relevance score for an initial set of documents
         - [preview] SAMPLE: samples a fraction of the table rows
         - [preview] COMPLETION: send prompts and context to an LLM
-        - [preview] CHANGE_POINT: detects spikes, dips, and change points in a metric.
     </processing-commands>
 
     <grouping-functions>

@@ -9,6 +9,7 @@ import { z } from '@kbn/zod';
 import { createPrompt } from '@kbn/inference-common';
 import systemPromptTemplate from './system_prompt_template.text';
 import contentPromptTemplate from './content_prompt_template.text';
+import { ListDatasetsTool } from '../list_datasets/list_datasets_tool';
 
 export const EsqlPrompt = createPrompt({
   name: 'esql_prompt',
@@ -82,22 +83,7 @@ export const EsqlPrompt = createPrompt({
           required: ['queries'],
         },
       },
-      list_datasets: {
-        description:
-          'List datasets (index, data stream, aliases) based on a name or pattern, similar to _resolve/_index',
-        schema: {
-          type: 'object',
-          properties: {
-            name: {
-              type: 'array',
-              items: {
-                type: 'string',
-              },
-            },
-          },
-          required: ['name'],
-        },
-      },
+      list_datasets: ListDatasetsTool,
       describe_dataset: {
         description: `Get dataset description via sampling of documents`,
         schema: {

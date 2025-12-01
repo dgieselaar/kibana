@@ -12,6 +12,7 @@ import { esFieldTypeToKibanaFieldType } from '@kbn/field-types';
 import type { DatatableColumn, DatatableColumnType } from '@kbn/expressions-plugin/common';
 import { trace } from '@opentelemetry/api';
 import { BasicPrettyPrinter, Parser } from '@kbn/esql-ast';
+import type { FieldValue } from '@elastic/elasticsearch/lib/api/types';
 import { formatQueryWithErrors } from './format_query_with_errors';
 
 export interface QueryValidateRunOutput {
@@ -24,9 +25,11 @@ export interface QueryValidateRunOutput {
 export async function runAndValidateEsqlQuery({
   query,
   client,
+  params,
 }: {
   query: string;
   client: ElasticsearchClient;
+  params?: FieldValue[];
 }): Promise<QueryValidateRunOutput> {
   // Format the query for readability before validation and execution
   let formattedQuery: string;
@@ -42,13 +45,10 @@ export async function runAndValidateEsqlQuery({
 
   const errorMessages = formatQueryWithErrors(formattedQuery, errors);
 
-  return client.transport
-    .request({
-      method: 'POST',
-      path: '_query',
-      body: {
-        query: formattedQuery,
-      },
+  return client.esql
+    .query({
+      query: formattedQuery,
+      params,
     })
     .then((res) => {
       const esqlResponse = res as ESQLSearchResponse;

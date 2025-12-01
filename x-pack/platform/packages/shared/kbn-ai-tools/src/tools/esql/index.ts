@@ -12,6 +12,8 @@ import type {
   PromptResponse,
   ToolCallbacksOfToolOptions,
   ToolDefinition,
+  ToolDefinitions,
+  ToolNamesOf,
   ToolOptions,
 } from '@kbn/inference-common';
 import { truncateList } from '@kbn/inference-common';
@@ -20,15 +22,21 @@ import { EsqlDocumentBase, runAndValidateEsqlQuery } from '@kbn/inference-plugin
 import { executeAsReasoningAgent } from '@kbn/inference-prompt-utils';
 import { omit, once } from 'lodash';
 import moment from 'moment';
-import { indexPatternToCcs } from '@kbn/es-query';
+import kbnDatemath from '@kbn/datemath';
+import type { FinalToolChoice } from '@kbn/inference-prompt-utils';
+import type { FieldValue } from '@elastic/elasticsearch/lib/api/types';
 import { describeDataset, formatDocumentAnalysis } from '../../..';
 import { EsqlPrompt } from './prompt';
+import { listDatasets } from '../list_datasets/list_datasets';
 
 const loadEsqlDocBase = once(() => EsqlDocumentBase.load());
 
 export function executeAsEsqlAgent<
   TTools extends Record<string, ToolDefinition> | undefined =
     | Record<string, ToolDefinition>
+    | undefined,
+  TFinalToolChoice extends FinalToolChoice<ToolNamesOf<{ tools: TTools }>> | undefined =
+    | FinalToolChoice<ToolNamesOf<{ tools: TTools }>>
     | undefined
 >(
   options: {
@@ -40,12 +48,21 @@ export function executeAsEsqlAgent<
     signal: AbortSignal;
     prompt: string;
     tools?: TTools;
+    params?: FieldValue[];
   } & (TTools extends Record<string, ToolDefinition>
     ? keyof TTools extends never
       ? {}
-      : { toolCallbacks: ToolCallbacksOfToolOptions<{ tools: TTools }> }
+      : {
+          toolCallbacks: ToolCallbacksOfToolOptions<{ tools: TTools }>;
+          finalToolChoice?: TFinalToolChoice;
+        }
     : {})
-): PromptCompositeResponse<PromptOptions<typeof EsqlPrompt> & { tools: TTools; stream: false }>;
+): PromptCompositeResponse<
+  PromptOptions<typeof EsqlPrompt> & {
+    tools: TTools;
+    stream: false;
+  } & (TFinalToolChoice extends FinalToolChoice ? { toolChoice: TFinalToolChoice } : {})
+>;
 
 export async function executeAsEsqlAgent({
   inferenceClient,
@@ -54,7 +71,10 @@ export async function executeAsEsqlAgent({
   end,
   signal,
   prompt,
+  tools,
   toolCallbacks,
+  finalToolChoice,
+  params,
 }: {
   inferenceClient: BoundInferenceClient;
   esClient: ElasticsearchClient;
@@ -62,7 +82,10 @@ export async function executeAsEsqlAgent({
   end?: number;
   signal: AbortSignal;
   prompt: string;
+  tools?: ToolDefinitions;
   toolCallbacks?: ToolCallbacksOfToolOptions<ToolOptions>;
+  finalToolChoice?: FinalToolChoice;
+  params?: FieldValue[];
 }): Promise<PromptResponse> {
   const docBase = await loadEsqlDocBase();
 
@@ -70,13 +93,16 @@ export async function executeAsEsqlAgent({
     return await runAndValidateEsqlQuery({
       query,
       client: esClient,
+      params,
     }).then((response) => {
       if (response.error || response.errorMessages?.length) {
         return {
-          error:
-            response.error && response.error instanceof errors.ResponseError
+          error: {
+            message: response.error?.message,
+            ...(response.error && response.error instanceof errors.ResponseError
               ? omit(response.error, 'meta')
-              : response.error,
+              : response.error),
+          },
           errorMessages: response.errorMessages,
         };
       }
@@ -90,32 +116,37 @@ export async function executeAsEsqlAgent({
 
   const assistantReply = await executeAsReasoningAgent({
     inferenceClient,
-    prompt: EsqlPrompt,
+    prompt: {
+      ...EsqlPrompt,
+      versions: EsqlPrompt.versions.map((version) => {
+        return {
+          ...version,
+          tools: {
+            ...version.tools,
+            ...tools,
+          },
+        };
+      }),
+    },
     abortSignal: signal,
+    finalToolChoice: finalToolChoice as FinalToolChoice<any>,
     toolCallbacks: {
       ...toolCallbacks,
       list_datasets: async (toolCall) => {
         return {
-          response: await esClient.indices
-            .resolveIndex({
-              name: indexPatternToCcs(
-                toolCall.function.arguments.name.length
-                  ? toolCall.function.arguments.name.flatMap((index) => index.split(','))
-                  : '*'
-              ),
-              allow_no_indices: true,
-            })
-            .then((response) => {
-              return {
-                ...response,
-                data_streams: response.data_streams.map((dataStream) => {
-                  return {
-                    name: dataStream.name,
-                    timestamp_field: dataStream.timestamp_field,
-                  };
-                }),
-              };
-            }),
+          response: await listDatasets({
+            esClient,
+            arguments: {
+              start: toolCall.function.arguments.start
+                ? kbnDatemath.parse(toolCall.function.arguments.start)?.valueOf()
+                : start,
+              end: toolCall.function.arguments.end
+                ? kbnDatemath.parse(toolCall.function.arguments.end)?.valueOf()
+                : end,
+              kql: toolCall.function.arguments.kql,
+              pattern: toolCall.function.arguments.pattern,
+            },
+          }),
         };
       },
       describe_dataset: async (toolCall) => {
