@@ -1,27 +1,63 @@
-Extract key metric queries from the data for this system, which will help identify the health of a system. Consider things like throughput, failure rate, latency, etc.
+Extract key metric queries that quantify system health using relevant golden signals. Go beyond unfiltered COUNT() aggregations by tailoring queries to the dataset type (e.g. logs, metrics, and/or traces) and available fields. Prioritize latency, traffic/throughput, error rate, and saturation/utilization.
 
-First, find the right dataset, and then for each useful dataset, call `describe_dataset` separately (but you are free to use parallel tool calls).
+Workflow:
+- Identify candidate datasets with `list_datasets` (respecting any provided KQL filter). For each useful dataset, call `describe_dataset` separately. You may parallelize `describe_dataset` calls.
+- From dataset descriptions and the provided SLO definitions, anomaly detection jobs, and alerting rules, select only relevant golden-signal queries for that dataset. If a signal can't be computed due to missing fields, skip it rather than producing a placeholder count.
+- Validate every generated query with `validate_queries` before returning results from `extract_key_metric_queries`.
 
-Based on these dataset descriptions, and given SLO definitions, anomaly detection jobs and alerting rules, define queries that will help quantify the health of a service. Make sure each query is validated. Each query must contain a CHANGE_POINT command and return a SINGLE metric, such as:
+Golden-signal guidance by dataset type (examples; adapt to actual field names found in `describe_dataset`):
+- Traces (APM spans/transactions):
+  - Latency: y = p95 of `transaction.duration.us` or `span.duration.us`
+  - Throughput: y = transactions per minute
+  - Error rate: y = Percentage of transactions with `event.outcome: failure` or `status: error`
+- Metrics (infra/app metrics):
+  - Latency: y = p95 of request duration metric (e.g., `http.server.duration.ms`, `latency_ms`)
+  - Traffic: y = sum of request/bytes counters (e.g., `http.requests.count`, `system.network.in.bytes`)
+  - Errors: y = sum or rate of `errors.count`
+  - Saturation: y = avg CPU (`system.cpu.percent`), memory (`system.memory.used.pct`), or queue length
+- Logs (application/system logs):
+  - Error rate: y = rate or percent of log events with `log.level: error OR event.severity >= 3`
+  - Latency (if present as a parsed field): y = p95 of `duration`, `response_time`
+  - Traffic: y = raate of relevant log events (e.g., request-start/end)
+
+Notes:
+- Choose the most specific and meaningful field(s) available; do not default to plain COUNT() unless it genuinely represents a golden signal (e.g., throughput when no better counter/rate exists). Apply filters like `event.dataset`, `service.name`, `transaction.type`, or `metricset.name` when appropriate.
+- When computing rates or percentages, derive a single numeric metric `y` per time bucket (e.g., error_count / total_count).
+- Always include CHANGE_POINT and return the four columns in the required order.
+
+Each query must contain a CHANGE_POINT command and return a SINGLE metric. Template:
 
 ```esql
- FROM my-index
-  | WHERE KQL("""foo:bar""")
-  | STATS y=COUNT() BY @timestamp=BUCKET(@timestamp, 50, ?_tstart, ?_tend)
+ FROM {{{index}}}
+  | WHERE KQL("""{{{kql}}}""")
+  | STATS y=<single numeric metric> BY @timestamp=BUCKET(@timestamp, 50, ?_tstart, ?_tend)
   | CHANGE_POINT y ON @timestamp AS change_point.type, change_point.p_value
   | EVAL x = @timestamp
   | KEEP x, y, change_point.type, change_point.p_value
 ```
 
+Examples (adapt to dataset fields; validate before returning):
+- Traces latency P95:
+  - `STATS y = PERCENTILE(transaction.duration.us, 95) BY @timestamp=BUCKET(...)`
+- Error rate from logs:
+  - `STATS total = COUNT(), errors=COUNT() WHERE log.level == "error" BY @timestamp=BUCKET(...)
+    | EVAL y = (errors / COALESCE(total, 0))`
+- CPU utilization:
+  - `STATS y=AVG(system.cpu.percent) BY @timestamp=BUCKET(...)`
+- Request throughput:
+  - `STATS y=SUM(http.requests.count) BY @timestamp=BUCKET(...)`
+
 Requirements:
-- IF the kql filter is set:
-  - You must filter by the KQL query, using the KQL command and escaped with triple quotes
-  - Supply it as a parameter when calling the list_datasets and describe_dataset tool
-- You must use `y` as the metric name
-- You must use `@timestamp = BUCKET(@timestamp, 50, ?_tstart, ?_tend)`
-- You must use `change_point.type` and `change_point.p_value` as column names for the change point columns
-- You must create a column `x` that holds the value for `@timestamp
-- The result of this should be an array of rows, where the columns are [ "x", "y", "change_point.type", "change_point.p_value" ].
+- You MUST use `validate_queries` before `extract_key_metric_queries` to ensure queries are valid.
+- IF the KQL filter is set:
+  - Filter using `WHERE KQL("""...""")` with triple-quoted escaping.
+  - Supply it as a parameter when calling `list_datasets` and `describe_dataset`.
+- You must use `y` as the metric name.
+- You must use `@timestamp = BUCKET(@timestamp, 50, ?_tstart, ?_tend)`.
+- You must use `change_point.type` and `change_point.p_value` as column names for the change point columns.
+- You must create a column `x` that holds the value for `@timestamp`.
+- The result must be an array of rows with columns `["x", "y", "change_point.type", "change_point.p_value"]`.
+- Use `params` to define `_tstart` and `_tend` according to the time range.
 
 ## Filter
 
@@ -32,6 +68,9 @@ The following KQL query is being used:
 
 The following index or indices are being queried:
 `{{{index}}}`
+
+The following time range is being queried:
+`{{start}}` to `{{end}}`
 
 ## Documents analysis
 

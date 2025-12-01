@@ -6,7 +6,12 @@
  */
 
 import type { DocumentAnalysis } from '@kbn/ai-tools';
-import { executeAsEsqlAgent, formatDocumentAnalysis, pValueToLabel } from '@kbn/ai-tools';
+import {
+  esqlQuerySchema,
+  executeAsEsqlAgent,
+  formatDocumentAnalysis,
+  pValueToLabel,
+} from '@kbn/ai-tools';
 import type { BoundInferenceClient } from '@kbn/inference-common';
 import type { ElasticsearchClient, Logger } from '@kbn/core/server';
 import type { ChangePointType } from '@kbn/es-types';
@@ -44,19 +49,6 @@ export async function extractKeyMetrics({
   anomalyDetectionJobs: unknown[];
   sloDefinitions: unknown[];
 }): Promise<Array<{ query: string; timeseries: Timeseries }>> {
-  const params = [
-    {
-      _tstart: {
-        value: new Date(start).toISOString(),
-      },
-    },
-    {
-      _tend: {
-        value: new Date(end).toISOString(),
-      },
-    },
-  ] as unknown as FieldValue[];
-
   const { toolCalls } = await executeAsEsqlAgent({
     inferenceClient,
     esClient,
@@ -68,6 +60,8 @@ export async function extractKeyMetrics({
       rules: JSON.stringify(rules),
       anomaly_detection_jobs: JSON.stringify(anomalyDetectionJobs),
       slo_definitions: JSON.stringify(sloDefinitions),
+      start: new Date(start).toISOString(),
+      end: new Date(end).toISOString(),
     }),
     signal,
     start,
@@ -75,7 +69,6 @@ export async function extractKeyMetrics({
     finalToolChoice: {
       function: 'extract_key_metric_queries',
     },
-    params,
     tools: {
       extract_key_metric_queries: {
         description: '',
@@ -84,15 +77,7 @@ export async function extractKeyMetrics({
           properties: {
             metrics: {
               type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  query: {
-                    type: 'string',
-                  },
-                },
-                required: ['query'],
-              },
+              items: esqlQuerySchema,
             },
           },
           required: ['metrics'],
@@ -115,14 +100,17 @@ export async function extractKeyMetrics({
   const keyMetrics = await Promise.all(
     keyMetricQueries.map(
       async (metricQuery): Promise<{ query: string; timeseries: Timeseries }> => {
+        const { query, params } = metricQuery;
+
         const response = await esClient.esql.query({
-          query: metricQuery.query,
+          query,
           filter: {
             bool: {
               filter: [...dateRangeQuery(start, end)],
             },
           },
-          params,
+          params: (params?.map((param) => ({ [param.name]: param.value })) ??
+            []) as unknown as FieldValue[],
         });
 
         const columns = response.columns ?? [];
