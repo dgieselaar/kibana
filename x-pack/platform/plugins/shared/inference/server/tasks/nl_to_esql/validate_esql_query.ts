@@ -12,7 +12,7 @@ import { esFieldTypeToKibanaFieldType } from '@kbn/field-types';
 import type { DatatableColumn, DatatableColumnType } from '@kbn/expressions-plugin/common';
 import { trace } from '@opentelemetry/api';
 import { BasicPrettyPrinter, Parser } from '@kbn/esql-ast';
-import type { FieldValue } from '@elastic/elasticsearch/lib/api/types';
+import type { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
 import { formatQueryWithErrors } from './format_query_with_errors';
 
 export interface QueryValidateRunOutput {
@@ -25,11 +25,14 @@ export interface QueryValidateRunOutput {
 export async function runAndValidateEsqlQuery({
   query,
   client,
-  params,
+  options = {},
 }: {
   query: string;
   client: ElasticsearchClient;
-  params?: FieldValue[];
+  options?: {
+    params?: Array<Record<string, string | number | boolean>>;
+    filter?: QueryDslQueryContainer;
+  };
 }): Promise<QueryValidateRunOutput> {
   // Format the query for readability before validation and execution
   let formattedQuery: string;
@@ -45,10 +48,15 @@ export async function runAndValidateEsqlQuery({
 
   const errorMessages = formatQueryWithErrors(formattedQuery, errors);
 
-  return client.esql
-    .query({
-      query: formattedQuery,
-      params,
+  return client.transport
+    .request({
+      method: 'POST',
+      path: '/_query',
+      body: {
+        query: formattedQuery,
+        params: options.params,
+        filter: options.filter,
+      },
     })
     .then((res) => {
       const esqlResponse = res as ESQLSearchResponse;

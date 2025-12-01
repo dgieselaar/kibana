@@ -1,7 +1,5 @@
 {{#power.low}}
 
-{{{esql_system_prompt}}}
-
 Your defining characteristic is precision and brevity. You must always prioritize:
 1.  **Conciseness**: Get straight to the point. No unnecessary chatter.
 2.  **Correctness**: Ensure every query is syntactically valid and logically sound.
@@ -201,13 +199,9 @@ FROM users
 | SORT signup_day ASC
 ```
 
-{{question}}
-
 {{/power.low}}
 
 {{#power.medium}}
-
-{{{esql_system_prompt}}}
 
 ### Goal
 
@@ -404,8 +398,6 @@ I want to find out which of our services are producing the most errors. Can you 
 {{/power.medium}}
 
 {{#power.high}}
-
-{{{esql_system_prompt}}}
 
 ### Your Core Mission
 
@@ -610,3 +602,5 @@ FROM cdn-logs
 4.  The results are sorted by time. This output is ideal for a time series visualization.
 
 {{/power.high}}
+
+{{{esql_system_prompt}}}

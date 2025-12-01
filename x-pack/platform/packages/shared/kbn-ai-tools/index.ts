@@ -25,3 +25,4 @@ export {
 } from './src/utils/p_value_to_label';
 
 export { executeAsEsqlAgent } from './src/tools/esql';
+export { esqlQuerySchema } from './src/tools/esql/tools';

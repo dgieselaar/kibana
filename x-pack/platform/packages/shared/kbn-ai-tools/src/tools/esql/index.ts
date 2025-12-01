@@ -24,7 +24,6 @@ import { omit, once } from 'lodash';
 import moment from 'moment';
 import kbnDatemath from '@kbn/datemath';
 import type { FinalToolChoice } from '@kbn/inference-prompt-utils';
-import type { FieldValue } from '@elastic/elasticsearch/lib/api/types';
 import { describeDataset, formatDocumentAnalysis } from '../../..';
 import { EsqlPrompt } from './prompt';
 import { listDatasets } from '../list_datasets/list_datasets';
@@ -48,7 +47,6 @@ export function executeAsEsqlAgent<
     signal: AbortSignal;
     prompt: string;
     tools?: TTools;
-    params?: FieldValue[];
   } & (TTools extends Record<string, ToolDefinition>
     ? keyof TTools extends never
       ? {}
@@ -74,7 +72,6 @@ export async function executeAsEsqlAgent({
   tools,
   toolCallbacks,
   finalToolChoice,
-  params,
 }: {
   inferenceClient: BoundInferenceClient;
   esClient: ElasticsearchClient;
@@ -85,15 +82,16 @@ export async function executeAsEsqlAgent({
   tools?: ToolDefinitions;
   toolCallbacks?: ToolCallbacksOfToolOptions<ToolOptions>;
   finalToolChoice?: FinalToolChoice;
-  params?: FieldValue[];
 }): Promise<PromptResponse> {
   const docBase = await loadEsqlDocBase();
 
-  async function runEsqlQuery(query: string) {
+  async function runEsqlQuery(query: string, params?: Array<{ name: string; value: string }>) {
     return await runAndValidateEsqlQuery({
       query,
       client: esClient,
-      params,
+      options: {
+        params: params?.map((param) => ({ [param.name]: param.value })),
+      },
     }).then((response) => {
       if (response.error || response.errorMessages?.length) {
         return {
@@ -160,22 +158,24 @@ export async function executeAsEsqlAgent({
 
         return {
           response: {
-            analysis: formatDocumentAnalysis(analysis),
+            analysis: formatDocumentAnalysis(analysis, { dropUnmapped: true, dropEmpty: true }),
           },
         };
       },
       get_documentation: async (toolCall) => {
         return {
           response: docBase.getDocumentation(
-            toolCall.function.arguments.commands.concat(toolCall.function.arguments.functions),
+            (toolCall.function.arguments.commands || []).concat(
+              toolCall.function.arguments.functions ?? []
+            ),
             { generateMissingKeywordDoc: true }
           ),
         };
       },
       run_queries: async (toolCall) => {
         const results = await Promise.all(
-          toolCall.function.arguments.queries.map(async (query) => {
-            const response = await runEsqlQuery(query);
+          toolCall.function.arguments.queries.map(async ({ query, params }) => {
+            const response = await runEsqlQuery(query, params);
 
             const cols = response.columns ?? [];
             const docs =
@@ -191,18 +191,7 @@ export async function executeAsEsqlAgent({
               }) ?? [];
 
             return {
-              query,
-              ...(start !== undefined && end !== undefined
-                ? {
-                    timeRange: {
-                      start: new Date(start).toISOString(),
-                      end: new Date(end).toISOString(),
-                    },
-                  }
-                : {}),
-              response: {
-                docs: truncateList(docs, 50),
-              },
+              docs: truncateList(docs, 50),
             };
           })
         );
@@ -215,10 +204,10 @@ export async function executeAsEsqlAgent({
       },
       validate_queries: async (toolCall) => {
         const results = await Promise.all(
-          toolCall.function.arguments.queries.map(async (query) => {
+          toolCall.function.arguments.queries.map(async ({ query, params }) => {
             return {
               query,
-              validation: await runEsqlQuery(query + ' | LIMIT 0').then((response) => {
+              validation: await runEsqlQuery(query + ' | LIMIT 0', params).then((response) => {
                 if ('error' in response) {
                   return {
                     valid: false,
