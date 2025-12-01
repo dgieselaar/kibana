@@ -43,7 +43,7 @@ export type ReasoningPromptResponseOf<
   >;
 };
 
-export type ReasoningPromptResponse = PromptResponse & { input: Message[] };
+export type ReasoningPromptResponse = Omit<PromptResponse, 'tokens'> & { input: Message[] };
 
 export type FinalToolChoice<TToolNames extends string = string> = ToolChoice<TToolNames> & {
   summarize?: boolean;

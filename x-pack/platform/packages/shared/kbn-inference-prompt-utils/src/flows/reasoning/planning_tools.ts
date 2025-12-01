@@ -33,7 +33,7 @@ export const COMPLETE_TOOL = {
 } as const;
 
 export const PLANNING_TOOLS = {
-  reason: REASON_TOOL,
+  // reason: REASON_TOOL,
   complete: COMPLETE_TOOL,
 } as const;
 

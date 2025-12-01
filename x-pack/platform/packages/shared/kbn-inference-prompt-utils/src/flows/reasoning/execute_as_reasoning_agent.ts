@@ -8,6 +8,7 @@ import type {
   AssistantMessage,
   Message,
   PromptOptions,
+  PromptResponse,
   ToolCall,
   ToolCallback,
   ToolCallbackResult,
@@ -89,7 +90,83 @@ export async function executeAsReasoningAgent(
       finalToolChoice?: FinalToolChoice;
     }
 ): Promise<ReasoningPromptResponse> {
-  const { inferenceClient, maxSteps = 10, power = 'medium', toolCallbacks } = options;
+  const { inferenceClient, maxSteps = 10, power = 'medium', toolCallbacks, temperature } = options;
+
+  async function callPrompt({
+    messages,
+    toolChoice,
+    stepsLeft,
+  }: {
+    messages: Message[];
+    toolChoice?: ToolChoice;
+    stepsLeft: number;
+  }): Promise<PromptResponse> {
+    const nextPrompt = {
+      ...options.prompt,
+      versions: options.prompt.versions.map((version) => {
+        const { tools: promptTools, ...rest } = version;
+
+        if (power === 'low') {
+          return {
+            ...rest,
+            tools: promptTools,
+          };
+        }
+
+        return formatToolOptions(
+          {
+            ...rest,
+            tools: {
+              ...promptTools,
+              ...PLANNING_TOOLS,
+            },
+          },
+          power
+        );
+      }),
+    };
+
+    const promptOptions = {
+      ...omit(options, 'finalToolChoice'),
+      prompt: nextPrompt,
+    };
+
+    const response = await inferenceClient.prompt({
+      ...promptOptions,
+      prompt: {
+        ...promptOptions.prompt,
+        input: z.intersection(
+          promptOptions.prompt.input,
+          z.object({
+            power: z.object({
+              low: z.boolean(),
+              medium: z.boolean(),
+              high: z.boolean(),
+            }),
+          })
+        ),
+      },
+      input: {
+        ...promptOptions.input,
+        power: {
+          low: power === 'low',
+          medium: power === 'medium',
+          high: power === 'high',
+        },
+      },
+      stream: false,
+      temperature,
+      toolChoice,
+      prevMessages: formatMessages({
+        messages,
+        power,
+        stepsLeft,
+      }),
+      stopSequences: [END_INTERNAL_REASONING_MARKER],
+    });
+
+    return response;
+  }
 
   async function callTools(toolCalls: ToolCall[]): Promise<ToolMessage[]> {
     return await Promise.all(
@@ -128,23 +205,23 @@ export async function executeAsReasoningAgent(
   }
 
   async function innerCallPromptUntil({
-    messages: givenMessages,
+    messages: messagesForRound,
     stepsLeft,
-    temperature,
+    toolChoice: toolChoiceForRound,
   }: {
     messages: Message[];
     stepsLeft: number;
-    temperature?: number;
+    toolChoice?: ToolChoice;
   }): Promise<ReasoningPromptResponse> {
     if (stepsLeft === 0) {
       throw new Error(`Task did not complete in time`);
     }
 
-    const lastAssistantMessage = givenMessages.findLast(
+    const lastAssistantMessage = messagesForRound.findLast(
       (msg): msg is AssistantMessage => msg.role === MessageRole.Assistant
     );
 
-    const lastSystemToolCallName = givenMessages.findLast(
+    const lastSystemToolCallName = messagesForRound.findLast(
       (message): message is PlanningToolMessage =>
         message.role === MessageRole.Tool && isPlanningToolName(message.name)
     )?.name;
@@ -162,7 +239,7 @@ export async function executeAsReasoningAgent(
         isPlanningToolName(toolCall.function.name)
       );
 
-    const prevMessages = givenMessages.concat();
+    const prevMessages = messagesForRound.concat();
 
     // these are hints
     if (isFinalTurn && lastSystemToolCallName !== 'complete') {
@@ -171,82 +248,25 @@ export async function executeAsReasoningAgent(
       prevMessages.push(...createReasonToolCall());
     }
 
-    const nextPrompt = {
-      ...options.prompt,
-      versions: options.prompt.versions.map((version) => {
-        const { tools: promptTools, ...rest } = version;
-
-        if (power === 'low') {
-          return {
-            ...rest,
-            tools: promptTools,
-          };
-        }
-
-        return formatToolOptions(
-          {
-            ...rest,
-            tools: {
-              ...promptTools,
-              ...PLANNING_TOOLS,
-            },
-          },
-          power
-        );
-      }),
-    };
-
     const forceComplete = isFinalTurn;
     const forceReason = power === 'high' && shouldReason;
 
-    const promptOptions = {
-      ...omit(options, 'finalToolChoice'),
-      prompt: nextPrompt,
-    };
-
-    let toolChoice = forceComplete
-      ? options.finalToolChoice || ToolChoiceType.none
-      : forceReason
-      ? ToolChoiceType.none
-      : ToolChoiceType.auto;
+    let toolChoice =
+      toolChoiceForRound ??
+      (forceComplete
+        ? options.finalToolChoice || ToolChoiceType.none
+        : forceReason
+        ? ToolChoiceType.none
+        : ToolChoiceType.auto);
 
     if (typeof toolChoice === 'object') {
       toolChoice = pick(toolChoice, 'function');
     }
 
-    const response = await inferenceClient.prompt({
-      ...promptOptions,
-      prompt: {
-        ...promptOptions.prompt,
-        input: z.intersection(
-          promptOptions.prompt.input,
-          z.object({
-            power: z.object({
-              low: z.boolean(),
-              medium: z.boolean(),
-              high: z.boolean(),
-            }),
-          })
-        ),
-      },
-      input: {
-        ...promptOptions.input,
-        power: {
-          low: power === 'low',
-          medium: power === 'medium',
-          high: power === 'high',
-        },
-      },
-      stream: false,
-      temperature,
+    const response = await callPrompt({
+      messages: prevMessages,
+      stepsLeft,
       toolChoice,
-      prevMessages: formatMessages({
-        messages: prevMessages,
-        power,
-        stepsLeft,
-      }),
-      stopSequences: [END_INTERNAL_REASONING_MARKER],
-      power: 'low',
     });
 
     let content = response.content;
@@ -292,40 +312,6 @@ export async function executeAsReasoningAgent(
       throw new Error(`When using system tools, only a single tool call is allowed`);
     }
 
-    const finalToolCallName =
-      options.finalToolChoice && typeof options.finalToolChoice === 'object'
-        ? options.finalToolChoice.function
-        : undefined;
-
-    const hasCalledFinalTool =
-      !!finalToolCallName &&
-      response.toolCalls.some((toolCall) => toolCall.function.name === finalToolCallName);
-
-    if (isFinalTurn && finalToolCallName && !hasCalledFinalTool) {
-      throw new Error(`Ran out of steps before final tool \`${finalToolCallName}\` was called`);
-    }
-
-    if (hasCalledFinalTool || isFinalTurn) {
-      // We don't want to send these results back to the LLM, if we are already
-      // completing
-
-      // TODO: implement summarization step if summarization is required and missing
-      // const missingSummarization =
-      //   options.finalToolChoice &&
-      //   typeof options.finalToolChoice === 'object' &&
-      //   options.finalToolChoice.summarize &&
-      //   !response.content;
-
-      return {
-        content: response.content,
-        tokens: response.tokens,
-        toolCalls: response.toolCalls.filter(
-          (toolCall) => toolCall.function.name === finalToolCallName
-        ),
-        input: removeSystemToolCalls(prevMessages),
-      };
-    }
-
     const toolMessagesForNonSystemToolCalls = nonSystemToolCalls.length
       ? (await callTools(nonSystemToolCalls)).map((toolMessage) => {
           return {
@@ -348,6 +334,49 @@ export async function executeAsReasoningAgent(
     });
 
     const allToolMessages = [...toolMessagesForNonSystemToolCalls, ...systemToolMessages];
+
+    const finalToolCallName =
+      options.finalToolChoice && typeof options.finalToolChoice === 'object'
+        ? options.finalToolChoice.function
+        : undefined;
+
+    const hasCalledFinalTool =
+      !!finalToolCallName &&
+      response.toolCalls.some((toolCall) => toolCall.function.name === finalToolCallName);
+
+    if (hasCalledFinalTool) {
+      // We don't want to send these results back to the LLM, if we are already
+      // completing
+
+      const missingSummarization =
+        options.finalToolChoice &&
+        typeof options.finalToolChoice === 'object' &&
+        options.finalToolChoice.summarize &&
+        !response.content;
+
+      let finalContent = response.content;
+
+      if (missingSummarization) {
+        const { content: summarizedContent } = await callPrompt({
+          stepsLeft: 1,
+          messages: prevMessages.concat(
+            assistantMessage,
+            ...allToolMessages,
+            ...createCompleteToolCall()
+          ),
+          toolChoice: ToolChoiceType.none,
+        });
+        finalContent = summarizedContent;
+      }
+
+      return {
+        content: finalContent,
+        toolCalls: response.toolCalls.filter(
+          (toolCall) => toolCall.function.name === finalToolCallName
+        ),
+        input: removeSystemToolCalls(prevMessages),
+      };
+    }
 
     if (completeNextTurn) {
       return innerCallPromptUntil({
