@@ -1,0 +1,12 @@
+**Context for this run**
+
+```json
+{
+  "kql": "{{{kql}}}",
+  "log_patterns": {{{log_patterns}}},
+  "key_metrics": {{{key_metrics}}},
+  "alerts": {{{alerts}}},
+  "slos": {{{slos}}},
+  "anomalies": {{{anomalies}}}
+}
+```

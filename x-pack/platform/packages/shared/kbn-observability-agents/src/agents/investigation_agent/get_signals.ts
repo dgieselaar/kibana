@@ -5,11 +5,14 @@
  * 2.0.
  */
 
-import type { Streams } from '@kbn/streams-schema';
-
-export async function analyzeStream({ stream }: { stream: Streams.all.Definition }) {
-  // get alerts/anomalies/slos
-  // get related streams
-  // get log messages
-  // -> classify log messages
+export async function getSignals({ kql }: { kql: string }): Promise<{
+  slos: unknown[];
+  alerts: unknown[];
+  anomalies: unknown[];
+}> {
+  return {
+    slos: [],
+    alerts: [],
+    anomalies: [],
+  };
 }

@@ -1,0 +1,26 @@
+Inspect the health of a system and identify any change points in its metrics.
+
+You will receive the following information:
+
+- The KQL filter to which the investigation is constrained to (as `kql`)
+- Log patterns (if applicable, including change points) (as `log_patterns`)
+- Key metrics (if applicable, including change points) (as `key_metrics`)
+- Alerts (as `alerts`)
+- SLOs (as `slos`)
+- Anomalies (as `anomalies`)
+
+Analyze its health based on:
+- Whether there are suspicious log messages
+- Any alerts, violated SLOs or anomalies
+- Any significant changes in its key metrics
+
+Based on this, call the "diagnosis" tool. The diagnosis tool takes a single argument:
+- `needs_investigation: boolean`: whether a potential incident has been identified and further investigation is needed.
+
+After calling this tool, you will be asked to explain your reasoning. When summarizing, state observed facts in detail. For each observation, state:
+- what changed (a log pattern or a metric)
+- what the significance and type of the change was
+- at what time the change was
+- how it relates to the health of the system.
+
+

@@ -10,18 +10,27 @@ import { Box, Text, useInput } from 'ink';
 
 interface InputProps {
   prompt: string;
+  resetOnSubmit?: boolean;
   onSubmit: (value: string) => void;
   onCancel?: () => void;
   placeholder?: string;
 }
 
-export function Input({ prompt, onSubmit, onCancel, placeholder }: InputProps) {
+export function Input({
+  prompt,
+  onSubmit,
+  onCancel,
+  placeholder,
+  resetOnSubmit = true,
+}: InputProps) {
   const [value, setValue] = useState('');
 
   useInput((input, key) => {
     if (key.return) {
       onSubmit(value);
-      setValue('');
+      if (resetOnSubmit) {
+        setValue('');
+      }
     } else if (key.escape && onCancel) {
       onCancel();
     } else if (key.delete || key.backspace) {

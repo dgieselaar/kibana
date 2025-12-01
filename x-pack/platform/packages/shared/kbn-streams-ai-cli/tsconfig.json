@@ -27,5 +27,6 @@
     "@kbn/inference-tracing",
     "@kbn/ink",
     "@kbn/datemath",
+    "@kbn/observability-agents",
   ]
 }

@@ -10,6 +10,7 @@
 
 import type { StreamWorkflow } from '@kbn/streams-ai';
 import {
+  analyzeStreamWorkflow,
   generateDescriptionWorkflow,
   generateNaturalLanguageQueriesWorkflow,
   onboardAnomalyDetectionJobsWorkflow,
@@ -39,13 +40,17 @@ export interface StreamDetailProps {
 export function StreamDetail({ stream }: StreamDetailProps) {
   const workflows: Record<string, { workflow: StreamWorkflow; label: string }> = useMemo(() => {
     return {
-      'full-flow': {
-        label: 'Full Onboarding Flow',
-        workflow: onboardStreamWorkflow,
-      },
       'partition-stream': {
         label: 'Partition Stream',
         workflow: partitionStreamWorkflow,
+      },
+      'analyze-stream': {
+        label: 'Analyze Stream',
+        workflow: analyzeStreamWorkflow,
+      },
+      'full-flow': {
+        label: 'Full Onboarding Flow',
+        workflow: onboardStreamWorkflow,
       },
       description: {
         label: 'Description',

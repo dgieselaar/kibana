@@ -1,0 +1,54 @@
+Extract key metric queries from the data for this system, which will help identify the health of a system. Consider things like throughput, failure rate, latency, etc.
+
+First, find the right dataset, and then for each useful dataset, call `describe_dataset` separately (but you are free to use parallel tool calls).
+
+Based on these dataset descriptions, and given SLO definitions, anomaly detection jobs and alerting rules, define queries that will help quantify the health of a service. Make sure each query is validated. Each query must contain a CHANGE_POINT command and return a SINGLE metric, such as:
+
+```esql
+ FROM my-index
+  | WHERE KQL("""foo:bar""")
+  | STATS y=COUNT() BY @timestamp=BUCKET(@timestamp, 50, ?_tstart, ?_tend)
+  | CHANGE_POINT y ON @timestamp AS change_point.type, change_point.p_value
+  | EVAL x = @timestamp
+  | KEEP x, y, change_point.type, change_point.p_value
+```
+
+Requirements:
+- IF the kql filter is set:
+  - You must filter by the KQL query, using the KQL command and escaped with triple quotes
+  - Supply it as a parameter when calling the list_datasets and describe_dataset tool
+- You must use `y` as the metric name
+- You must use `@timestamp = BUCKET(@timestamp, 50, ?_tstart, ?_tend)`
+- You must use `change_point.type` and `change_point.p_value` as column names for the change point columns
+- You must create a column `x` that holds the value for `@timestamp
+- The result of this should be an array of rows, where the columns are [ "x", "y", "change_point.type", "change_point.p_value" ].
+
+## Filter
+
+The following KQL query is being used:
+```kql
+{{{kql}}}
+```
+
+The following index or indices are being queried:
+`{{{index}}}`
+
+## Documents analysis
+
+1000 documents were sampled and aggregated into a single data structure:
+
+```json
+{{{analysis}}}
+```
+
+## Signal definitions
+
+The following signal definitions are available:
+
+```json
+{
+  "rules": {{{rules}}},
+  "slo_definitions": {{{slo_definitions}}},
+  "anomaly_detection_jobs": {{{anomaly_detection_jobs}}}
+}
+```

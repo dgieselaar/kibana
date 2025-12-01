@@ -37,6 +37,7 @@ export type {
 
 export { onboardStreamWorkflow } from './src/workflows/onboarding/onboard_stream_workflow';
 
-export { analyzeStream } from './src/workflows/analyze';
+export { analyzeStream } from './src/workflows/analyze/analyze_stream';
+export { analyzeStreamWorkflow } from './src/workflows/analyze/analyze_stream_workflow';
 
 export type { ProcessingService } from './src/workflows/onboarding/processing/types';

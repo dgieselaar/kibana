@@ -1,0 +1,7 @@
+{
+  "type": "shared-server",
+  "id": "@kbn/observability-agents",
+  "owner": "@elastic/obs-ai-team",
+  "group": "platform",
+  "visibility": "shared"
+}
